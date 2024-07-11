@@ -1928,10 +1928,7 @@ void Unit::HandleEmoteCommand(Emote emoteId)
             continue;
 
         // absorb must be smaller than the damage itself
-        if (spell->GetSpellInfo()->Id == 1310030 && damageInfo.GetAttacker()->HasAura(1310031)) // Arcanosphere with Sphere Builder)
-            currentAbsorb = 0;
-        else
-            currentAbsorb = RoundToInterval(currentAbsorb, 0, int32(damageInfo.GetDamage()));
+        currentAbsorb = RoundToInterval(currentAbsorb, 0, int32(damageInfo.GetDamage()));
 
         damageInfo.AbsorbDamage(currentAbsorb);
 
@@ -3480,20 +3477,21 @@ void Unit::_AddAura(UnitAura* aura, Unit* caster)
                  *        but may be created as a result of aura links.
                  */
 
-        // register single target aura
-        caster->GetSingleCastAuras().push_back(aura);
+        // hater: add limit n respect for max targets
+        std::vector<Aura*> aurasSharingLimit;
         // remove other single target auras
-        Unit::AuraList& scAuras = caster->GetSingleCastAuras();
-        for (Unit::AuraList::iterator itr = scAuras.begin(); itr != scAuras.end();)
+        for (Aura* scAura : caster->GetSingleCastAuras())
+            if (scAura->IsSingleTargetWith(aura))
+                aurasSharingLimit.push_back(scAura);
+
+        // register single target aura
+        caster->GetSingleCastAuras().push_front(aura);
+
+        uint32 maxOtherAuras = aura->GetSpellInfo()->MaxAffectedTargets - 1;
+        while (aurasSharingLimit.size() > maxOtherAuras)
         {
-            if ((*itr) != aura &&
-                (*itr)->IsSingleTargetWith(aura))
-            {
-                (*itr)->Remove();
-                itr = scAuras.begin();
-            }
-            else
-                ++itr;
+            aurasSharingLimit.back()->Remove();
+            aurasSharingLimit.pop_back();
         }
     }
 }
@@ -4180,7 +4178,7 @@ void Unit::RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGUID, W
                             newAura->UnregisterSingleTarget();
                             // bring back single target aura status to the old aura
                             aura->SetIsSingleTarget(true);
-                            caster->GetSingleCastAuras().push_back(aura);
+                            caster->GetSingleCastAuras().push_front(aura);
                         }
                         // FIXME: using aura->GetMaxDuration() maybe not blizzlike but it fixes stealing of spells like Innervate
                         newAura->SetLoadedState(aura->GetMaxDuration(), int32(dur), stealCharge ? 1 : aura->GetCharges(), 1, recalculateMask, aura->GetCritChance(), aura->CanApplyResilience(), &damage[0]);
@@ -6481,6 +6479,7 @@ void Unit::SetCharm(Unit* charm, bool apply)
 
     // Hook for OnHeal Event
     sScriptMgr->OnHeal(healer, victim, (uint32&)gain);
+    FIRE_ID(healInfo.GetSpellInfo()->events.id, Spell, OnHeal, TSHealInfo(&healInfo));
 
     Unit* unit = healer;
     if (healer && healer->GetTypeId() == TYPEID_UNIT && healer->IsTotem())
@@ -14956,6 +14955,21 @@ float Unit::GetCollisionHeight() const
     float const collisionHeight = scaleMod * modelData->CollisionHeight * modelData->ModelScale * displayInfo->CreatureModelScale;
     return collisionHeight == 0.0f ? DEFAULT_COLLISION_HEIGHT : collisionHeight;
 }
+
+// @dh-begin
+std::vector<AuraApplication*> Unit::GetAppliedAurasById(uint32 spellId) {
+    Unit::AuraApplicationMap& aAuras = GetAppliedAuras();
+    std::vector<AuraApplication*> out = {};
+    for (Unit::AuraApplicationMap::iterator itr = aAuras.begin(); itr != aAuras.end(); itr++)
+    {
+        SpellInfo const* spellProto = itr->second->GetBase()->GetSpellInfo();
+        if (itr->first == spellId)
+            out.push_back(itr->second);
+    }
+
+    return out;
+}
+// @dh-end
 
 std::string Unit::GetDebugInfo() const
 {

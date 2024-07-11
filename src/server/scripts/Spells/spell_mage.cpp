@@ -242,11 +242,6 @@ class spell_mage_arcane_missiles : public AuraScript
 {
     PrepareAuraScript(spell_mage_arcane_missiles);
 
-    bool Validate(SpellInfo const* /*spellInfo*/) override
-    {
-        return true;//return ValidateSpellInfo({ SPELL_MAGE_T10_2P_BONUS, SPELL_MAGE_T10_2P_BONUS_EFFECT });
-    }
-
     void OnRemoveDummy(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
     {
         if (Unit* caster = GetCaster())

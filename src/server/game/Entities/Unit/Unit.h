@@ -1378,6 +1378,7 @@ class TC_GAME_API Unit : public WorldObject
         // m_appliedAuras container management
         AuraApplicationMap      & GetAppliedAuras()       { return m_appliedAuras; }
         AuraApplicationMap const& GetAppliedAuras() const { return m_appliedAuras; }
+        std::vector<AuraApplication*> GetAppliedAurasById(uint32 spell);
 
         uint8 GetAppliedAuraCountByMechanicType(Mechanics mech);
 
