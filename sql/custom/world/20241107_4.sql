@@ -1,5 +1,3 @@
-DELETE FROM gameobject;
-
 INSERT INTO gameobject (id,`map`,zoneId,areaId,spawnMask,phaseMask,position_x,position_y,position_z,orientation,rotation0,rotation1,rotation2,rotation3,spawntimesecs,animprogress,state,ScriptName,VerifiedBuild) VALUES
 	 (1734,0,0,0,1,255,-7770.0,-2510.0,140.817,2.707,0.0,0.0,0.0,0.0,900,255,1,'',0),
 	 (2047,0,0,0,1,255,-7770.0,-2510.0,140.817,2.707,0.0,0.0,0.0,0.0,2700,255,1,'',0),

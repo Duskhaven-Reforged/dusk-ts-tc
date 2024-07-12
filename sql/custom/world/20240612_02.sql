@@ -1,18 +1,3 @@
-drop table if exists `creature_loot_template`;
-CREATE TABLE `creature_loot_template` (
-  `Entry` int unsigned NOT NULL DEFAULT '0',
-  `Item` int unsigned NOT NULL DEFAULT '0',
-  `Reference` int unsigned NOT NULL DEFAULT '0',
-  `Chance` float NOT NULL DEFAULT '100',
-  `QuestRequired` tinyint(1) NOT NULL DEFAULT '0',
-  `LootMode` smallint unsigned NOT NULL DEFAULT '1',
-  `GroupId` tinyint unsigned NOT NULL DEFAULT '0',
-  `MinCount` tinyint unsigned NOT NULL DEFAULT '1',
-  `MaxCount` tinyint unsigned NOT NULL DEFAULT '1',
-  `Comment` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  PRIMARY KEY (`Entry`,`Item`,`Reference`,`GroupId`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Loot System';
-
 INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
 	 (9000002,0,11111,1.0,0,1,1,1,1,''),
 	 (9000002,1,20000,5.0,0,1,2,1,1,''),
