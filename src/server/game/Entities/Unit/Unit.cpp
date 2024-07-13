@@ -6963,6 +6963,14 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
         AddPct(DoneTotalMod, (*i)->GetAmount());
     }
 
+    AuraEffectList const& mDamageToCaster = owner->GetAuraEffectsByType(SPELL_AURA_MOD_DAMAGE_TO_CASTER);
+    for (AuraEffectList::const_iterator i = mDamageToCaster.begin(); i != mDamageToCaster.end(); ++i) {
+        if (!(*i)->GetCasterGUID() == victim->GetGUID())
+            continue;
+
+        AddPct(DoneTotalMod, (*i)->GetAmount());
+    }
+
     AuraEffectList const& mOverrideClassScript = owner->GetAuraEffectsByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
     for (AuraEffectList::const_iterator i = mOverrideClassScript.begin(); i != mOverrideClassScript.end(); ++i)
     {
@@ -7914,6 +7922,9 @@ float Unit::SpellHealingPctDone(Unit* victim, SpellInfo const* spellProto) const
         }
     }
 
+    if (owner->IsPlayer())
+        FIRE(Player, OnCustomScriptedHealMod, TSPlayer(const_cast<Player*>(owner->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSMutableNumber<float>(&DoneTotalMod));
+
     return DoneTotalMod;
 }
 
@@ -8354,6 +8365,14 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
     // ..done
     DoneTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_DONE_DAMAGETYPE, 1 << DIRECT_DAMAGE);
     DoneTotalMod *= victim->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_TAKEN_DAMAGETYPE, 1 << DIRECT_DAMAGE);
+
+    DoneTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_TO_CASTER, [victim, spellProto](AuraEffect const* aurEff) -> bool
+    {
+        if (aurEff->GetCasterGUID() == victim->GetGUID() && aurEff->IsAffectedOnSpell(spellProto))
+            return true;
+        return false;
+    });
+
 
     // bonus against aurastate
     DoneTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE, [victim](AuraEffect const* aurEff) -> bool
@@ -14959,14 +14978,16 @@ float Unit::GetCollisionHeight() const
 // @dh-begin
 std::vector<AuraApplication*> Unit::GetAppliedAurasById(uint32 spellId) {
     Unit::AuraApplicationMap& aAuras = GetAppliedAuras();
-    std::vector<AuraApplication*> out = {};
-    for (Unit::AuraApplicationMap::iterator itr = aAuras.begin(); itr != aAuras.end(); itr++)
+    TC_LOG_INFO("server.worldserver", "AppliedAuras before {}", aAuras.size());
+    std::vector<AuraApplication*> out;
+    out.reserve(10);
+    for (Unit::AuraApplicationMap::iterator itr = aAuras.begin(); itr != aAuras.end(); ++itr)
     {
         SpellInfo const* spellProto = itr->second->GetBase()->GetSpellInfo();
         if (itr->first == spellId)
             out.push_back(itr->second);
     }
-
+    TC_LOG_INFO("server.worldserver", "AppliedAuras filtered {}", out.size());
     return out;
 }
 // @dh-end

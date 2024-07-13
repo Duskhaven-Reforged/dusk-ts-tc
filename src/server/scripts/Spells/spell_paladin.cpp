@@ -1975,7 +1975,6 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScript(spell_pal_aura_mastery);
     RegisterSpellScript(spell_pal_aura_mastery_immune);
     RegisterSpellScript(spell_pal_avenging_wrath);
-    RegisterSpellScript(spell_pal_beacon_of_light);
     RegisterSpellScript(spell_pal_blessing_of_faith);
     RegisterSpellScript(spell_pal_blessing_of_sanctuary);
     RegisterSpellScript(spell_pal_divine_purpose);
@@ -2010,8 +2009,6 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScript(spell_pal_judgement_of_wisdom_mana);
     RegisterSpellScript(spell_pal_judgements_of_the_just);
     RegisterSpellScript(spell_pal_judgements_of_the_wise);
-    RegisterSpellScript(spell_pal_lay_on_hands);
-    RegisterSpellScript(spell_pal_light_s_beacon);
     RegisterSpellScript(spell_pal_righteous_defense);
     RegisterSpellScript(spell_pal_righteous_vengeance);
     RegisterSpellScript(spell_pal_sacred_shield);

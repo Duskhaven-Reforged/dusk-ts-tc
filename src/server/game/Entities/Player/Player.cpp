@@ -10153,7 +10153,7 @@ Item* Player::GetItemByPos(uint8 bag, uint8 slot) const
 
 // hater: add check for weapon
 bool Player::IsUnarmed() const {
-    if (auto item = GetItemByPos(NULL_BAG, 15))
+    if (auto item = GetItemByPos(NULL_BAG, EQUIPMENT_SLOT_MAINHAND))
         return false;
 
     return true;

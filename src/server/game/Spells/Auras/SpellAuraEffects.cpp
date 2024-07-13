@@ -370,14 +370,14 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //303 SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE implemented in Unit::SpellDamageBonus, Unit::MeleeDamageBonus
     &AuraEffect::HandleAuraModFakeInebriation,                    //304 SPELL_AURA_MOD_DRUNK
     &AuraEffect::HandleAuraModIncreaseSpeed,                      //305 SPELL_AURA_MOD_MINIMUM_SPEED
-    &AuraEffect::HandleUnused,                                    //306 0 spells in 3.3.5
+    &AuraEffect::HandleNoImmediateEffect,                         //306 SPELL_AURA_MOD_DAMAGE_TO_CASTER
     &AuraEffect::HandleUnused,                                    //307 0 spells in 3.3.5
     &AuraEffect::HandleNoImmediateEffect,                         //308 SPELL_AURA_MOD_CRIT_CHANCE_FOR_CASTER implemented in Unit::GetUnitCriticalChance and Unit::GetUnitSpellCriticalChance
-    &AuraEffect::HandleUnused,                                    //309 0 spells in 3.3.5
+    &AuraEffect::HandleNoImmediateEffect,                         //309 SPELL_AURA_IMMUNE_TO_SILENCE
     &AuraEffect::HandleNoImmediateEffect,                         //310 SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE implemented in Spell::CalculateDamageDone
     &AuraEffect::HandleNoImmediateEffect,                         //311 SPELL_AURA_TRIGGER_SPELL_WITH_PCT_OF_TRIGGER
     &AuraEffect::HandleCombatMount,                               //312 SPELL_AURA_COMBAT_MOUNT_ILLUSION
-    &AuraEffect::HandleUnused,                                    //313 0 spells in 3.3.5
+    &AuraEffect::HandleNoImmediateEffect,                         //313 SPELL_AURA_IMMUNE_TO_INTERRUPT
     &AuraEffect::HandlePreventResurrection,                       //314 SPELL_AURA_PREVENT_RESURRECTION todo
     &AuraEffect::HandleNoImmediateEffect,                         //315 SPELL_AURA_UNDERWATER_WALKING todo
     &AuraEffect::HandleNoImmediateEffect,                         //316 SPELL_AURA_PERIODIC_HASTE implemented in AuraEffect::CalculatePeriodic
@@ -2556,6 +2556,10 @@ void AuraEffect::HandleAuraModSilence(AuraApplication const* aurApp, uint8 mode,
 
     if (apply)
     {
+        auto silenceImmunities = target->GetAuraEffectsByType(SPELL_AURA_IMMUNE_TO_SILENCE);
+        if (!silenceImmunities.empty())
+            return;
+
         target->SetUnitFlag(UNIT_FLAG_SILENCED);
 
         // call functions which may have additional effects after changing state of unit
