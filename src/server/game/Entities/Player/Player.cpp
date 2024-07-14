@@ -24500,7 +24500,7 @@ uint32 Player::GetResurrectionSpellId()
     }
 
     // Reincarnation (passive spell)  // prio: 1                  // Glyph of Renewed Life
-    if (prio < 1 && HasSpell(1230010) && !GetSpellHistory()->HasCooldown(1230011) && /*(HasAura(58059) || HasItemCount(17030))*/)
+    if (prio < 1 && HasSpell(1230010) && !GetSpellHistory()->HasCooldown(1230011) /*&& (HasAura(58059) || HasItemCount(17030))*/)
         spell_id = 1230011;
 
     return spell_id;
