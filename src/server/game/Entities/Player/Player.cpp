@@ -8310,6 +8310,8 @@ void Player::CastItemCombatSpell(DamageInfo const& damageInfo, Item* item, ItemT
                             args.AddSpellMod(static_cast<SpellValueMod>(SPELLVALUE_BASE_POINT0 + AsUnderlyingType(spellEffectInfo.EffectIndex)), CalculatePct(spellEffectInfo.CalcValue(this), effectPct));
                 }
                 CastSpell(target, spellInfo->Id, args);
+
+                FIRE(Player,OnEnchantTriggered,TSPlayer(this), TSUnit(target), TSItem(item),TSSpellInfo(spellInfo));
             }
         }
     }
@@ -25458,12 +25460,12 @@ void Player::AddRunePower(uint8 index) const
 
 static RuneType runeSlotTypes[MAX_RUNES] =
 {
-    /*0*/ RUNE_BLOOD,
-    /*1*/ RUNE_BLOOD,
-    /*2*/ RUNE_UNHOLY,
-    /*3*/ RUNE_UNHOLY,
-    /*4*/ RUNE_FROST,
-    /*5*/ RUNE_FROST
+    /*0*/ RUNE_DEATH,
+    /*1*/ RUNE_DEATH,
+    /*2*/ RUNE_DEATH,
+    /*3*/ RUNE_DEATH,
+    /*4*/ RUNE_DEATH,
+    /*5*/ RUNE_DEATH
 };
 
 void Player::InitRunes()

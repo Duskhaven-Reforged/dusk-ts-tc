@@ -371,7 +371,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleAuraModFakeInebriation,                    //304 SPELL_AURA_MOD_DRUNK
     &AuraEffect::HandleAuraModIncreaseSpeed,                      //305 SPELL_AURA_MOD_MINIMUM_SPEED
     &AuraEffect::HandleNoImmediateEffect,                         //306 SPELL_AURA_MOD_DAMAGE_TO_CASTER
-    &AuraEffect::HandleUnused,                                    //307 0 spells in 3.3.5
+    &AuraEffect::HandleUnused,                                    //307 0
     &AuraEffect::HandleNoImmediateEffect,                         //308 SPELL_AURA_MOD_CRIT_CHANCE_FOR_CASTER implemented in Unit::GetUnitCriticalChance and Unit::GetUnitSpellCriticalChance
     &AuraEffect::HandleNoImmediateEffect,                         //309 SPELL_AURA_IMMUNE_TO_SILENCE
     &AuraEffect::HandleNoImmediateEffect,                         //310 SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE implemented in Spell::CalculateDamageDone
@@ -391,7 +391,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //324 SPELL_AURA_MOD_BASE_CRIT_DAMAGE implemented in Unit::SpellCriticalDamageBonus
     &AuraEffect::HandleNoImmediateEffect,                         //325 SPELL_AURA_MOD_DAMAGE_TAKEN_PCT_BEFORE_BLOCK
     &AuraEffect::HandleNoImmediateEffect,                         //326 SPELL_AURA_ADD_SPELL_BLOCK
-    &AuraEffect::HandleNoImmediateEffect,                         //327 SPELL_AURA_MOD_MOVEMENT_SPEED_COMBAT
+    &AuraEffect::HandleModToggleAuraCombatState,                  //327 SPELL_AURA_MOD_TOGGLE_AURA_COMBAT_STATE
     &AuraEffect::HandleAuraModSpellPower,                         //328 SPELL_AURA_MOD_SPELL_POWER
     &AuraEffect::HandleAuraModSpellPowerPercent,                  //329 SPELL_AURA_MOD_SPELL_POWER_PCT
     &AuraEffect::HandleAuraModSpellPowerOfStatPercent,            //330 SPELL_AURA_MOD_SPELL_POWER_OF_STAT_PERCENT
@@ -1142,6 +1142,7 @@ bool AuraEffect::CheckEffectProc(AuraApplication* aurApp, ProcEventInfo& eventIn
             if (!spellInfo || !spellInfo->CalcCastTime())
                 return false;
             break;
+        case SPELL_AURA_MOD_DAMAGE_TO_CASTER:
         case SPELL_AURA_MOD_DAMAGE_FROM_CASTER:
             // Compare casters
             if (GetCasterGUID() != eventInfo.GetActor()->GetGUID())
@@ -6243,8 +6244,7 @@ void AuraEffect::HandleModToggleAuraCombatState(AuraApplication const* aurApp, u
 
     if (apply)
     {
-        if ((caster->IsInCombat() && GetMiscValueB() == 1)
-            || (!caster->IsInCombat() && GetMiscValueB() == 0))
+        if ((caster->IsInCombat() && GetMiscValueB() == 1) || (!caster->IsInCombat() && GetMiscValueB() == 0))
             caster->AddAura(GetTriggerSpell(), caster);
         else if (GetAmplitude() != 1)
             caster->RemoveAura(GetTriggerSpell());
