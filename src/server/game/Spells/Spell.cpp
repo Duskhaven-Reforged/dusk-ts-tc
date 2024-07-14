@@ -7506,6 +7506,10 @@ bool Spell::IsAutoActionResetSpell() const
     if (IsTriggered() || !(m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_INTERRUPT))
         return false;
 
+    // Duskhaven: Maelstrom Weapon Proc
+    if (m_caster->ToUnit()->HasAura(1230021))
+        return false;
+
     if (!m_casttime && m_spellInfo->HasAttribute(SPELL_ATTR6_NOT_RESET_SWING_IF_INSTANT))
         return false;
 

@@ -93,6 +93,17 @@ enum ShamanSpells
     SPELL_SHAMAN_MAELSTROM_POWER                = 70831,
     SPELL_SHAMAN_T10_ENHANCEMENT_4P_BONUS       = 70832,
     SPELL_SHAMAN_BLESSING_OF_THE_ETERNALS_R1    = 51554,
+
+    // Duskhaven
+    SPELL_SHAMAN_AIRS_GRACE                     = 1240026,
+    SPELL_SHAMAN_EARTHS_STOICISM                = 1240028,
+    SPELL_SHAMAN_ELEMENTAL_BASH_DUMMY           = 1240029,
+    SPELL_SHAMAN_ELEMENTAL_BASH_REVERBERATION   = 1240030,
+    SPELL_SHAMAN_FROSTBRAND_SLOWED              = 1230016,
+    SPELL_SHAMAN_GRIT                           = 1240011,
+    SPELL_SHAMAN_LAVA_POOL_DEMORALIZE           = 1230023,
+    SPELL_SHAMAN_MAELSTROM_DEFENSE              = 1240031,
+    SPELL_SHAMAN_MAELSTROM_DEFENSE_DUMMY        = 1240032
 };
 
 enum ShamanSpellIcons
@@ -1209,7 +1220,7 @@ class spell_sha_lightning_shield : public AuraScript
     }
 };
 
-// 53817 - Maelstrom Weapon
+// 1230020 - Maelstrom Weapon
 class spell_sha_maelstrom_weapon : public AuraScript
 {
     PrepareAuraScript(spell_sha_maelstrom_weapon);
@@ -1218,27 +1229,23 @@ class spell_sha_maelstrom_weapon : public AuraScript
     {
         return ValidateSpellInfo(
         {
-            SPELL_SHAMAN_MAELSTROM_POWER,
-            SPELL_SHAMAN_T10_ENHANCEMENT_4P_BONUS
+            SPELL_SHAMAN_MAELSTROM_DEFENSE,
+            SPELL_SHAMAN_MAELSTROM_DEFENSE_DUMMY
         });
     }
 
-    void HandleBonus(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    bool CheckProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
     {
-        if (GetStackAmount() < GetSpellInfo()->StackAmount)
-            return;
+        if ((eventInfo.GetTypeMask() & (PROC_FLAG_TAKEN_MELEE_AUTO_ATTACK | PROC_FLAG_TAKEN_SPELL_MELEE_DMG_CLASS))
+            && (!eventInfo.GetProcTarget()->HasAura(SPELL_SHAMAN_MAELSTROM_DEFENSE) || eventInfo.GetProcTarget()->HasAura(SPELL_SHAMAN_MAELSTROM_DEFENSE_DUMMY)))
+                return false;
 
-        Unit* caster = GetUnitOwner();
-        AuraEffect const* aurEff = caster->GetAuraEffect(SPELL_SHAMAN_T10_ENHANCEMENT_4P_BONUS, EFFECT_0);
-        if (!aurEff || !roll_chance_i(aurEff->GetAmount()))
-            return;
-
-        caster->CastSpell(nullptr, SPELL_SHAMAN_MAELSTROM_POWER, aurEff);
+        return true;
     }
 
     void Register() override
     {
-        OnEffectApply += AuraEffectApplyFn(spell_sha_maelstrom_weapon::HandleBonus, EFFECT_0, SPELL_AURA_ADD_PCT_MODIFIER, AURA_EFFECT_HANDLE_CHANGE_AMOUNT);
+        DoCheckEffectProc += AuraCheckEffectProcFn(spell_sha_maelstrom_weapon::CheckProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
     }
 };
 
@@ -1924,6 +1931,194 @@ class spell_sha_windfury_weapon : public AuraScript
     }
 };
 
+// Duskhaven
+// 1240017 - Elemental Bash
+class spell_sha_elemental_bash : public SpellScript
+{
+    PrepareSpellScript(spell_sha_elemental_bash);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_EARTHS_STOICISM,
+            SPELL_SHAMAN_ELEMENTAL_BASH_DUMMY,
+            SPELL_SHAMAN_ELEMENTAL_BASH_REVERBERATION
+        });
+    }
+
+    void HandleBeforeHit(SpellMissInfo missInfo)
+    {
+        if (missInfo != SPELL_MISS_NONE)
+            return;
+
+        if (Unit* caster = GetCaster())
+            if (Unit* target = GetHitUnit())
+                if (caster->HasAura(SPELL_SHAMAN_EARTHS_STOICISM))
+                {
+                    int32 pct = sSpellMgr->GetSpellInfo(SPELL_SHAMAN_EARTHS_STOICISM)->GetEffect(EFFECT_1).CalcValue();
+                    damage = int32(CalculatePct(GetHitDamage(), pct));
+                    caster->CastSpell(target, SPELL_SHAMAN_ELEMENTAL_BASH_DUMMY, true);
+                }
+    }
+
+    void HandleAfterHit()
+    {
+        if (Unit* caster = GetCaster())
+            if (Unit* target = GetHitUnit())
+                if (caster->HasAura(SPELL_SHAMAN_EARTHS_STOICISM))
+                {
+                    CastSpellExtraArgs args(TRIGGERED_FULL_MASK);
+                    args.AddSpellBP0(damage);
+
+                    caster->CastSpell(target, SPELL_SHAMAN_ELEMENTAL_BASH_REVERBERATION, args);
+                }
+    }
+
+    void Register() override
+    {
+        BeforeHit += BeforeSpellHitFn(spell_sha_elemental_bash::HandleBeforeHit);
+        AfterHit += SpellHitFn(spell_sha_elemental_bash::HandleAfterHit);
+    }
+
+private:
+    int32 damage = 0;
+};
+
+// 1240030 - Elemental Bash (Earth's Stoicism Proc)
+class spell_sha_elemental_bash_aoe_proc : public SpellScript
+{
+    PrepareSpellScript(spell_sha_elemental_bash_aoe_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_ELEMENTAL_BASH_DUMMY
+        });
+    }
+
+    void RemoveInvalidTargets(std::list<WorldObject*>& targets)
+    {
+        targets.remove_if(Trinity::UnitAuraCheck(true, SPELL_SHAMAN_ELEMENTAL_BASH_DUMMY));
+    }
+
+    void Register() override
+    {
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_sha_elemental_bash_aoe_proc::RemoveInvalidTargets, EFFECT_ALL, TARGET_DEST_TARGET_ENEMY);
+    }
+};
+
+// 1240015 - Frostbrand Weapon
+class spell_sha_frostbrand_weapon_proc : public SpellScript
+{
+    PrepareSpellScript(spell_sha_frostbrand_weapon_proc);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_FROSTBRAND_SLOWED
+        });
+    }
+
+    void HandleOnHit()
+    {
+        if (Unit* caster = GetCaster())
+            if (Unit* target = GetHitUnit())
+                caster->CastSpell(target, SPELL_SHAMAN_FROSTBRAND_SLOWED, true);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_sha_frostbrand_weapon_proc::HandleOnHit);
+    }
+};
+
+// 1240011 - Grit
+class spell_sha_grit : public AuraScript
+{
+    PrepareAuraScript(spell_sha_grit);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_GRIT
+        });
+    }
+
+    bool CheckProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        Unit* procTarget = eventInfo.GetProcTarget();
+        int32 dmgPct = (float)eventInfo.GetDamageInfo()->GetDamage() / procTarget->GetMaxHealth() * 100;
+        int32 pct = sSpellMgr->GetSpellInfo(SPELL_SHAMAN_GRIT)->GetEffect(EFFECT_0).CalcValue();
+
+        if (pct < dmgPct)
+            return false;
+
+        return true;
+    }
+
+    void Register() override
+    {
+        DoCheckEffectProc += AuraCheckEffectProcFn(spell_sha_grit::CheckProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
+    }
+};
+
+// 1240022 - Lava Pool Totem (dmg)
+class spell_sha_lava_pool_totem_dmg : public SpellScript
+{
+    PrepareSpellScript(spell_sha_lava_pool_totem_dmg);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_LAVA_POOL_DEMORALIZE
+        });
+    }
+
+    void HandleOnHit()
+    {
+        if (Unit* caster = GetCaster())
+            if (Unit* target = GetHitUnit())
+                caster->CastSpell(target, SPELL_SHAMAN_LAVA_POOL_DEMORALIZE, true);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_sha_lava_pool_totem_dmg::HandleOnHit);
+    }
+};
+
+// 1240027 - Lesser Elemental Bash
+class spell_sha_lesser_elemental_bash : public SpellScript
+{
+    PrepareSpellScript(spell_sha_lesser_elemental_bash);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_AIRS_GRACE
+        });
+    }
+
+    void HandleOnHit()
+    {
+        int32 pct = sSpellMgr->GetSpellInfo(SPELL_SHAMAN_AIRS_GRACE)->GetEffect(EFFECT_0).CalcValue();
+        int32 damage = CalculatePct(GetHitDamage(), pct);
+
+        SetHitDamage(damage);
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_sha_lesser_elemental_bash::HandleOnHit);
+    }
+};
+
 void AddSC_shaman_spell_scripts()
 {
     RegisterSpellScript(spell_sha_ancestral_awakening);
@@ -1977,4 +2172,11 @@ void AddSC_shaman_spell_scripts()
     RegisterSpellScript(spell_sha_t10_elemental_4p_bonus);
     RegisterSpellScript(spell_sha_t10_restoration_4p_bonus);
     RegisterSpellScript(spell_sha_windfury_weapon);
+    // Duskhaven
+    RegisterSpellScript(spell_sha_elemental_bash);
+    RegisterSpellScript(spell_sha_elemental_bash_aoe_proc);
+    RegisterSpellScript(spell_sha_frostbrand_weapon_proc);
+    RegisterSpellScript(spell_sha_grit);
+    RegisterSpellScript(spell_sha_lava_pool_totem_dmg);
+    RegisterSpellScript(spell_sha_lesser_elemental_bash);
 }
