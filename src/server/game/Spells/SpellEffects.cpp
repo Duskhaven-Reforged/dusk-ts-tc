@@ -2514,6 +2514,9 @@ void Spell::EffectDispel()
             if (owner->GetAura(56249))
                 owner->CastSpell(owner, 19658, args);
     }
+    // Purge with Electrified Purge
+    if (m_spellInfo->Id == 1230022 && m_caster->ToUnit()->HasAura(1230023))
+        m_caster->CastSpell(m_caster, 1230021, true);
 }
 
 void Spell::EffectDualWield()

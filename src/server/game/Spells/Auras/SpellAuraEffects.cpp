@@ -328,7 +328,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandlePhase,                                     //261 SPELL_AURA_PHASE
     &AuraEffect::HandleNoImmediateEffect,                         //262 SPELL_AURA_ABILITY_IGNORE_AURASTATE implemented in Spell::CheckCast
     &AuraEffect::HandleAuraAllowOnlyAbility,                      //263 SPELL_AURA_ALLOW_ONLY_ABILITY player can use only abilities set in SpellClassMask
-    &AuraEffect::HandleUnused,                                    //264 unused (3.2.0)
+    &AuraEffect::HandleNoImmediateEffect,                         //264 Aleist3r: changed to SPELL_AURA_IMMUNE_TO_DISARM
     &AuraEffect::HandleUnused,                                    //265 unused (3.2.0)
     &AuraEffect::HandleUnused,                                    //266 unused (3.2.0)
     &AuraEffect::HandleNoImmediateEffect,                         //267 SPELL_AURA_MOD_IMMUNE_AURA_APPLY_SCHOOL         implemented in Unit::IsImmunedToSpellEffect
@@ -419,6 +419,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //352 SPELL_AURA_MOD_RESTED_XP_MAX_AMOUNT implemented in Player::SetRestBonus, Spell::EffectGiveRestedExperience
     &AuraEffect::HandleNoImmediateEffect,                         //355 SPELL_AURA_MOD_RESTED_XP_RECOVERY_RATE implemented in Player::Update
     &AuraEffect::HandleNoImmediateEffect,                         //356 SPELL_AURA_ADD_COMBAT_RATING_PCT_TO_SPELL_EFFECT implemented in AuraEffect::CalculateSpellMod()
+    &AuraEffect::HandleNoImmediateEffect,                         //356 SPELL_AURA_ADD_COMBAT_RATING_TO_SPELL_EFFECT implemented in AuraEffect::CalculateSpellMod()
 };
 
 AuraEffect::AuraEffect(Aura* base, SpellEffectInfo const& spellEfffectInfo, int32 const* baseAmount, Unit* caster):
@@ -822,6 +823,49 @@ void AuraEffect::CalculateSpellMod()
                 }
             }
             m_spellmod->value = int32(GetCaster()->ToPlayer()->GetRatingBonusValue(CombatRating(GetMiscValueB())) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
+            break;
+        case SPELL_AURA_ADD_COMBAT_RATING_TO_SPELL_EFFECT:
+            if (!m_spellmod)
+            {
+                m_spellmod = new SpellModifier(GetBase());
+
+                m_spellmod->type = SPELLMOD_FLAT;
+                m_spellmod->spellId = GetId();
+                m_spellmod->mask = GetSpellInfo()->GetEffect(GetEffIndex()).SpellClassMask;
+                m_spellmod->charges = GetBase()->GetCharges();
+
+                int32 tempMisc = GetMiscValue();
+
+                switch (tempMisc)
+                {
+                case 2:
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                    break;
+                case 3:
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                    break;
+                case 4:
+                    m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
+                    break;
+                case 5:
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                    break;
+                case 6:
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                    break;
+                case 7:
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                    break;
+                case 1:
+                default:
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                    break;
+                }
+            }
+            m_spellmod->value = int32(GetCaster()->GetUInt32Value(static_cast<uint16>(PLAYER_FIELD_COMBAT_RATING_1) + CombatRating(GetMiscValueB())) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
             break;
         default:
             break;
@@ -2482,6 +2526,9 @@ void AuraEffect::HandleAuraModDisarm(AuraApplication const* aurApp, uint8 mode, 
         return;
 
     Unit* target = aurApp->GetTarget();
+
+    if (target->HasAuraType(SPELL_AURA_IMMUNE_TO_DISARM))
+        return;
 
     //Prevent handling aura twice
     AuraType type = GetAuraType();
