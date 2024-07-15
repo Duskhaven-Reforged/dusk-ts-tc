@@ -172,7 +172,7 @@ int finish(char const* message, int returnValue)
     return returnValue;
 }
 
-bool handleArgs(int argc, char** argv,
+bool handleArgsNew(int argc, char** argv,//TODO: TC added this, maybe reuse later
                int &mapnum,
                int &tileX,
                int &tileY,
