@@ -341,7 +341,7 @@ enum AuraType : uint32
     SPELL_AURA_PHASE                                        = 261,
     SPELL_AURA_ABILITY_IGNORE_AURASTATE                     = 262,
     SPELL_AURA_ALLOW_ONLY_ABILITY                           = 263,
-    SPELL_AURA_264                                          = 264,
+    SPELL_AURA_IMMUNE_TO_DISARM                             = 264,
     SPELL_AURA_265                                          = 265,
     SPELL_AURA_266                                          = 266,
     SPELL_AURA_MOD_IMMUNE_AURA_APPLY_SCHOOL                 = 267,
@@ -433,6 +433,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_RESTED_XP_RECOVERY_RATE                  = 353,
     SPELL_AURA_MOD_CHANGE_DAMAGE_SCHOOL_OF_SPELL            = 354,
     SPELL_AURA_ADD_COMBAT_RATING_PCT_TO_SPELL_EFFECT        = 355,
+    SPELL_AURA_ADD_COMBAT_RATING_TO_SPELL_EFFECT            = 356,
     TOTAL_AURAS                                             
 };
 

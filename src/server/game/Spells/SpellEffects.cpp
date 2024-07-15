@@ -443,7 +443,6 @@ void Spell::EffectSchoolDMG()
                     {
                         // Calculate damage of Immolate/Shadowflame tick
                         int32 pdamage = aura->GetAmount();
-                        pdamage = unitTarget->SpellDamageBonusTaken(unitCaster, aura->GetSpellInfo(), pdamage, DOT);
 
                         // And multiply by amount of ticks to get damage potential
                         pdamage *= aura->GetSpellInfo()->GetMaxTicks(unitCaster);
@@ -457,7 +456,6 @@ void Spell::EffectSchoolDMG()
                         ASSERT(m_spellInfo->GetMaxTicks(unitCaster) > 0);
                         m_spellValue->EffectBasePoints[EFFECT_1] = dotBasePoints / m_spellInfo->GetMaxTicks(unitCaster);
 
-                        apply_direct_bonus = false;
                         // Glyph of Conflagrate
                         if (!unitCaster->HasAura(56235))
                             unitTarget->RemoveAurasDueToSpell(aura->GetId(), unitCaster->GetGUID());
@@ -2514,6 +2512,9 @@ void Spell::EffectDispel()
             if (owner->GetAura(56249))
                 owner->CastSpell(owner, 19658, args);
     }
+    // Purge with Electrified Purge
+    if (m_spellInfo->Id == 1230022 && m_caster->ToUnit()->HasAura(1230023))
+        m_caster->CastSpell(m_caster, 1230021, true);
 }
 
 void Spell::EffectDualWield()
@@ -3526,7 +3527,7 @@ void Spell::EffectInterruptCast()
                             PROC_SPELL_TYPE_MASK_ALL, PROC_SPELL_PHASE_HIT, PROC_HIT_INTERRUPT, nullptr, nullptr, nullptr);
                 }
                 ExecuteLogEffectInterruptCast(effectInfo->EffectIndex, unitTarget, curSpellInfo->Id);
-                unitTarget->InterruptSpell(CurrentSpellTypes(i), false);
+                unitTarget->InterruptSpell(CurrentSpellTypes(i), false, false, SPELL_FAILED_INTERRUPTED_COMBAT, SPELL_FAILED_DONT_REPORT);
                 if (m_caster->IsPlayer())
                     FIRE(Player, OnSuccessfulInterrupt, TSPlayer(const_cast<Player*>(m_caster->ToPlayer())), TSUnit(const_cast<Unit*>(unitTarget)), TSSpell(const_cast<Spell*>(spell)));
             }
@@ -4075,17 +4076,25 @@ void Spell::EffectInebriate()
 
     Player* player = unitTarget->ToPlayer();
     uint8 currentDrunk = player->GetDrunkValue();
-    uint8 drunkMod = damage;
-    if (currentDrunk + drunkMod > 100)
-    {
+    int32 drunkMod = damage;
+
+    if (drunkMod == 0)
+        return;
+
+    // drunkMod may contain values that are guaranteed to cause uint8 overflow/underflow (examples: 29690, 46874)
+    // In addition, we would not want currentDrunk to become more than 100.
+    // So before adding the values, let's check that everything is fine.
+    if (drunkMod > static_cast<int32>(100 - currentDrunk))
         currentDrunk = 100;
-        if (rand_chance() < 25.0f)
-            player->CastSpell(player, 67468, false);    // Drunken Vomit
-    }
+    else if (drunkMod < static_cast<int32>(0 - currentDrunk))
+        currentDrunk = 0;
     else
-        currentDrunk += drunkMod;
+        currentDrunk += drunkMod; // Due to previous checks we can be sure that currentDrunk will not go beyond [0-100] range.
 
     player->SetDrunkValue(currentDrunk, m_CastItem ? m_CastItem->GetEntry() : 0);
+
+    if (currentDrunk == 100 && roll_chance_i(25))
+        player->CastSpell(player, 67468, false);    // Drunken Vomit
 }
 
 void Spell::EffectFeedPet()
@@ -4494,13 +4503,9 @@ void Spell::EffectKnockBack()
             if (creatureTarget->isWorldBoss() || creatureTarget->IsDungeonBoss())
                 return;
 
-    // Spells with SPELL_EFFECT_KNOCK_BACK (like Thunderstorm) can't knockback target if target has ROOT/STUN
-    if (unitTarget->HasUnitState(UNIT_STATE_ROOT | UNIT_STATE_STUNNED))
+    // Spells with SPELL_EFFECT_KNOCK_BACK (like Thunderstorm) can't knockback target if target has ROOT
+    if (unitTarget->HasUnitState(UNIT_STATE_ROOT))
         return;
-
-    // Instantly interrupt non melee spells being cast
-    if (unitTarget->IsNonMeleeSpellCast(true))
-        unitTarget->InterruptNonMeleeSpells(true);
 
     float ratio = 0.1f;
     float speedxy = float(effectInfo->MiscValue) * ratio;

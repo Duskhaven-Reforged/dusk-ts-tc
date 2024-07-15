@@ -242,6 +242,16 @@ class spell_mage_arcane_missiles : public AuraScript
 {
     PrepareAuraScript(spell_mage_arcane_missiles);
 
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_MAGE_ARCANE_ANOMALY_DAMAGE,
+            SPELL_MAGE_ARCANE_ANOMALY_TALENT,
+            SPELL_MAGE_CLEARCASTING_PROC
+        });
+    }
+
     void OnRemoveDummy(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
     {
         if (Unit* caster = GetCaster())
@@ -252,9 +262,6 @@ class spell_mage_arcane_missiles : public AuraScript
 
     void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
     {
-        /*Unit* target = GetTarget();
-        if (target->HasAura(SPELL_MAGE_T10_2P_BONUS) && _canProcT10)
-            target->CastSpell(nullptr, SPELL_MAGE_T10_2P_BONUS_EFFECT, aurEff);*/
         if (Unit* caster = GetCaster())
             if (caster->HasAura(SPELL_MAGE_CLEARCASTING_PROC))
                 caster->RemoveAuraFromStack(SPELL_MAGE_CLEARCASTING_PROC);
@@ -988,7 +995,12 @@ class spell_mage_ignite : public AuraScript
 
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_MAGE_IGNITE });
+        return ValidateSpellInfo(
+        {
+            SPELL_MAGE_FIRE_BLAST,
+            SPELL_MAGE_FUEL_THE_FIRE,
+            SPELL_MAGE_IGNITE
+        });
     }
 
     bool CheckProc(ProcEventInfo& eventInfo)
@@ -1030,7 +1042,19 @@ class spell_mage_living_bomb : public AuraScript
 
     bool Validate(SpellInfo const* spell) override
     {
-        return ValidateSpellInfo({ static_cast<uint32>(spell->GetEffect(EFFECT_1).CalcValue()) });
+        return ValidateSpellInfo(
+        {
+            static_cast<uint32>(spell->GetEffect(EFFECT_1).CalcValue()),
+            SPELL_MAGE_LIVING_BOMB_DIRECT_DAMAGE,
+            SPELL_MAGE_LIVING_BOMB_DUMMY,
+            SPELL_MAGE_LIVING_BOMB_DUMMY_AURA,
+            SPELL_MAGE_LIVING_BOMB_LB,
+            SPELL_MAGE_LIVING_BOMBARDMENT,
+            SPELL_MAGE_FEEL_THE_BURN_PROC,
+            SPELL_MAGE_FEEL_THE_BURN_TALENT,
+            SPELL_MAGE_GROUND_ZERO_PROC,
+            SPELL_MAGE_GROUND_ZERO_TALENT
+        });
     }
 
     void OnApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
