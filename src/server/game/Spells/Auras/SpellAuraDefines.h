@@ -384,7 +384,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_FAKE_INEBRIATE                           = 304,
     SPELL_AURA_MOD_MINIMUM_SPEED                            = 305,
     SPELL_AURA_MOD_DAMAGE_TO_CASTER                         = 306,
-    SPELL_AURA_HEAL_ABSORB_TEST                             = 307,
+    SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT                 = 307,
     SPELL_AURA_MOD_CRIT_CHANCE_FOR_CASTER                   = 308,
     SPELL_AURA_IMMUNE_TO_SILENCE                            = 309,
     SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE            = 310,

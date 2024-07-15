@@ -5220,12 +5220,30 @@ void Unit::UpdateResistanceBuffModsMod(SpellSchools school)
         return false;
     });
 
+    auto healthPct = GetTotalAuraModifier(SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT, [school, this](AuraEffect const* aurEff) -> bool
+    {
+        TC_LOG_INFO("server.worldserver", "Health pct from max hp mod to res {}: {} applied on {} for total {}", (1 << school), aurEff->GetAmount(), this->GetMaxHealth(), CalculatePct(this->GetMaxHealth(), aurEff->GetAmount()));
+        if (aurEff->GetMiscValue() == 2 && (aurEff->GetMiscValueB() & (1 << school)) && aurEff->GetAmount() > 0)
+            return true;
+        return false;
+    });
+
+    modPos += CalculatePct(GetMaxHealth(), healthPct);
+
     modNeg = GetTotalAuraModifier(SPELL_AURA_MOD_RESISTANCE, [school](AuraEffect const* aurEff) -> bool
     {
         if ((aurEff->GetMiscValue() & (1 << school)) && aurEff->GetAmount() < 0)
             return true;
         return false;
     });
+
+    healthPct = GetTotalAuraModifier(SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT, [school](AuraEffect const* aurEff) -> bool
+    {
+        if (aurEff->GetMiscValue() == 2 && (aurEff->GetMiscValueB() & (1 << school)) && aurEff->GetAmount() < 0)
+            return true;
+        return false;
+    });
+    modNeg += -1 * CalculatePct(GetMaxHealth(), -1*healthPct);
 
     float factor = GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_RESISTANCE_PCT, 1 << school);
     modPos *= factor;
@@ -5274,12 +5292,28 @@ void Unit::UpdateStatBuffMod(Stats stat)
         return false;
     });
 
+    auto healthPct = GetTotalAuraModifier(SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT, [stat](AuraEffect const* aurEff) -> bool
+    {
+        if (aurEff->GetMiscValue() == 3 && (aurEff->GetMiscValueB() & 1 << stat) && aurEff->GetAmount() > 0)
+            return true;
+        return false;
+    });
+    modPos += CalculatePct(GetMaxHealth(), healthPct);
+
     modNeg += GetTotalAuraModifier(SPELL_AURA_MOD_STAT, [stat](AuraEffect const* aurEff) -> bool
     {
         if ((aurEff->GetMiscValue() < 0 || aurEff->GetMiscValue() == stat) && aurEff->GetAmount() < 0)
             return true;
         return false;
     });
+
+    healthPct = GetTotalAuraModifier(SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT, [stat](AuraEffect const* aurEff) -> bool
+    {
+        if (aurEff->GetMiscValue() == 3 && (aurEff->GetMiscValueB() & 1 << stat) && aurEff->GetAmount() < 0)
+            return true;
+        return false;
+    });
+    modNeg += -1 * CalculatePct(GetMaxHealth(), -1*healthPct);
 
     factor = GetTotalAuraMultiplier(SPELL_AURA_MOD_PERCENT_STAT, [stat](AuraEffect const* aurEff) -> bool
     {

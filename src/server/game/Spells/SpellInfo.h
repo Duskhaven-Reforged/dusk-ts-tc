@@ -93,7 +93,8 @@ enum SpellTargetCheckTypes : uint8
     TARGET_CHECK_RAID,
     TARGET_CHECK_RAID_CLASS,
     TARGET_CHECK_PASSENGER,
-    TARGET_CHECK_SUMMON
+    TARGET_CHECK_SUMMON,
+    TARGET_CHECK_CASTER,
 };
 
 enum SpellTargetDirectionTypes

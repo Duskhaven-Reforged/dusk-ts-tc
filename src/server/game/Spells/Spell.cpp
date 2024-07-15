@@ -1030,6 +1030,7 @@ void Spell::SelectImplicitNearbyTargets(SpellEffectInfo const& spellEffectInfo, 
             range = m_spellInfo->GetMaxRange(false, m_caster, this);
             break;
         case TARGET_CHECK_ALLY:
+        case TARGET_CHECK_CASTER:
         case TARGET_CHECK_PARTY:
         case TARGET_CHECK_RAID:
         case TARGET_CHECK_RAID_CLASS:
@@ -1459,6 +1460,7 @@ void Spell::SelectImplicitDestDestTargets(SpellEffectInfo const& spellEffectInfo
     {
         case TARGET_DEST_DYNOBJ_ENEMY:
         case TARGET_DEST_DYNOBJ_ALLY:
+        case TARGET_DEST_DYNOBJ_CASTER:
         case TARGET_DEST_DYNOBJ_NONE:
         case TARGET_DEST_DEST:
             return;
@@ -4993,41 +4995,41 @@ void Spell::TakeRunePower(bool didHit)
     // - Death rune, originally a Frost rune
     // - Death rune, any kind
     runeCost[RUNE_DEATH] = 0;                               // calculated later
-    for (uint32 i = 0; i < MAX_RUNES; ++i)
-    {
-        RuneType rune = player->GetCurrentRune(i);
-        if (!player->GetRuneCooldown(i) && runeCost[rune] > 0)
-        {
-            player->SetRuneCooldown(i, didHit ? player->GetRuneBaseCooldown(i) : uint32(RUNE_MISS_COOLDOWN), true);
-            player->SetLastUsedRune(rune);
-            runeCost[rune]--;
-        }
-    }
+    // for (uint32 i = 0; i < MAX_RUNES; ++i)
+    // {
+    //     RuneType rune = player->GetCurrentRune(i);
+    //     if (!player->GetRuneCooldown(i) && runeCost[rune] > 0)
+    //     {
+    //         player->SetRuneCooldown(i, didHit ? player->GetRuneBaseCooldown(i) : uint32(RUNE_MISS_COOLDOWN), true);
+    //         player->SetLastUsedRune(rune);
+    //         runeCost[rune]--;
+    //     }
+    // }
 
     // Find a Death rune where the base rune matches the one we need
     runeCost[RUNE_DEATH] = runeCost[RUNE_BLOOD] + runeCost[RUNE_UNHOLY] + runeCost[RUNE_FROST];
-    if (runeCost[RUNE_DEATH] > 0)
-    {
-        for (uint32 i = 0; i < MAX_RUNES; ++i)
-        {
-            RuneType rune = player->GetCurrentRune(i);
-            RuneType baseRune = player->GetBaseRune(i);
-            if (!player->GetRuneCooldown(i) && rune == RUNE_DEATH && runeCost[baseRune] > 0)
-            {
-                player->SetRuneCooldown(i, didHit ? player->GetRuneBaseCooldown(i) : uint32(RUNE_MISS_COOLDOWN), true);
-                player->SetLastUsedRune(rune);
-                runeCost[baseRune]--;
-                runeCost[rune]--;
+    // if (runeCost[RUNE_DEATH] > 0)
+    // {
+    //     for (uint32 i = 0; i < MAX_RUNES; ++i)
+    //     {
+    //         RuneType rune = player->GetCurrentRune(i);
+    //         RuneType baseRune = player->GetBaseRune(i);
+    //         if (!player->GetRuneCooldown(i) && rune == RUNE_DEATH && runeCost[baseRune] > 0)
+    //         {
+    //             player->SetRuneCooldown(i, didHit ? player->GetRuneBaseCooldown(i) : uint32(RUNE_MISS_COOLDOWN), true);
+    //             player->SetLastUsedRune(rune);
+    //             runeCost[baseRune]--;
+    //             runeCost[rune]--;
 
-                // keep Death Rune type if missed
-                if (didHit)
-                    player->RestoreBaseRune(i);
+    //             // keep Death Rune type if missed
+    //             if (didHit)
+    //                 player->RestoreBaseRune(i);
 
-                if (runeCost[RUNE_DEATH] == 0)
-                    break;
-            }
-        }
-    }
+    //             if (runeCost[RUNE_DEATH] == 0)
+    //                 break;
+    //         }
+    //     }
+    // }
 
     // Grab any Death rune
     if (runeCost[RUNE_DEATH] > 0)
@@ -8319,7 +8321,6 @@ void Spell::PrepareTriggersExecutedOnHit()
             // proc chance is stored in effect amount
             int32 chance = unitCaster->CalculateSpellDamage(aurEff->GetSpellEffectInfo(), &auraBaseAmount);
             chance *= aurEff->GetBase()->GetStackAmount();
-
             // build trigger and add to the list
             m_hitTriggerSpells.emplace_back(spellInfo, auraSpellInfo, chance);
         }
@@ -8480,6 +8481,10 @@ bool WorldObjectSpellTargetCheck::operator()(WorldObject* target) const
                     return false;
                 // TODO: restore IsValidAttackTarget for corpses using corpse owner (faction, etc)
                 if (!target->IsCorpse() && !_caster->IsValidAssistTarget(unitTarget, _spellInfo))
+                    return false;
+                break;
+            case TARGET_CHECK_CASTER:
+                if (target->GetGUID() != _caster->GetGUID())
                     return false;
                 break;
             case TARGET_CHECK_PARTY:

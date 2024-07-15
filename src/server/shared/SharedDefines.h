@@ -1631,7 +1631,7 @@ enum Targets
     TARGET_UNIT_CONE_ALLY              = 59,
     TARGET_UNIT_CONE_ENTRY             = 60,
     TARGET_UNIT_TARGET_AREA_RAID_CLASS = 61,
-    TARGET_UNK_62                      = 62,
+    TARGET_DEST_DYNOBJ_CASTER          = 62,
     TARGET_DEST_TARGET_ANY             = 63,
     TARGET_DEST_TARGET_FRONT           = 64,
     TARGET_DEST_TARGET_BACK            = 65,

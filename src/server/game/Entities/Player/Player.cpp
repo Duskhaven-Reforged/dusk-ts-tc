@@ -1331,12 +1331,13 @@ void Player::Update(uint32 p_time)
     if (HasRunes())
     {
     //@tswow-end
+        auto runesOnCD = 0;
         // Update rune timers
         for (uint8 i = 0; i < MAX_RUNES; ++i)
         {
             uint32 timer = GetRuneTimer(i);
 
-            // Don't update timer if rune is disabled
+            //Don't update timer if rune is disabled
             if (GetRuneCooldown(i))
                 continue;
 
@@ -5684,7 +5685,7 @@ void Player::UpdateRating(CombatRating cr)
 
     // @dh-begin:
     // hater: prob add the ts equiv here
-    /*
+
     // Apply bonus from SPELL_AURA_MOD_RATING_PCT
     AuraEffectList const& modRatingPct = GetAuraEffectsByType(SPELL_AURA_MOD_RATING_PCT);
     for (AuraEffectList::const_iterator i = modRatingPct.begin(); i != modRatingPct.end(); ++i)
@@ -5692,7 +5693,7 @@ void Player::UpdateRating(CombatRating cr)
         {
             uint8 level = GetLevel();
             GtCombatRatingsEntry const* combatRating = sGtCombatRatingsStore.LookupEntry(cr * GT_MAX_LEVEL + level - 1);
-            float mult = combatRating->ratio;
+            float mult = combatRating->Data;
             amount += round((*i)->GetAmount() * mult);
         }
 
@@ -5708,8 +5709,18 @@ void Player::UpdateRating(CombatRating cr)
     AuraEffectList const& modRatingFromAllSourcesPct = GetAuraEffectsByType(SPELL_AURA_MOD_RATING_FROM_ALL_SOURCES_BY_PCT);
     for (AuraEffectList::const_iterator i = modRatingFromAllSourcesPct.begin(); i != modRatingFromAllSourcesPct.end(); ++i)
         if ((*i)->GetMiscValue() & (1 << cr))
-            amount = int32(CalculatePct(GetRatingBonusValue(cr), (*i)->GetAmount()));
-    */
+            amount += int32(CalculatePct(GetRatingBonusValue(cr), (*i)->GetAmount()));
+
+    amount = GetTotalAuraModifier(SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT, [cr](AuraEffect const* aurEff) -> bool
+        {
+            if (aurEff->GetMiscValue() == 1 && aurEff->GetMiscValueB() & (1 << cr))
+                return true;
+            return false;
+        });
+
+    for (AuraEffectList::const_iterator i = modRatingFromAllSourcesPct.begin(); i != modRatingFromAllSourcesPct.end(); ++i)
+        if ((*i)->GetMiscValue() & (1 << cr))
+            amount += int32(CalculatePct(GetMaxHealth(), (*i)->GetAmount()));
     // @dh-end
 
     if (amount < 0)

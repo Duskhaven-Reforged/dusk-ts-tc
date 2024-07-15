@@ -340,6 +340,7 @@ class TC_GAME_API AuraEffect
         void HandlePeriodicCooldownRecoveryTick(AuraApplication* aurApp, Unit* caster) const;
 
         void HandleCombatMount(AuraApplication const* aurApp, uint8 mode, bool) const;
+        void HandleModStatFromMaxHealthPct(AuraApplication const* aurApp, uint8 mode, bool apply) const;
 
         uint32 GetTriggerSpell() const;
 

@@ -371,7 +371,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleAuraModFakeInebriation,                    //304 SPELL_AURA_MOD_DRUNK
     &AuraEffect::HandleAuraModIncreaseSpeed,                      //305 SPELL_AURA_MOD_MINIMUM_SPEED
     &AuraEffect::HandleNoImmediateEffect,                         //306 SPELL_AURA_MOD_DAMAGE_TO_CASTER
-    &AuraEffect::HandleUnused,                                    //307 0
+    &AuraEffect::HandleModStatFromMaxHealthPct,                   //307 SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT
     &AuraEffect::HandleNoImmediateEffect,                         //308 SPELL_AURA_MOD_CRIT_CHANCE_FOR_CASTER implemented in Unit::GetUnitCriticalChance and Unit::GetUnitSpellCriticalChance
     &AuraEffect::HandleNoImmediateEffect,                         //309 SPELL_AURA_IMMUNE_TO_SILENCE
     &AuraEffect::HandleNoImmediateEffect,                         //310 SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE implemented in Spell::CalculateDamageDone
@@ -6362,6 +6362,55 @@ void AuraEffect::HandleCombatMount(AuraApplication const* aurApp, uint8 mode, bo
         target->SetMountDisplayId(mount);
     else
         target->SetMountDisplayId(0);
+}
+
+void AuraEffect::HandleModStatFromMaxHealthPct(AuraApplication const* aurApp, uint8 mode, bool apply) const
+{
+    if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
+        return;
+
+    Unit* target = aurApp->GetTarget();
+    if (!target->IsPlayer())
+        return;
+
+    auto Mode = GetMiscValue();
+    auto value = CalculatePct(target->GetMaxHealth(), GetAmount());
+    
+    switch (Mode) {
+    case 1:{ // Rating
+        for (uint32 rating = 0; rating < MAX_COMBAT_RATING; ++rating)
+        if (GetMiscValue() & (1 << rating))
+            target->ToPlayer()->ApplyRatingMod(CombatRating(rating), 0, apply);
+        } break;
+    case 2: { // Resistance
+        for (uint8 x = SPELL_SCHOOL_NORMAL; x < MAX_SPELL_SCHOOL; ++x)
+            {
+                if (GetMiscValueB() & (1 << x))
+                {
+                    
+                    target->HandleStatFlatModifier(UnitMods(UNIT_MOD_RESISTANCE_START + x), BASE_VALUE, value, apply);
+                    target->UpdateResistanceBuffModsMod(SpellSchools(x));
+                }
+            }
+        } break;
+    case 3: { // Attribute
+        for (int32 i = STAT_STRENGTH; i < MAX_STATS; ++i)
+        {
+            // -1 or -2 is all stats (misc < -2 checked in function beginning)
+            if (GetMiscValueB() & (1 << i))
+            {   
+                target->HandleStatFlatModifier(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_VALUE, float(value), !apply);
+                target->UpdateStatBuffMod(Stats(i));
+            }
+        }
+        } break;
+    case 4: { // Power
+        Unit* target = aurApp->GetTarget();
+        UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + GetMiscValueB());
+        auto bonus = CalculatePct(target->GetMaxHealth(), GetAmount());
+        target->HandleStatFlatModifier(unitMod, TOTAL_VALUE, float(bonus), apply);
+        } break;
+    }
 }
 // @dh-end
 

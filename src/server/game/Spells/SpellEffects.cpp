@@ -3526,10 +3526,9 @@ void Spell::EffectInterruptCast()
                             PROC_SPELL_TYPE_MASK_ALL, PROC_SPELL_PHASE_HIT, PROC_HIT_INTERRUPT, nullptr, nullptr, nullptr);
                 }
                 ExecuteLogEffectInterruptCast(effectInfo->EffectIndex, unitTarget, curSpellInfo->Id);
-                Spell* currentSpell = unitTarget->GetCurrentSpell(CurrentSpellTypes(i));
                 unitTarget->InterruptSpell(CurrentSpellTypes(i), false);
                 if (m_caster->IsPlayer())
-                    FIRE(Player, OnSuccessfulInterrupt, TSPlayer(const_cast<Player*>(m_caster->ToPlayer())), TSUnit(const_cast<Unit*>(unitTarget)), TSSpell(const_cast<Spell*>(currentSpell)));
+                    FIRE(Player, OnSuccessfulInterrupt, TSPlayer(const_cast<Player*>(m_caster->ToPlayer())), TSUnit(const_cast<Unit*>(unitTarget)), TSSpell(const_cast<Spell*>(spell)));
             }
         }
     }
