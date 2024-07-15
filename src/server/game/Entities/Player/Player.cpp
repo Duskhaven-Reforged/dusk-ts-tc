@@ -1327,16 +1327,6 @@ void Player::Update(uint32 p_time)
     UpdateEnchantTime(p_time);
     UpdateHomebindTime(p_time);
 
-    if (!_instanceResetTimes.empty())
-    {
-        for (InstanceTimeMap::iterator itr = _instanceResetTimes.begin(); itr != _instanceResetTimes.end();)
-        {
-            if (itr->second < now)
-                _instanceResetTimes.erase(itr++);
-            else
-                ++itr;
-        }
-    }
     //@tswow-begin
     if (HasRunes())
     {
@@ -3975,14 +3965,6 @@ uint32 Player::ResetTalentsCost() const
 
 void Player::IncreaseResetTalentsCostAndCounters(uint32 lastResetTalentsCost)
 {
-    // @tswow-begin
-    FIRE(
-          Player,OnTalentsResetEarly
-        , TSPlayer(this)
-        , TSMutable<bool,bool>(&no_cost)
-    );
-    // @tswow-end
-    sScriptMgr->OnPlayerTalentsReset(this, no_cost);
     if (lastResetTalentsCost > 0) // We don't want to reset the accumulated talent reset cost if we decide to temporarily enable CONFIG_NO_RESET_TALENT_COST
         m_resetTalentsCost = lastResetTalentsCost;
 
@@ -3994,6 +3976,13 @@ void Player::IncreaseResetTalentsCostAndCounters(uint32 lastResetTalentsCost)
 
 bool Player::ResetTalents(bool involuntarily /*= false*/)
 {
+    // @tswow-begin
+    FIRE(
+        Player, OnTalentsResetEarly
+        , TSPlayer(this)
+        , TSMutable<bool, bool>(&involuntarily)
+    );
+    // @tswow-end
     sScriptMgr->OnPlayerTalentsReset(this, involuntarily);
 
     // not need after this call
@@ -4072,7 +4061,7 @@ bool Player::ResetTalents(bool involuntarily /*= false*/)
     FIRE(
           Player,OnTalentsResetLate
         , TSPlayer(this)
-        , no_cost
+        , involuntarily
     );
     // @tswow-end
 
@@ -6087,7 +6076,7 @@ void Player::UpdateWeaponSkill(Unit* victim, WeaponAttackType attType)
 void Player::UpdateCombatSkills(Unit* victim, WeaponAttackType attType, bool defense)
 {
     int32 plevel = GetLevel();                              // if defense than victim == attacker
-    int32 greylevel = Trinity::XP::GetGrayLevel(plevel);
+    int32 greylevel = Trinity::XP::GetGrayLevel(this,plevel);
     int32 moblevel = victim->GetLevelForTarget(this);
 
     if (moblevel > plevel + 5)
@@ -10134,6 +10123,14 @@ Item* Player::GetItemByPos(uint8 bag, uint8 slot) const
     if (Bag* pBag = GetBagByPos(bag))
         return pBag->GetItemByPos(slot);
     return nullptr;
+}
+
+// hater: add check for weapon
+bool Player::IsUnarmed() const {
+    if (auto item = GetItemByPos(NULL_BAG, EQUIPMENT_SLOT_MAINHAND))
+        return false;
+
+    return true;
 }
 
 //Does additional check for disarmed weapons
@@ -20089,7 +20086,6 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create /* = false
     _SaveEquipmentSets(trans);
     GetSession()->SaveTutorialsData(trans);                 // changed only while character in game
     _SaveGlyphs(trans);
-    _SaveInstanceTimeRestrictions(trans);
     // @tswow-begin TODO: fix transaction
     m_db_json.Save();
     // @tswow-end
