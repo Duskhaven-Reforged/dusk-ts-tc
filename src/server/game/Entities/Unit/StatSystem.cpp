@@ -1236,15 +1236,6 @@ void Player::UpdatePowerRegen(Powers power)
     int32 modManaRegenInterrupt = GetTotalAuraModifier(SPELL_AURA_MOD_MANA_REGEN_INTERRUPT);
     if (modManaRegenInterrupt > 100)
         modManaRegenInterrupt = 100;
-    // @tswow-begin
-    FIRE(Player,OnUpdateManaRegen
-        , TSPlayer(this)
-        , TSMutableNumber<float>(&power_regen)
-        , TSMutableNumber<float>(&power_regen_mp5)
-        , TSMutableNumber<int32>(&modManaRegenInterrupt)
-    );
-    // @tswow-end
-    SetStatFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER, power_regen_mp5 + CalculatePct(power_regen, modManaRegenInterrupt));
     /// @todo possible use of miscvalueb instead of amount
     if (HasAuraTypeWithValue(SPELL_AURA_PREVENT_REGENERATE_POWER, power))
     {
@@ -1281,6 +1272,15 @@ void Player::UpdatePowerRegen(Powers power)
 
             if (GetLevel() < 15)
                 modifier *= 2.066f - (GetLevel() * 0.066f);
+
+            // @tswow-begin
+            FIRE(Player, OnUpdateManaRegen
+                , TSPlayer(this)
+                , TSMutableNumber<float>(&power_regen)
+                , TSMutableNumber<float>(&power_regen_mp5)
+                , TSMutableNumber<int32>(&modManaRegenInterrupt)
+            );
+            // @tswow-end
             break;
         }
         case POWER_RAGE:
