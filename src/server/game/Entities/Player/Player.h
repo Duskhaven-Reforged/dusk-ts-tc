@@ -184,8 +184,6 @@ typedef std::unordered_map<uint32, PlayerTalent*> PlayerTalentMap;
 typedef std::unordered_map<uint32, PlayerSpell> PlayerSpellMap;
 typedef std::unordered_set<SpellModifier*> SpellModContainer;
 
-typedef std::unordered_map<uint32 /*instanceId*/, time_t/*releaseTime*/> InstanceTimeMap;
-
 enum ActionButtonUpdateState
 {
     ACTIONBUTTON_UNCHANGED = 0,
@@ -780,7 +778,6 @@ enum PlayerDelayedOperations
     DELAYED_SPELL_CAST_DESERTER = 0x04,
     DELAYED_BG_MOUNT_RESTORE    = 0x08,                     ///< Flag to restore mount state after teleport from BG
     DELAYED_BG_TAXI_RESTORE     = 0x10,                     ///< Flag to restore taxi state after teleport from BG
-    DELAYED_BG_GROUP_RESTORE    = 0x20,                     ///< Flag to restore group state after teleport from BG
     DELAYED_END
 };
 
@@ -1222,7 +1219,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         Player* GetTrader() const;
         TradeData* GetTradeData() const { return m_trade; }
-        void TradeCancel(bool sendback);
+        void TradeCancel(bool sendback, TradeStatus status = TRADE_STATUS_TRADE_CANCELED);
 
         CinematicMgr* GetCinematicMgr() const { return _cinematicMgr; }
 
@@ -1415,7 +1412,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         bool m_mailsUpdated;
 
         void SetBindPoint(ObjectGuid guid) const;
-        void SendTalentWipeConfirm(ObjectGuid guid) const;
+        void SendTalentWipeConfirm(ObjectGuid trainerGuid) const;
         void ResetPetTalents();
         void RegenerateAll();
         void Regenerate(Powers power);
@@ -1503,8 +1500,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         std::string const& GetGuildName() const;
         uint32 GetFreeTalentPoints() const { return GetUInt32Value(PLAYER_CHARACTER_POINTS1); }
         void SetFreeTalentPoints(uint32 points);
-        bool ResetTalents(bool no_cost = false);
+        bool ResetTalents(bool involuntarily = false);
         uint32 ResetTalentsCost() const;
+        void IncreaseResetTalentsCostAndCounters(uint32 lastResetTalentsCost);
         void InitTalentForLevel();
         void BuildPlayerTalentsInfoData(WorldPacket* data);
         void BuildPetTalentsInfoData(WorldPacket* data);
@@ -1772,8 +1770,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void UpdateExpertise(WeaponAttackType attType);
         void ApplyManaRegenBonus(int32 amount, bool apply);
         void ApplyHealthRegenBonus(int32 amount, bool apply);
-        void UpdateManaRegen();
+        void UpdatePowerRegen(Powers power);
         void UpdateRuneRegen(RuneType rune);
+        float GetPowerRegen(Powers power) const;
         uint32 GetRuneTimer(uint8 index) const { return m_runeGraceCooldown[index]; }
         void SetRuneTimer(uint8 index, uint32 timer) { m_runeGraceCooldown[index] = timer; }
         uint32 GetLastRuneGraceTimer(uint8 index) const { return m_lastRuneGraceTimers[index]; }
@@ -1939,6 +1938,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         void SetDrunkValue(uint8 newDrunkValue, uint32 itemId = 0);
         uint8 GetDrunkValue() const { return GetByteValue(PLAYER_BYTES_3, PLAYER_BYTES_3_OFFSET_INEBRIATION); }
+        int32 GetFakeDrunkValue() const { return GetInt32Value(PLAYER_FAKE_INEBRIATION); }
+        void UpdateInvisibilityDrunkDetect();
         static DrunkenState GetDrunkenstateByValue(uint8 value);
 
         uint32 GetDeathTimer() const { return m_deathTimer; }
@@ -2061,7 +2062,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetBGTeam(uint32 team);
         uint32 GetBGTeam() const;
 
-        void LeaveBattleground(bool teleportToEntryPoint = true);
+        void LeaveBattleground(bool teleportToEntryPoint = true, bool withoutDeserterDebuff = false);
         bool CanJoinToBattleground(Battleground const* bg) const;
         bool CanReportAfkDueToLimit();
         void ReportedAfkBy(Player* reporter);
@@ -2214,8 +2215,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SendSavedInstances();
         bool Satisfy(AccessRequirement const* ar, uint32 target_map, bool report = false);
         bool CheckInstanceValidity(bool /*isLogin*/);
-        bool CheckInstanceCount(uint32 instanceId) const;
-        void AddInstanceEnterTime(uint32 instanceId, time_t enterTime);
 
         // last used pet number (for BG's)
         uint32 GetLastPetNumber() const { return m_lastpetnumber; }
@@ -2414,7 +2413,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void _LoadBGData(PreparedQueryResult result);
         void _LoadGlyphs(PreparedQueryResult result);
         void _LoadTalents(PreparedQueryResult result);
-        void _LoadInstanceTimeRestrictions(PreparedQueryResult result);
         void _LoadPetStable(uint8 petStableSlots, PreparedQueryResult result);
 
         /*********************************************************/
@@ -2437,7 +2435,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void _SaveGlyphs(CharacterDatabaseTransaction trans) const;
         void _SaveTalents(CharacterDatabaseTransaction trans);
         void _SaveStats(CharacterDatabaseTransaction trans) const;
-        void _SaveInstanceTimeRestrictions(CharacterDatabaseTransaction trans);
 
         /*********************************************************/
         /***              ENVIRONMENTAL SYSTEM                 ***/
@@ -2661,7 +2658,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         uint32 m_ChampioningFaction;
 
-        InstanceTimeMap _instanceResetTimes;
         uint32 _pendingBindId;
         uint32 _pendingBindTimer;
 
