@@ -301,7 +301,9 @@ void Player::UpdateSpellDamageAndHealingBonus()
     // Magic damage modifiers implemented in Unit::SpellDamageBonusDone
     // This information for client side use only
     // Get healing bonus for all schools
-    SetStatInt32Value(PLAYER_FIELD_MOD_HEALING_DONE_POS, SpellBaseHealingBonusDone(SPELL_SCHOOL_MASK_ALL));
+    auto SpellHealingAll = SpellBaseHealingBonusDone(SPELL_SCHOOL_MASK_ALL);
+    SetStatInt32Value(PLAYER_FIELD_MOD_HEALING_DONE_POS, SpellHealingAll);
+    FIRE(Player,OnUpdateSpellHealing, TSPlayer(this), TSMutableNumber<int32>(&SpellHealingAll));
     // Get damage bonus for all schools
     Unit::AuraEffectList const& modDamageAuras = GetAuraEffectsByType(SPELL_AURA_MOD_DAMAGE_DONE);
     for (uint16 i = SPELL_SCHOOL_HOLY; i < MAX_SPELL_SCHOOL; ++i)
@@ -312,7 +314,9 @@ void Player::UpdateSpellDamageAndHealingBonus()
                 negativeMod += aurEff->GetAmount();
             return negativeMod;
         }));
-        SetStatInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_POS + i, SpellBaseDamageBonusDone(SpellSchoolMask(1 << i)) - GetInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_NEG + i));
+        auto SpellDamageSchool = SpellBaseDamageBonusDone(SpellSchoolMask(1 << i)) - GetInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_NEG + i);
+        FIRE(Player,OnUpdateSpellDamage, TSPlayer(this), TSMutableNumber<int32>(&SpellDamageSchool), SpellSchoolMask(1 << i));
+        SetStatInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_POS + i, SpellDamageSchool);
     }
 }
 

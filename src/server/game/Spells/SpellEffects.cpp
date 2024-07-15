@@ -3363,10 +3363,6 @@ void Spell::EffectWeaponDmg()
         }
     }
 
-    if (unitCaster->IsPlayer()) {
-        FIRE(Player, OnCustomScriptedDamageMod, TSPlayer(const_cast<Player*>(unitCaster->ToPlayer())), TSUnit(const_cast<Unit*>(unitTarget)), TSSpellInfo(m_spellInfo), TSNumber<uint8>(SPELL_DIRECT_DAMAGE), TSMutableNumber<float>(&totalDamagePercentMod), TSNumber<uint8>(2));
-    }
-
     bool normalized = false;
     float weaponDamagePercentMod = 1.0f;
     for (SpellEffectInfo const& spellEffectInfo : m_spellInfo->GetEffects())

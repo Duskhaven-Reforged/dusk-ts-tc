@@ -374,7 +374,7 @@ Unit::Unit(bool isWorldObject) :
     m_modMeleeHitChance = 0.0f;
     m_modRangedHitChance = 0.0f;
     m_modSpellHitChance = 0.0f;
-    m_baseSpellCritChance = 5.0f;
+    m_baseSpellCritChance = 5;
 
     m_lastManaUse = 0;
     m_lastPowerCost = 0;
@@ -3314,11 +3314,6 @@ bool Unit::IsMovementPreventedByCasting() const
     if (!HasUnitState(UNIT_STATE_CASTING))
         return false;
 
-    if (Spell* spell = m_currentSpells[CURRENT_GENERIC_SPELL])
-        if (spell->getState() == SPELL_STATE_FINISHED ||
-            !(spell->m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT))
-            return false;
-
     // channeled spells during channel stage (after the initial cast timer) allow movement with a specific spell attribute
     if (Spell* spell = m_currentSpells[CURRENT_CHANNELED_SPELL])
         if (spell->getState() != SPELL_STATE_FINISHED && spell->IsChannelActive())
@@ -4471,8 +4466,8 @@ void Unit::RemoveAllAuras()
             {
                 sstr << "m_ownedAuras:" << "\n";
 
-                for (auto const& [spellId, aura] : m_ownedAuras)
-                    sstr << aura->GetDebugInfo() << "\n";
+                for (std::pair<uint32 const, Aura*>& auraPair : m_ownedAuras)
+                    sstr << auraPair.second->GetDebugInfo() << "\n";
             }
 
             TC_LOG_ERROR("entities.unit", "{}", sstr.str());
@@ -7251,10 +7246,6 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
             // Drain Soul - If the target is at or below 25% health, Drain Soul causes four times the normal damage
             if (spellProto->SpellFamilyFlags[0] & 0x00004000 && !victim->HealthAbovePct(25))
                 DoneTotalMod *= 4;
-
-            // Don't let Conflagrate double dip from damage done bonuses (from Immolate/Shadowflame and then for itself)
-            if (spellProto->SpellFamilyFlags[1] & 0x800000)
-                DoneTotalMod = 1.0f;
             break;
         case SPELLFAMILY_HUNTER:
             // Steady Shot
@@ -7278,7 +7269,7 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
     }
 
     if (IsPlayer())
-        FIRE(Player, OnCustomScriptedDamageMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&DoneTotalMod), TSNumber<uint8>(1));
+        FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&DoneTotalMod), TSNumber<uint8>(1));
 
     // damage bonus against caster
     AuraEffectList const& mDamageDoneVersusCaster = GetAuraEffectsByType(SPELL_AURA_MOD_SCHOOL_MASK_DAMAGE_VS_CASTER);
@@ -7352,6 +7343,9 @@ uint32 Unit::SpellDamageBonusTaken(Unit* caster, SpellInfo const* spellProto, ui
                 });
         }
     }
+
+    if (IsPlayer())
+        FIRE(Player, OnCustomScriptedDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(caster)), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&TakenTotalMod), TSNumber<uint8>(1));
 
     // Sanctified Wrath (bypass damage reduction)
     if (caster && TakenTotalMod < 1.0f)
@@ -7433,27 +7427,18 @@ float Unit::SpellCritChanceDone(SpellInfo const* spellInfo, SpellSchoolMask scho
     float crit_chance = 0.0f;
     switch (spellInfo->DmgClass)
     {
-        case SPELL_DAMAGE_CLASS_NONE:
         case SPELL_DAMAGE_CLASS_MAGIC:
         {
-            auto getPhysicalCritChance = [&]
-            {
-                return GetUnitCriticalChanceDone(attackType) + GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL, schoolMask);
-            };
-
-            auto getMagicCritChance = [&]
-            {
-                if (IsPlayer())
-                    return GetFloatValue(PLAYER_SPELL_CRIT_PERCENTAGE1 + AsUnderlyingType(GetFirstSchoolInMask(schoolMask)));
-
-                return m_baseSpellCritChance + GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL, schoolMask);
-            };
-
             if (schoolMask & SPELL_SCHOOL_MASK_NORMAL)
-                crit_chance = std::max(crit_chance, getPhysicalCritChance());
-
-            if (schoolMask & ~SPELL_SCHOOL_MASK_NORMAL)
-                crit_chance = std::max(crit_chance, getMagicCritChance());
+                crit_chance = 0.0f;
+            // For other schools
+            else if (GetTypeId() == TYPEID_PLAYER)
+                crit_chance = GetFloatValue(PLAYER_SPELL_CRIT_PERCENTAGE1 + AsUnderlyingType(GetFirstSchoolInMask(schoolMask)));
+            else
+            {
+                crit_chance = (float)m_baseSpellCritChance;
+                crit_chance += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL, schoolMask);
+            }
             break;
         }
         case SPELL_DAMAGE_CLASS_MELEE:
@@ -7463,6 +7448,7 @@ float Unit::SpellCritChanceDone(SpellInfo const* spellInfo, SpellSchoolMask scho
             crit_chance += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL, schoolMask);
             break;
         }
+        case SPELL_DAMAGE_CLASS_NONE:
         default:
             return 0.0f;
     }
@@ -8508,6 +8494,9 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
                             AddPct(DoneTotalMod, aurEff->GetAmount());
                 break;
         }
+
+        if (IsPlayer())
+            FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(0), TSMutableNumber<float>(&DoneTotalMod), TSNumber<uint8>(1));
     }
 
     float tmpDamage = float(int32(pdamage) + DoneFlatBenefit) * DoneTotalMod;
@@ -8574,6 +8563,9 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
                 return false;
             });
         }
+
+        if (IsPlayer())
+            FIRE(Player, OnCustomScriptedDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(attacker)), TSSpellInfo(spellProto), TSNumber<uint8>(0), TSMutableNumber<float>(&TakenTotalMod), TSNumber<uint8>(2));
     }
 
     // .. taken pct: dummy auras
@@ -10421,12 +10413,6 @@ void Unit::CleanupBeforeRemoveFromMap(bool finalCleanup)
 
     if (IsInWorld())
         RemoveFromWorld();
-    else
-    {
-        // cleanup that must happen even if not in world
-        if (IsVehicle())
-            RemoveVehicleKit();
-    }
 
     ASSERT(GetGUID());
 
@@ -13886,11 +13872,11 @@ void Unit::_EnterVehicle(Vehicle* vehicle, int8 seatId, AuraApplication const* a
             return;
         }
 
-        if (Creature* vehicleBaseCreature = vehicle->GetBase()->ToCreature())
+        if (vehicle->GetBase()->GetTypeId() == TYPEID_UNIT)
         {
             // If a player entered a vehicle that is part of a formation, remove it from said formation
-            if (CreatureGroup* creatureGroup = vehicleBaseCreature->GetFormation())
-                sFormationMgr->RemoveCreatureFromGroup(creatureGroup, vehicleBaseCreature);
+            if (CreatureGroup* creatureGroup = vehicle->GetBase()->ToCreature()->GetFormation())
+                creatureGroup->RemoveMember(vehicle->GetBase()->ToCreature());
         }
     }
 
