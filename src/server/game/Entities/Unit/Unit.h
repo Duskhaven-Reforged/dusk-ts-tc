@@ -146,7 +146,7 @@ enum UnitModifierPctType
     MODIFIER_TYPE_PCT_END = 2
 };
 
-enum WeaponDamageRange
+enum WeaponDamageRange : uint8
 {
     MINDAMAGE,
     MAXDAMAGE
@@ -885,6 +885,7 @@ class TC_GAME_API Unit : public WorldObject
         void CombatStopWithPets(bool includingCast = false);
         void StopAttackFaction(uint32 faction_id);
         Unit* SelectNearbyTarget(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE) const;
+        std::list<Unit*> SelectNearbyTargets(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1) const;
         void SendMeleeAttackStop(Unit* victim = nullptr);
         void SendMeleeAttackStart(Unit* victim);
 
@@ -1036,7 +1037,10 @@ class TC_GAME_API Unit : public WorldObject
         AnimTier GetAnimTier() const { return AnimTier(GetByteValue(UNIT_FIELD_BYTES_1, UNIT_BYTES_1_OFFSET_ANIM_TIER)); }
         void SetAnimTier(AnimTier animTier);
 
-        bool IsMounted() const { return HasUnitFlag(UNIT_FLAG_MOUNT); }
+        bool IsMounted() const { 
+            auto combatMounted = !GetAuraEffectsByType(SPELL_AURA_COMBAT_MOUNT_ILLUSION).empty();
+            return HasUnitFlag(UNIT_FLAG_MOUNT) && !combatMounted;
+        }
         uint32 GetMountDisplayId() const { return GetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID); }
         void SetMountDisplayId(uint32 mountDisplayId) { SetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID, mountDisplayId); }
         void Mount(uint32 mount, uint32 vehicleId = 0, uint32 creatureEntry = 0);
@@ -1374,6 +1378,7 @@ class TC_GAME_API Unit : public WorldObject
         // m_appliedAuras container management
         AuraApplicationMap      & GetAppliedAuras()       { return m_appliedAuras; }
         AuraApplicationMap const& GetAppliedAuras() const { return m_appliedAuras; }
+        std::vector<AuraApplication*> GetAppliedAurasById(uint32 spell);
 
         uint8 GetAppliedAuraCountByMechanicType(Mechanics mech);
 
@@ -1690,6 +1695,9 @@ class TC_GAME_API Unit : public WorldObject
         void SetLastManaUse(uint32 spellCastTime) { m_lastManaUse = spellCastTime; }
         bool IsUnderLastManaUseEffect() const;
 
+        void SetLastPowerCost(int32 spellPowerCost) { m_lastPowerCost = spellPowerCost; }
+        int32 GetLastPowerCost() const { return m_lastPowerCost; }
+
         uint32 GetCastingTimeForBonus(SpellInfo const* spellProto, DamageEffectType damagetype, uint32 CastingTime) const;
         float CalculateDefaultCoefficient(SpellInfo const* spellInfo, DamageEffectType damagetype) const;
 
@@ -2000,6 +2008,8 @@ class TC_GAME_API Unit : public WorldObject
         uint32 m_state;                                     // Even derived shouldn't modify
         uint32 m_lastManaUse;                               // msecs
         TimeTracker m_splineSyncTimer;
+
+        int32 m_lastPowerCost;
 
         Diminishing m_Diminishing;
 

@@ -494,6 +494,7 @@ SpellValue::SpellValue(SpellInfo const* proto)
     RadiusMod = 1.0f;
     AuraStackAmount = 1;
     CriticalChance = 0.0f;
+    EffectDuration = 0;
 }
 
 class TC_GAME_API SpellEvent : public BasicEvent
@@ -2957,6 +2958,10 @@ void Spell::DoSpellEffectHit(Unit* unit, SpellEffectInfo const& spellEffectInfo,
                             hitInfo.HitAura->ModStackAmount(m_spellValue->AuraStackAmount);
                     }
 
+                    if (m_spellValue->EffectDuration > 0) {
+                        hitInfo.HitAura->SetDuration(m_spellValue->EffectDuration);
+                    }
+
                     hitInfo.HitAura->SetDiminishGroup(hitInfo.DRGroup);
 
                     hitInfo.AuraDuration = caster->ModSpellDuration(hitInfo.AuraSpellInfo, unit, hitInfo.AuraDuration, hitInfo.Positive, hitInfo.HitAura->GetEffectMask());
@@ -3338,6 +3343,8 @@ void Spell::cancel(SpellCastResult result /*= SPELL_FAILED_INTERRUPTED*/, Option
         if (m_spellInfo->IsChanneled()) // if not channeled then the object for the current cast wasn't summoned yet
             m_originalCaster->RemoveGameObject(m_spellInfo->Id, true);
     }
+    if (auto caster = m_caster->ToUnit())
+        FIRE(Unit, OnCastCancelled, TSUnit(static_cast<Unit*>(m_caster)), GetSpellInfo());
 
     //set state back so finish will be processed
     m_spellState = oldState;
@@ -4913,6 +4920,10 @@ void Spell::TakePower()
     }
 
     unitCaster->ModifyPower(powerType, -m_powerCost);
+    unitCaster->SetLastPowerCost(m_powerCost);
+
+    if (unitCaster->GetTypeId() == TYPEID_PLAYER)
+        FIRE(Player,OnPowerSpent, TSPlayer(unitCaster->ToPlayer()), powerType, m_powerCost);
 
     // Set the five second timer
     if (powerType == POWER_MANA && m_powerCost > 0)
@@ -7571,6 +7582,10 @@ bool Spell::IsAutoActionResetSpell() const
     if (IsTriggered() || !(m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_INTERRUPT))
         return false;
 
+    // Duskhaven: Maelstrom Weapon Proc
+    if (m_caster->ToUnit()->HasAura(1230021))
+        return false;
+
     if (!m_casttime && m_spellInfo->HasAttribute(SPELL_ATTR6_NOT_RESET_SWING_IF_INSTANT))
         return false;
 
@@ -7852,6 +7867,18 @@ void Spell::DoEffectOnLaunchTarget(TargetInfo& targetInfo, float multiplier, Spe
         m_damageMultipliers[spellEffectInfo.EffectIndex] *= multiplier;
     }
 
+    if (targetInfo.MissCondition == SPELL_MISS_REFLECT) {
+        auto Reflector = ObjectAccessor::GetUnit(*m_caster, targetInfo.TargetGUID);
+        float min_dam = float(Reflector->GetMaxNegativeAuraModifier(SPELL_AURA_MOD_REFLECTED_SPELL_DAMAGE_PCT));
+        if (min_dam)
+            AddPct(m_damage, min_dam);
+
+
+        float max_dam = float(Reflector->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_REFLECTED_SPELL_DAMAGE_PCT));
+        if (max_dam)
+            AddPct(m_damage, max_dam);
+    }
+
     targetInfo.Damage += m_damage;
     targetInfo.Healing += m_healing;
 }
@@ -7963,6 +7990,8 @@ void Spell::SetSpellValue(SpellValueMod mod, int32 value)
         case SPELLVALUE_CRIT_CHANCE:
             m_spellValue->CriticalChance = value;
             break;
+        case SPELLVALUE_DURATION:
+            m_spellValue->EffectDuration = (uint32)value;
     }
 }
 

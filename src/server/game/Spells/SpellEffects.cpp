@@ -378,10 +378,10 @@ void Spell::EffectSchoolDMG()
                     break;
 
                 // Shield Slam
-                if ((m_spellInfo->SpellFamilyFlags[1] & 0x200) && m_spellInfo->GetCategory() == 1209)
+                if (m_spellInfo->SpellFamilyFlags[0] & 0x40000000)
                 {
                     uint8 level = unitCaster->GetLevel();
-                    uint32 block_value = unitCaster->GetShieldBlockValue(uint32(float(level) * 24.5f), uint32(float(level) * 34.5f));
+                    uint32 block_value = unitCaster->GetShieldBlockValue();
                     damage += int32(unitCaster->ApplyEffectModifiers(m_spellInfo, effectInfo->EffectIndex, float(block_value)));
                 }
                 // Victory Rush
@@ -678,10 +678,10 @@ void Spell::EffectSchoolDMG()
                     break;
                 }
                 // Shield of Righteousness
-                if (m_spellInfo->SpellFamilyFlags[EFFECT_1] & 0x100000)
+                if (m_spellInfo->SpellFamilyFlags[0] & 64)
                 {
                     uint8 level = unitCaster->GetLevel();
-                    uint32 block_value = unitCaster->GetShieldBlockValue(uint32(float(level) * 29.5f), uint32(float(level) * 39.5f));
+                    uint32 block_value = unitCaster->GetShieldBlockValue();
                     damage += CalculatePct(block_value, m_spellInfo->GetEffect(EFFECT_1).CalcValue());
                     break;
                 }
@@ -846,8 +846,11 @@ void Spell::EffectTriggerSpell()
     CastSpellExtraArgs args(m_originalCasterGUID);
     // set basepoints for trigger with value effect
     if (effectInfo->Effect == SPELL_EFFECT_TRIGGER_SPELL_WITH_VALUE)
-        for (uint32 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+        for (uint32 i = 0; i < MAX_SPELL_EFFECTS; ++i) {
             args.AddSpellMod(SpellValueMod(SPELLVALUE_BASE_POINT0 + i), damage);
+            if (effectInfo->MiscValueB > 0)
+                args.AddSpellMod(SpellValueMod(SPELLVALUE_DURATION), effectInfo->MiscValueB);
+        }
 
     // original caster guid only for GO cast
     m_caster->CastSpell(std::move(targets), spellInfo->Id, args);
@@ -1846,6 +1849,7 @@ void Spell::EffectEnergizePct()
         return;
 
     uint32 maxPower = unitTarget->GetMaxPower(power);
+    TC_LOG_INFO("server.worldserver", "Max Power {} : {}", power, maxPower);
     if (!maxPower)
         return;
 
@@ -2508,6 +2512,9 @@ void Spell::EffectDispel()
             if (owner->GetAura(56249))
                 owner->CastSpell(owner, 19658, args);
     }
+    // Purge with Electrified Purge
+    if (m_spellInfo->Id == 1230022 && m_caster->ToUnit()->HasAura(1230023))
+        m_caster->CastSpell(m_caster, 1230021, true);
 }
 
 void Spell::EffectDualWield()
@@ -3356,6 +3363,10 @@ void Spell::EffectWeaponDmg()
         }
     }
 
+    if (unitCaster->IsPlayer()) {
+        FIRE(Player, OnCustomScriptedDamageMod, TSPlayer(const_cast<Player*>(unitCaster->ToPlayer())), TSUnit(const_cast<Unit*>(unitTarget)), TSSpellInfo(m_spellInfo), TSNumber<uint8>(SPELL_DIRECT_DAMAGE), TSMutableNumber<float>(&totalDamagePercentMod), TSNumber<uint8>(2));
+    }
+
     bool normalized = false;
     float weaponDamagePercentMod = 1.0f;
     for (SpellEffectInfo const& spellEffectInfo : m_spellInfo->GetEffects())
@@ -3485,6 +3496,10 @@ void Spell::EffectInterruptCast()
     if (!unitTarget || !unitTarget->IsAlive())
         return;
 
+    auto interruptImmunities = unitTarget->GetAuraEffectsByType(SPELL_AURA_IMMUNE_TO_INTERRUPT);
+    if (!interruptImmunities.empty())
+        return;
+
     /// @todo not all spells that used this effect apply cooldown at school spells
     // also exist case: apply cooldown to interrupted cast only and to all spells
     // there is no CURRENT_AUTOREPEAT_SPELL spells that can be interrupted
@@ -3513,6 +3528,8 @@ void Spell::EffectInterruptCast()
                 }
                 ExecuteLogEffectInterruptCast(effectInfo->EffectIndex, unitTarget, curSpellInfo->Id);
                 unitTarget->InterruptSpell(CurrentSpellTypes(i), false, false, SPELL_FAILED_INTERRUPTED_COMBAT, SPELL_FAILED_DONT_REPORT);
+                if (m_caster->IsPlayer())
+                    FIRE(Player, OnSuccessfulInterrupt, TSPlayer(const_cast<Player*>(m_caster->ToPlayer())), TSUnit(const_cast<Unit*>(unitTarget)), TSSpell(const_cast<Spell*>(currentSpell)));
             }
         }
     }
@@ -5708,26 +5725,28 @@ void Spell::EffectLearnTransmogSet()
 
 void Spell::EffectJumpCharge()
 {
-    if (effectHandleMode != SPELL_EFFECT_HANDLE_LAUNCH)
-        return;
+    // if (effectHandleMode != SPELL_EFFECT_HANDLE_LAUNCH)
+    //     return;
 
-    if (!m_caster || !m_caster->ToUnit())
-        return;
+    // if (!m_caster || !m_caster->ToUnit())
+    //     return;
 
-    if (m_caster->ToUnit()->HasUnitState(UNIT_STATE_IN_FLIGHT))
-        return;
+    // if (m_caster->ToUnit()->HasUnitState(UNIT_STATE_IN_FLIGHT))
+    //     return;
 
-    JumpChargeParams const* params = sObjectMgr->GetJumpChargeParams(effectInfo->MiscValue);
+    // JumpChargeParams const* params = sObjectMgr->GetJumpChargeParams(effectInfo->MiscValue);
 
-    if (!params)
-        return;
+    // if (!params)
+    //     return;
 
-    float speed = params->Speed;
+    // float speed = params->Speed;
 
-    if (params->TreatSpeedAsMoveTimeSeconds)
-        speed = m_caster->GetExactDist(destTarget) / params->MoveTimeInSec;
+    // if (params->TreatSpeedAsMoveTimeSeconds)
+    //     speed = m_caster->GetExactDist(destTarget) / params->MoveTimeInSec;
 
-    m_caster->ToUnit()->GetMotionMaster()->MoveJumpWithGravity(*destTarget, speed, params->JumpGravity, 0, ObjectAccessor::GetUnit(*m_caster, m_caster->GetGuidValue(UNIT_FIELD_TARGET)));
+    // m_caster->ToUnit()->GetMotionMaster()->MoveJumpWithGravity(*destTarget, speed, params->JumpGravity, 0, ObjectAccessor::GetUnit(*m_caster, m_caster->GetGuidValue(UNIT_FIELD_TARGET)));
+
+    // TODO MOVE THIS TO TSWOW
 
     //if (m_caster->GetTypeId() == TYPEID_PLAYER)
     //{
@@ -5743,13 +5762,18 @@ void Spell::EffectModifyCurrentSpellCooldown()
     if (m_caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    SpellInfo const* spellInfo = GetSpellInfo();
+    auto family = GetSpellInfo()->SpellFamilyName;
     flag96 spellMask = effectInfo->SpellClassMask;
     int32 amount = effectInfo->CalcValue();
     int32 ignoreSpellMask = effectInfo->MiscValue;
     int32 ignoreSpellFamily = effectInfo->MiscValueB;
     Player* player = m_caster->ToPlayer();
-    // rewrite with spellhistory    player->GetSpellHistory()->ModifyCooldown();
+
+    auto mod = effectInfo->CalcValue();
+    player->GetSpellHistory()->ModifyCooldowns([spellMask, family](SpellHistory::CooldownStorageType::iterator itr) -> bool {
+        SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(itr->first);
+        return family == spellInfo->SpellFamilyName && spellMask & spellInfo->SpellFamilyFlags;
+        }, mod);
 
     //for (SpellCooldowns::const_iterator itr = spellCDs.begin(); itr != spellCDs.end(); ++itr)
     //{
@@ -5771,23 +5795,19 @@ void Spell::EffectRemoveCurrentSpellCooldown()
     if (m_caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    SpellInfo const* spellInfo = GetSpellInfo();
+    auto family = GetSpellInfo()->SpellFamilyName;
     flag96 spellMask = effectInfo->SpellClassMask;
+    int32 amount = effectInfo->CalcValue();
     int32 ignoreSpellMask = effectInfo->MiscValue;
     int32 ignoreSpellFamily = effectInfo->MiscValueB;
     Player* player = m_caster->ToPlayer();
+    // rewrite with spellhistory    player->GetSpellHistory()->ModifyCooldown();
+
+    player->GetSpellHistory()->ResetCooldowns([family, spellMask](SpellHistory::CooldownStorageType::iterator itr) -> bool {
+        SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(itr->first);
+        return family == spellInfo->SpellFamilyName && spellMask & spellInfo->SpellFamilyFlags;
+        }, true);
     
-    //SpellCooldowns const spellCDs = player->GetSpellCooldowns();
-    //for (SpellCooldowns::const_iterator itr = spellCDs.begin(); itr != spellCDs.end(); ++itr)
-    //{
-    //    SpellInfo const* cdSpell = sSpellMgr->GetSpellInfo(itr->first);
-    //    if (cdSpell && cdSpell->SpellFamilyName == spellInfo->SpellFamilyName && (cdSpell->SpellFamilyFlags & spellMask) && !ignoreSpellMask && !ignoreSpellFamily)
-    //        player->RemoveSpellCooldown(cdSpell->Id, true);
-    //    else if (cdSpell && cdSpell->SpellFamilyName == spellInfo->SpellFamilyName && ignoreSpellMask && !ignoreSpellFamily)
-    //        player->RemoveSpellCooldown(cdSpell->Id, true);
-    //    else if (cdSpell && ignoreSpellFamily)
-    //        player->RemoveSpellCooldown(cdSpell->Id, true);
-    //}
 }
 
 void Spell::EffectRestoreSpellCharge()

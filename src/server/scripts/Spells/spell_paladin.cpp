@@ -1657,10 +1657,19 @@ class spell_pal_seal_of_righteousness : public AuraScript
         float mws = GetTarget()->GetAttackTime(BASE_ATTACK);
         mws /= 1000.0f;
 
-        int32 bp = std::lroundf(mws * (0.022f * ap + 0.044f * sph));
+        int32 bp = std::lroundf(mws * (0.02f * ap + 0.04f * sph));
+        bool Doubled = false;
+        if (roll_chance_i(20)) {
+            Doubled = true;
+            bp *= 2;
+        }   
         CastSpellExtraArgs args(aurEff);
         args.AddSpellBP0(bp);
         GetTarget()->CastSpell(victim, SPELL_PALADIN_SEAL_OF_RIGHTEOUSNESS, args);
+
+        if (Doubled) {
+            GetTarget()->EnergizeBySpell(GetTarget(), GetSpellInfo(), bp, POWER_MANA);
+        }
     }
 
     void Register() override
@@ -1966,7 +1975,6 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScript(spell_pal_aura_mastery);
     RegisterSpellScript(spell_pal_aura_mastery_immune);
     RegisterSpellScript(spell_pal_avenging_wrath);
-    RegisterSpellScript(spell_pal_beacon_of_light);
     RegisterSpellScript(spell_pal_blessing_of_faith);
     RegisterSpellScript(spell_pal_blessing_of_sanctuary);
     RegisterSpellScript(spell_pal_divine_purpose);
@@ -2001,8 +2009,6 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScript(spell_pal_judgement_of_wisdom_mana);
     RegisterSpellScript(spell_pal_judgements_of_the_just);
     RegisterSpellScript(spell_pal_judgements_of_the_wise);
-    RegisterSpellScript(spell_pal_lay_on_hands);
-    RegisterSpellScript(spell_pal_light_s_beacon);
     RegisterSpellScript(spell_pal_righteous_defense);
     RegisterSpellScript(spell_pal_righteous_vengeance);
     RegisterSpellScript(spell_pal_sacred_shield);

@@ -1049,7 +1049,7 @@ bool Aura::ModStackAmount(int32 num, AuraRemoveMode removeMode /*= AURA_REMOVE_B
 
     // Update stack amount
     SetStackAmount(stackAmount);
-
+    
     if (refresh)
     {
         RefreshTimers(resetPeriodicTimer);
@@ -1153,7 +1153,6 @@ bool Aura::IsSingleTargetWith(Aura const* aura) const
     // spell with single target specific types
     switch (spec)
     {
-        case SPELL_SPECIFIC_JUDGEMENT:
         case SPELL_SPECIFIC_MAGE_POLYMORPH:
             if (aura->GetSpellInfo()->GetSpellSpecific() == spec)
                 return true;
@@ -2894,8 +2893,10 @@ void UnitAura::_UnapplyForTarget(Unit* target, Unit* caster, AuraApplication* au
 
 void UnitAura::Remove(AuraRemoveMode removeMode)
 {
+
     if (IsRemoved())
         return;
+
     GetUnitOwner()->RemoveOwnedAura(this, removeMode);
 }
 

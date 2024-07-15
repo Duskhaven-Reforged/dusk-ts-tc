@@ -320,6 +320,7 @@ class TC_GAME_API AuraEffect
         void HandleProcTriggerDamageAuraProc(AuraApplication* aurApp, ProcEventInfo& eventInfo);
         void HandleRaidProcFromChargeAuraProc(AuraApplication* aurApp, ProcEventInfo& eventInfo);
         void HandleRaidProcFromChargeWithValueAuraProc(AuraApplication* aurApp, ProcEventInfo& eventInfo);
+        void HandleProcTriggerSpellWithPctOfTriggerer(AuraApplication* aurApp, ProcEventInfo& eventInfo);
 
         // @dh-begin
         void HandleModSpellDamagePercentFromArmor(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const;
@@ -338,6 +339,8 @@ class TC_GAME_API AuraEffect
         void HandleAuraAddCharges(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleCreateAreaTrigger(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandlePeriodicCooldownRecoveryTick(AuraApplication* aurApp, Unit* caster) const;
+
+        void HandleCombatMount(AuraApplication const* aurApp, uint8 mode, bool) const;
 
         uint32 GetTriggerSpell() const;
 

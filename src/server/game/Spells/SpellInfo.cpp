@@ -458,8 +458,7 @@ int32 SpellEffectInfo::CalcValue(WorldObject const* caster /*= nullptr*/, int32 
             basePoints += int32(level * basePointsPerLevel);
         } else if (basePoints && casterUnit->IsPlayer()) {
             // Aleist3r: this conditional is just fucking beautiful; I need this formula to work in certain cases outside of just damage or healing effect
-            if ((_spellInfo->CanScaleDamagingOrHealing() && _spellInfo->ComputeIsDamagingOrHealingEffect()) ||
-                (!_spellInfo->CanScaleDamagingOrHealing() && !_spellInfo->ComputeIsDamagingOrHealingEffect()))
+            if (_spellInfo->CanScaleDamagingOrHealing())
             {
                 if (Player* player = ((Unit*)caster)->ToPlayer())
                 {
@@ -3773,6 +3772,7 @@ bool _isPositiveEffectImpl(SpellInfo const* spellInfo, SpellEffectInfo const& ef
                 case SPELL_AURA_SCHOOL_HEAL_ABSORB:
                 case SPELL_AURA_EMPATHY:
                 case SPELL_AURA_MOD_DAMAGE_FROM_CASTER:
+                case SPELL_AURA_MOD_DAMAGE_TO_CASTER:
                 case SPELL_AURA_PREVENTS_FLEEING:
                     return false;
                 default:
@@ -3992,6 +3992,7 @@ bool _isPositiveEffectImpl(SpellInfo const* spellInfo, SpellEffectInfo const& ef
             case SPELL_AURA_MOD_SHAPESHIFT:
             case SPELL_AURA_MOD_THREAT:
             case SPELL_AURA_PROC_TRIGGER_SPELL_WITH_VALUE:
+            case SPELL_AURA_TRIGGER_SPELL_WITH_PCT_OF_TRIGGER:
                 // check target for positive and negative spells
                 if (!_isPositiveTarget(effect))
                     return false;

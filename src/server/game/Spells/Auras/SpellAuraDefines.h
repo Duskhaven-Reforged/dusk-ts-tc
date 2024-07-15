@@ -140,7 +140,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_PACIFY_SILENCE                           = 60,
     SPELL_AURA_MOD_SCALE                                    = 61,
     SPELL_AURA_PERIODIC_HEALTH_FUNNEL                       = 62,
-    SPELL_AURA_63                                           = 63,   // old SPELL_AURA_PERIODIC_MANA_FUNNEL
+    SPELL_AURA_MOD_REFLECTED_SPELL_DAMAGE_PCT               = 63,
     SPELL_AURA_PERIODIC_MANA_LEECH                          = 64,
     SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK                  = 65,
     SPELL_AURA_FEIGN_DEATH                                  = 66,
@@ -167,7 +167,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN                     = 87,
     SPELL_AURA_MOD_HEALTH_REGEN_PERCENT                     = 88,
     SPELL_AURA_PERIODIC_DAMAGE_PERCENT                      = 89,
-    SPELL_AURA_90                                           = 90,   // old SPELL_AURA_MOD_RESIST_CHANCE
+    SPELL_AURA_MOD_DAMAGE_DONE_DAMAGETYPE                   = 90,   // old SPELL_AURA_MOD_RESIST_CHANCE
     SPELL_AURA_MOD_DETECT_RANGE                             = 91,
     SPELL_AURA_PREVENTS_FLEEING                             = 92,
     SPELL_AURA_MOD_UNATTACKABLE                             = 93,
@@ -196,7 +196,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_REGEN_DURING_COMBAT                      = 116,
     SPELL_AURA_MOD_MECHANIC_RESISTANCE                      = 117,
     SPELL_AURA_MOD_HEALING_PCT                              = 118,
-    SPELL_AURA_119                                          = 119,  // old SPELL_AURA_SHARE_PET_TRACKING
+    SPELL_AURA_MOD_HEALING_FROM_BANDAGE_PCT                 = 119,  // old SPELL_AURA_SHARE_PET_TRACKING => Mod healing from bandage
     SPELL_AURA_UNTRACKABLE                                  = 120,
     SPELL_AURA_EMPATHY                                      = 121,
     SPELL_AURA_MOD_OFFHAND_DAMAGE_PCT                       = 122,
@@ -241,7 +241,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT                   = 161,
     SPELL_AURA_POWER_BURN                                   = 162,
     SPELL_AURA_MOD_CRIT_DAMAGE_BONUS                        = 163,
-    SPELL_AURA_164                                          = 164,
+    SPELL_AURA_MOD_DAMAGE_TAKEN_DAMAGETYPE                  = 164,
     SPELL_AURA_MELEE_ATTACK_POWER_ATTACKER_BONUS            = 165,
     SPELL_AURA_MOD_ATTACK_POWER_PCT                         = 166,
     SPELL_AURA_MOD_RANGED_ATTACK_POWER_PCT                  = 167,
@@ -250,7 +250,7 @@ enum AuraType : uint32
     SPELL_AURA_DETECT_AMORE                                 = 170,
     SPELL_AURA_MOD_SPEED_NOT_STACK                          = 171,
     SPELL_AURA_MOD_MOUNTED_SPEED_NOT_STACK                  = 172,
-    SPELL_AURA_173                                          = 173,  // old SPELL_AURA_ALLOW_CHAMPION_SPELLS
+    SPELL_AURA_MOD_DAMAGE_TAKEN_FROM_SPELL                  = 173,  // mod damge taken from a spell masks
     SPELL_AURA_MOD_SPELL_DAMAGE_OF_STAT_PERCENT             = 174,  // by defeult intelect, dependent from SPELL_AURA_MOD_SPELL_HEALING_OF_STAT_PERCENT
     SPELL_AURA_MOD_SPELL_HEALING_OF_STAT_PERCENT            = 175,
     SPELL_AURA_SPIRIT_OF_REDEMPTION                         = 176,
@@ -341,7 +341,7 @@ enum AuraType : uint32
     SPELL_AURA_PHASE                                        = 261,
     SPELL_AURA_ABILITY_IGNORE_AURASTATE                     = 262,
     SPELL_AURA_ALLOW_ONLY_ABILITY                           = 263,
-    SPELL_AURA_264                                          = 264,
+    SPELL_AURA_IMMUNE_TO_DISARM                             = 264,
     SPELL_AURA_265                                          = 265,
     SPELL_AURA_266                                          = 266,
     SPELL_AURA_MOD_IMMUNE_AURA_APPLY_SCHOOL                 = 267,
@@ -383,14 +383,14 @@ enum AuraType : uint32
     SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE             = 303,
     SPELL_AURA_MOD_FAKE_INEBRIATE                           = 304,
     SPELL_AURA_MOD_MINIMUM_SPEED                            = 305,
-    SPELL_AURA_306                                          = 306,
+    SPELL_AURA_MOD_DAMAGE_TO_CASTER                         = 306,
     SPELL_AURA_HEAL_ABSORB_TEST                             = 307,
     SPELL_AURA_MOD_CRIT_CHANCE_FOR_CASTER                   = 308,
-    SPELL_AURA_309                                          = 309,
+    SPELL_AURA_IMMUNE_TO_SILENCE                            = 309,
     SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE            = 310,
-    SPELL_AURA_311                                          = 311,
-    SPELL_AURA_312                                          = 312,
-    SPELL_AURA_313                                          = 313,
+    SPELL_AURA_TRIGGER_SPELL_WITH_PCT_OF_TRIGGER            = 311,
+    SPELL_AURA_COMBAT_MOUNT_ILLUSION                        = 312,
+    SPELL_AURA_IMMUNE_TO_INTERRUPT                          = 313,
     SPELL_AURA_PREVENT_RESURRECTION                         = 314,
     SPELL_AURA_UNDERWATER_WALKING                           = 315,
     SPELL_AURA_PERIODIC_HASTE                               = 316,
@@ -432,6 +432,8 @@ enum AuraType : uint32
     SPELL_AURA_MOD_RESTED_XP_MAX_AMOUNT                     = 352,
     SPELL_AURA_MOD_RESTED_XP_RECOVERY_RATE                  = 353,
     SPELL_AURA_MOD_CHANGE_DAMAGE_SCHOOL_OF_SPELL            = 354,
+    SPELL_AURA_ADD_COMBAT_RATING_PCT_TO_SPELL_EFFECT        = 355,
+    SPELL_AURA_ADD_COMBAT_RATING_TO_SPELL_EFFECT            = 356,
     TOTAL_AURAS                                             
 };
 

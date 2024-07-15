@@ -127,7 +127,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleAuraModPacifyAndSilence,                   // 60 SPELL_AURA_MOD_PACIFY_SILENCE
     &AuraEffect::HandleAuraModScale,                              // 61 SPELL_AURA_MOD_SCALE
     &AuraEffect::HandleNoImmediateEffect,                         // 62 SPELL_AURA_PERIODIC_HEALTH_FUNNEL implemented in AuraEffect::PeriodicTick
-    &AuraEffect::HandleUnused,                                    // 63 unused (3.2.0) old SPELL_AURA_PERIODIC_MANA_FUNNEL
+    &AuraEffect::HandleNoImmediateEffect,                         // 63 hater: changed to SPELL_AURA_MOD_REFLECTED_SPELL_DAMAGE_PCT
     &AuraEffect::HandleNoImmediateEffect,                         // 64 SPELL_AURA_PERIODIC_MANA_LEECH implemented in AuraEffect::PeriodicTick
     &AuraEffect::HandleModCastingSpeed,                           // 65 SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK
     &AuraEffect::HandleFeignDeath,                                // 66 SPELL_AURA_FEIGN_DEATH
@@ -154,7 +154,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         // 87 SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN implemented in Unit::MeleeDamageBonus and Unit::SpellDamageBonus
     &AuraEffect::HandleNoImmediateEffect,                         // 88 SPELL_AURA_MOD_HEALTH_REGEN_PERCENT implemented in Player::RegenerateHealth
     &AuraEffect::HandleNoImmediateEffect,                         // 89 SPELL_AURA_PERIODIC_DAMAGE_PERCENT
-    &AuraEffect::HandleUnused,                                    // 90 unused (3.0.8a) old SPELL_AURA_MOD_RESIST_CHANCE
+    &AuraEffect::HandleNoImmediateEffect,                         // 90 SPELL_AURA_MOD_DAMAGE_DONE_DAMAGETYPE
     &AuraEffect::HandleNoImmediateEffect,                         // 91 SPELL_AURA_MOD_DETECT_RANGE implemented in Creature::GetAttackDistance
     &AuraEffect::HandlePreventFleeing,                            // 92 SPELL_AURA_PREVENTS_FLEEING
     &AuraEffect::HandleModUnattackable,                           // 93 SPELL_AURA_MOD_UNATTACKABLE
@@ -183,7 +183,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //116 SPELL_AURA_MOD_REGEN_DURING_COMBAT
     &AuraEffect::HandleNoImmediateEffect,                         //117 SPELL_AURA_MOD_MECHANIC_RESISTANCE     implemented in Unit::MagicSpellHitResult
     &AuraEffect::HandleNoImmediateEffect,                         //118 SPELL_AURA_MOD_HEALING_PCT             implemented in Unit::SpellHealingBonus
-    &AuraEffect::HandleUnused,                                    //119 unused (3.2.0) old SPELL_AURA_SHARE_PET_TRACKING
+    &AuraEffect::HandleNoImmediateEffect,                         //119 unused mod healing from bandage        implemented in Unit::SpellHealingBonus
     &AuraEffect::HandleAuraUntrackable,                           //120 SPELL_AURA_UNTRACKABLE
     &AuraEffect::HandleAuraEmpathy,                               //121 SPELL_AURA_EMPATHY
     &AuraEffect::HandleModOffhandDamagePercent,                   //122 SPELL_AURA_MOD_OFFHAND_DAMAGE_PCT
@@ -221,14 +221,14 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleModStealthLevel,                           //154 SPELL_AURA_MOD_STEALTH_LEVEL
     &AuraEffect::HandleNoImmediateEffect,                         //155 SPELL_AURA_MOD_WATER_BREATHING
     &AuraEffect::HandleNoImmediateEffect,                         //156 SPELL_AURA_MOD_REPUTATION_GAIN
-    &AuraEffect::HandleNULL,                                      //157 SPELL_AURA_PET_DAMAGE_MULTI
+    &AuraEffect::HandleNoImmediateEffect,                         //157 SPELL_AURA_MOD_PET_DAMAGE_MULTI
     &AuraEffect::HandleShieldBlockValue,                          //158 SPELL_AURA_MOD_SHIELD_BLOCKVALUE
     &AuraEffect::HandleNoImmediateEffect,                         //159 SPELL_AURA_NO_PVP_CREDIT      only for Honorless Target spell
     &AuraEffect::HandleNoImmediateEffect,                         //160 SPELL_AURA_MOD_AOE_AVOIDANCE                 implemented in Unit::MagicSpellHitResult
     &AuraEffect::HandleNoImmediateEffect,                         //161 SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT
     &AuraEffect::HandleNoImmediateEffect,                         //162 SPELL_AURA_POWER_BURN implemented in AuraEffect::PeriodicTick
     &AuraEffect::HandleNoImmediateEffect,                         //163 SPELL_AURA_MOD_CRIT_DAMAGE_BONUS
-    &AuraEffect::HandleUnused,                                    //164 unused (3.2.0), only one test spell
+    &AuraEffect::HandleNoImmediateEffect,                         //164 SPELL_AURA_MOD_DAMAGE_TAKEN_DAMAGETYPE
     &AuraEffect::HandleNoImmediateEffect,                         //165 SPELL_AURA_MELEE_ATTACK_POWER_ATTACKER_BONUS implemented in Unit::MeleeDamageBonus
     &AuraEffect::HandleAuraModAttackPowerPercent,                 //166 SPELL_AURA_MOD_ATTACK_POWER_PCT
     &AuraEffect::HandleAuraModRangedAttackPowerPercent,           //167 SPELL_AURA_MOD_RANGED_ATTACK_POWER_PCT
@@ -237,7 +237,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleDetectAmore,                               //170 SPELL_AURA_DETECT_AMORE       used to detect various spells that change visual of units for aura target
     &AuraEffect::HandleAuraModIncreaseSpeed,                      //171 SPELL_AURA_MOD_SPEED_NOT_STACK
     &AuraEffect::HandleAuraModIncreaseMountedSpeed,               //172 SPELL_AURA_MOD_MOUNTED_SPEED_NOT_STACK
-    &AuraEffect::HandleUnused,                                    //173 unused (3.2.0) no spells, old SPELL_AURA_ALLOW_CHAMPION_SPELLS  only for Proclaim Champion spell
+    &AuraEffect::HandleNoImmediateEffect,                         //173 SPELL_AURA_MOD_DAMAGE_TAKEN_FROM_SPELL
     &AuraEffect::HandleModSpellDamagePercentFromStat,             //174 SPELL_AURA_MOD_SPELL_DAMAGE_OF_STAT_PERCENT  implemented in Unit::SpellBaseDamageBonus
     &AuraEffect::HandleModSpellHealingPercentFromStat,            //175 SPELL_AURA_MOD_SPELL_HEALING_OF_STAT_PERCENT implemented in Unit::SpellBaseHealingBonus
     &AuraEffect::HandleSpiritOfRedemption,                        //176 SPELL_AURA_SPIRIT_OF_REDEMPTION   only for Spirit of Redemption spell, die at aura end
@@ -328,7 +328,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandlePhase,                                     //261 SPELL_AURA_PHASE
     &AuraEffect::HandleNoImmediateEffect,                         //262 SPELL_AURA_ABILITY_IGNORE_AURASTATE implemented in Spell::CheckCast
     &AuraEffect::HandleAuraAllowOnlyAbility,                      //263 SPELL_AURA_ALLOW_ONLY_ABILITY player can use only abilities set in SpellClassMask
-    &AuraEffect::HandleUnused,                                    //264 unused (3.2.0)
+    &AuraEffect::HandleNoImmediateEffect,                         //264 Aleist3r: changed to SPELL_AURA_IMMUNE_TO_DISARM
     &AuraEffect::HandleUnused,                                    //265 unused (3.2.0)
     &AuraEffect::HandleUnused,                                    //266 unused (3.2.0)
     &AuraEffect::HandleNoImmediateEffect,                         //267 SPELL_AURA_MOD_IMMUNE_AURA_APPLY_SCHOOL         implemented in Unit::IsImmunedToSpellEffect
@@ -370,14 +370,14 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //303 SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE implemented in Unit::SpellDamageBonus, Unit::MeleeDamageBonus
     &AuraEffect::HandleAuraModFakeInebriation,                    //304 SPELL_AURA_MOD_FAKE_INEBRIATE
     &AuraEffect::HandleAuraModIncreaseSpeed,                      //305 SPELL_AURA_MOD_MINIMUM_SPEED
-    &AuraEffect::HandleUnused,                                    //306 0 spells in 3.3.5
-    &AuraEffect::HandleUnused,                                    //307 0 spells in 3.3.5
+    &AuraEffect::HandleNoImmediateEffect,                         //306 SPELL_AURA_MOD_DAMAGE_TO_CASTER
+    &AuraEffect::HandleUnused,                                    //307 0
     &AuraEffect::HandleNoImmediateEffect,                         //308 SPELL_AURA_MOD_CRIT_CHANCE_FOR_CASTER implemented in Unit::GetUnitCriticalChance and Unit::GetUnitSpellCriticalChance
-    &AuraEffect::HandleUnused,                                    //309 0 spells in 3.3.5
+    &AuraEffect::HandleNoImmediateEffect,                         //309 SPELL_AURA_IMMUNE_TO_SILENCE
     &AuraEffect::HandleNoImmediateEffect,                         //310 SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE implemented in Spell::CalculateDamageDone
-    &AuraEffect::HandleNULL,                                      //311 0 spells in 3.3.5
-    &AuraEffect::HandleNULL,                                      //312 0 spells in 3.3.5
-    &AuraEffect::HandleUnused,                                    //313 0 spells in 3.3.5
+    &AuraEffect::HandleNoImmediateEffect,                         //311 SPELL_AURA_TRIGGER_SPELL_WITH_PCT_OF_TRIGGER
+    &AuraEffect::HandleCombatMount,                               //312 SPELL_AURA_COMBAT_MOUNT_ILLUSION
+    &AuraEffect::HandleNoImmediateEffect,                         //313 SPELL_AURA_IMMUNE_TO_INTERRUPT
     &AuraEffect::HandlePreventResurrection,                       //314 SPELL_AURA_PREVENT_RESURRECTION todo
     &AuraEffect::HandleNoImmediateEffect,                         //315 SPELL_AURA_UNDERWATER_WALKING todo
     &AuraEffect::HandleNoImmediateEffect,                         //316 SPELL_AURA_PERIODIC_HASTE implemented in AuraEffect::CalculatePeriodic
@@ -388,10 +388,10 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //321 SPELL_AURA_MOD_CRITICAL_BLOCK_PCT
     &AuraEffect::HandleAuraAddCharges,                            //322 SPELL_AURA_MOD_SPELL_CHARGES
     &AuraEffect::HandleModTriggerSpellOnStacks,                   //323 SPELL_AURA_MOD_TRIGGER_SPELL_ON_STACKS
-    &AuraEffect::HandleNoImmediateEffect,                         //324 SPELL_AURA_MOD_CRIT_DAMAGE implemented in Unit::SpellCriticalDamageBonus
+    &AuraEffect::HandleNoImmediateEffect,                         //324 SPELL_AURA_MOD_BASE_CRIT_DAMAGE implemented in Unit::SpellCriticalDamageBonus
     &AuraEffect::HandleNoImmediateEffect,                         //325 SPELL_AURA_MOD_DAMAGE_TAKEN_PCT_BEFORE_BLOCK
     &AuraEffect::HandleNoImmediateEffect,                         //326 SPELL_AURA_ADD_SPELL_BLOCK
-    &AuraEffect::HandleNoImmediateEffect,                         //327 SPELL_AURA_MOD_MOVEMENT_SPEED_COMBAT
+    &AuraEffect::HandleModToggleAuraCombatState,                  //327 SPELL_AURA_MOD_TOGGLE_AURA_COMBAT_STATE
     &AuraEffect::HandleAuraModSpellPower,                         //328 SPELL_AURA_MOD_SPELL_POWER
     &AuraEffect::HandleAuraModSpellPowerPercent,                  //329 SPELL_AURA_MOD_SPELL_POWER_PCT
     &AuraEffect::HandleAuraModSpellPowerOfStatPercent,            //330 SPELL_AURA_MOD_SPELL_POWER_OF_STAT_PERCENT
@@ -418,7 +418,8 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleAuraModForgeStat,                          //351 SPELL_AURA_MOD_FORGE_STAT
     &AuraEffect::HandleNoImmediateEffect,                         //352 SPELL_AURA_MOD_RESTED_XP_MAX_AMOUNT implemented in Player::SetRestBonus, Spell::EffectGiveRestedExperience
     &AuraEffect::HandleNoImmediateEffect,                         //355 SPELL_AURA_MOD_RESTED_XP_RECOVERY_RATE implemented in Player::Update
-
+    &AuraEffect::HandleNoImmediateEffect,                         //356 SPELL_AURA_ADD_COMBAT_RATING_PCT_TO_SPELL_EFFECT implemented in AuraEffect::CalculateSpellMod()
+    &AuraEffect::HandleNoImmediateEffect,                         //356 SPELL_AURA_ADD_COMBAT_RATING_TO_SPELL_EFFECT implemented in AuraEffect::CalculateSpellMod()
 };
 
 AuraEffect::AuraEffect(Aura* base, SpellEffectInfo const& spellEfffectInfo, int32 const* baseAmount, Unit* caster):
@@ -708,24 +709,122 @@ void AuraEffect::CalculateSpellMod()
 
                 switch (tempMisc)
                 {
-                case 2:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                    break;
-                case 3:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                    break;
-                case 4:
-                    m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
-                    break;
-                case 1:
-                default:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                    break;
+                    case 2:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        break;
+                    case 3:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 4:
+                        m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
+                        break;
+                    case 5:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        break;
+                    case 6:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 7:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 1:
+                    default:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        break;
                 }
             }
-            m_spellmod->value = GetCaster()->GetUInt32Value(static_cast<uint16>(PLAYER_FIELD_COMBAT_RATING_1) + CR_MASTERY);
+            m_spellmod->value = int32(GetCaster()->ToPlayer()->GetRatingBonusValue(CR_MASTERY) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
             break;
         case SPELL_AURA_ADD_MASTERY_RATING_TO_SPELL_EFFECT:
+            if (!m_spellmod)
+            {
+                m_spellmod = new SpellModifier(GetBase());
+
+                m_spellmod->type = SPELLMOD_FLAT;
+                m_spellmod->spellId = GetId();
+                m_spellmod->mask = GetSpellInfo()->GetEffect(GetEffIndex()).SpellClassMask;
+                m_spellmod->charges = GetBase()->GetCharges();
+
+                int32 tempMisc = GetMiscValue();
+
+                switch (tempMisc)
+                {
+                    case 2:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        break;
+                    case 3:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 4:
+                        m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
+                        break;
+                    case 5:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        break;
+                    case 6:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 7:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 1:
+                    default:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        break;
+                }
+            }
+            m_spellmod->value = int32(GetCaster()->GetUInt32Value(static_cast<uint16>(PLAYER_FIELD_COMBAT_RATING_1) + CR_MASTERY) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
+            break;
+        case SPELL_AURA_ADD_COMBAT_RATING_PCT_TO_SPELL_EFFECT:
+            if (!m_spellmod)
+            {
+                m_spellmod = new SpellModifier(GetBase());
+
+                m_spellmod->type = SPELLMOD_FLAT;
+                m_spellmod->spellId = GetId();
+                m_spellmod->mask = GetSpellInfo()->GetEffect(GetEffIndex()).SpellClassMask;
+                m_spellmod->charges = GetBase()->GetCharges();
+
+                int32 tempMisc = GetMiscValue();
+
+                switch (tempMisc)
+                {
+                    case 2:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        break;
+                    case 3:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 4:
+                        m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
+                        break;
+                    case 5:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        break;
+                    case 6:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 7:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                        break;
+                    case 1:
+                    default:
+                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                        break;
+                }
+            }
+            m_spellmod->value = int32(GetCaster()->ToPlayer()->GetRatingBonusValue(CombatRating(GetMiscValueB())) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
+            break;
+        case SPELL_AURA_ADD_COMBAT_RATING_TO_SPELL_EFFECT:
             if (!m_spellmod)
             {
                 m_spellmod = new SpellModifier(GetBase());
@@ -748,13 +847,25 @@ void AuraEffect::CalculateSpellMod()
                 case 4:
                     m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
                     break;
+                case 5:
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                    break;
+                case 6:
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                    break;
+                case 7:
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+                    break;
                 case 1:
                 default:
                     m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
                     break;
                 }
             }
-            m_spellmod->value = GetCaster()->ToPlayer()->GetRatingBonusValue(CR_MASTERY);
+            m_spellmod->value = int32(GetCaster()->GetUInt32Value(static_cast<uint16>(PLAYER_FIELD_COMBAT_RATING_1) + CombatRating(GetMiscValueB())) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
             break;
         default:
             break;
@@ -1075,6 +1186,7 @@ bool AuraEffect::CheckEffectProc(AuraApplication* aurApp, ProcEventInfo& eventIn
             if (!spellInfo || !spellInfo->CalcCastTime())
                 return false;
             break;
+        case SPELL_AURA_MOD_DAMAGE_TO_CASTER:
         case SPELL_AURA_MOD_DAMAGE_FROM_CASTER:
             // Compare casters
             if (GetCasterGUID() != eventInfo.GetActor()->GetGUID())
@@ -1159,6 +1271,9 @@ void AuraEffect::HandleProc(AuraApplication* aurApp, ProcEventInfo& eventInfo)
             break;
         case SPELL_AURA_RAID_PROC_FROM_CHARGE_WITH_VALUE:
             HandleRaidProcFromChargeWithValueAuraProc(aurApp, eventInfo);
+            break;
+        case SPELL_AURA_TRIGGER_SPELL_WITH_PCT_OF_TRIGGER:
+            HandleProcTriggerSpellWithPctOfTriggerer(aurApp, eventInfo);
             break;
         default:
             break;
@@ -2412,6 +2527,9 @@ void AuraEffect::HandleAuraModDisarm(AuraApplication const* aurApp, uint8 mode, 
 
     Unit* target = aurApp->GetTarget();
 
+    if (target->HasAuraType(SPELL_AURA_IMMUNE_TO_DISARM))
+        return;
+
     //Prevent handling aura twice
     AuraType type = GetAuraType();
     if (apply ? target->GetAuraEffectsByType(type).size() > 1 : target->HasAuraType(type))
@@ -2486,6 +2604,10 @@ void AuraEffect::HandleAuraModSilence(AuraApplication const* aurApp, uint8 mode,
 
     if (apply)
     {
+        auto silenceImmunities = target->GetAuraEffectsByType(SPELL_AURA_IMMUNE_TO_SILENCE);
+        if (!silenceImmunities.empty())
+            return;
+
         target->SetUnitFlag(UNIT_FLAG_SILENCED);
 
         // call functions which may have additional effects after changing state of unit
@@ -5935,6 +6057,26 @@ void AuraEffect::HandleRaidProcFromChargeWithValueAuraProc(AuraApplication* aurA
     target->CastSpell(target, triggerSpellId, args);
 }
 
+void AuraEffect::HandleProcTriggerSpellWithPctOfTriggerer(AuraApplication* aurApp, ProcEventInfo& eventInfo)
+{
+        Unit* triggerCaster = aurApp->GetTarget();
+        Unit* triggerTarget = eventInfo.GetProcTarget();
+
+        if (auto proc = eventInfo.GetProcSpell())
+            if (proc->IsTriggered())
+                return;
+
+        if (int32 dealt = eventInfo.GetDamageInfo()->GetDamage()) {
+            auto target = eventInfo.GetDamageInfo()->GetVictim();
+            auto pct = CalculatePct(dealt, GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue());
+            auto trigger = GetSpellInfo()->GetEffect(GetEffIndex()).TriggerSpell;
+            CastSpellExtraArgs args;
+            args.AddSpellMod(SPELLVALUE_BASE_POINT0, pct);
+            args.SetOriginalCaster(triggerCaster->GetGUID());
+            triggerCaster->CastSpell(target, trigger, args);
+        }
+}
+
 // @dh-begin
 void AuraEffect::HandleModSpellDamagePercentFromArmor(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
 {
@@ -6126,8 +6268,7 @@ void AuraEffect::HandleModToggleAuraCombatState(AuraApplication const* aurApp, u
 
     if (apply)
     {
-        if ((caster->IsInCombat() && GetMiscValueB() == 1)
-            || (!caster->IsInCombat() && GetMiscValueB() == 0))
+        if ((caster->IsInCombat() && GetMiscValueB() == 1) || (!caster->IsInCombat() && GetMiscValueB() == 0))
             caster->AddAura(GetTriggerSpell(), caster);
         else if (GetAmplitude() != 1)
             caster->RemoveAura(GetTriggerSpell());
@@ -6231,6 +6372,20 @@ void AuraEffect::HandlePeriodicCooldownRecoveryTick(AuraApplication* aurApp, Uni
     //    else if (cdSpell && ignoreSpellFamily)
     //        player->ModifySpellCooldown(cdSpell->Id, amount);
     //}
+}
+
+void AuraEffect::HandleCombatMount(AuraApplication const* aurApp, uint8 mode, bool apply) const {
+    Unit* target = aurApp->GetTarget();
+
+    if (!target || target->GetTypeId() != TYPEID_PLAYER)
+        return;
+
+    auto SpellInfo = GetBase()->GetSpellInfo();
+    auto mount = SpellInfo->GetEffect(GetEffIndex()).CalcValue();
+    if (apply)
+        target->SetMountDisplayId(mount);
+    else
+        target->SetMountDisplayId(0);
 }
 // @dh-end
 

@@ -236,6 +236,7 @@ bool CombatManager::SetInCombatWith(Unit* who, bool addSecondUnitSuppressed)
         NotifyAICombat(_owner, who);
     if (needOtherAI)
         NotifyAICombat(who, _owner);
+
     return IsInCombatWith(who);
 }
 
@@ -401,6 +402,7 @@ bool CombatManager::UpdateOwnerCombatState() const
     if (combatState == _owner->IsInCombat())
         return false;
 
+    _owner->ToggleCombatAuras(combatState);
     if (combatState)
     {
         _owner->SetUnitFlag(UNIT_FLAG_IN_COMBAT);

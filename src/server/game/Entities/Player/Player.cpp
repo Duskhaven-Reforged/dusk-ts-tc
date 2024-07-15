@@ -8288,6 +8288,8 @@ void Player::CastItemCombatSpell(DamageInfo const& damageInfo, Item* item, ItemT
                             args.AddSpellMod(static_cast<SpellValueMod>(SPELLVALUE_BASE_POINT0 + AsUnderlyingType(spellEffectInfo.EffectIndex)), CalculatePct(spellEffectInfo.CalcValue(this), effectPct));
                 }
                 CastSpell(target, spellInfo->Id, args);
+
+                FIRE(Player,OnEnchantTriggered,TSPlayer(this), TSUnit(target), TSItem(item),TSSpellInfo(spellInfo));
             }
         }
     }
@@ -24449,8 +24451,8 @@ uint32 Player::GetResurrectionSpellId()
     }
 
     // Reincarnation (passive spell)  // prio: 1                  // Glyph of Renewed Life
-    if (prio < 1 && HasSpell(20608) && !GetSpellHistory()->HasCooldown(21169) && (HasAura(58059) || HasItemCount(17030)))
-        spell_id = 21169;
+    if (prio < 1 && HasSpell(1230010) && !GetSpellHistory()->HasCooldown(1230011) /*&& (HasAura(58059) || HasItemCount(17030))*/)
+        spell_id = 1230011;
 
     return spell_id;
 }
@@ -25406,12 +25408,12 @@ void Player::AddRunePower(uint8 index) const
 
 static RuneType runeSlotTypes[MAX_RUNES] =
 {
-    /*0*/ RUNE_BLOOD,
-    /*1*/ RUNE_BLOOD,
-    /*2*/ RUNE_UNHOLY,
-    /*3*/ RUNE_UNHOLY,
-    /*4*/ RUNE_FROST,
-    /*5*/ RUNE_FROST
+    /*0*/ RUNE_DEATH,
+    /*1*/ RUNE_DEATH,
+    /*2*/ RUNE_DEATH,
+    /*3*/ RUNE_DEATH,
+    /*4*/ RUNE_DEATH,
+    /*5*/ RUNE_DEATH
 };
 
 void Player::InitRunes()
