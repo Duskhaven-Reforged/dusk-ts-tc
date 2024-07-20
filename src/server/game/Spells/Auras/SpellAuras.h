@@ -238,6 +238,7 @@ class TC_GAME_API Aura
         uint8 GetProcEffectMask(AuraApplication* aurApp, ProcEventInfo& eventInfo, TimePoint now) const;
         float CalcProcChance(SpellProcEntry const& procEntry, ProcEventInfo& eventInfo) const;
         void TriggerProcOnEvent(uint8 procEffectMask, AuraApplication* aurApp, ProcEventInfo& eventInfo);
+        void ConsumeProcCharges(SpellProcEntry const* procEntry);
 
         // AuraScript
         void LoadScripts();

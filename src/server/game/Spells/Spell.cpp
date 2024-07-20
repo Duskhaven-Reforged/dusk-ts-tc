@@ -5019,6 +5019,10 @@ SpellCastResult Spell::CheckRuneCost(uint32 runeCostID) const
     if (runeCost[RUNE_DEATH] > MAX_RUNES)
         return SPELL_FAILED_NO_POWER;                       // not sure if result code is correct
 
+    int32 Gain = src->RunicPower;
+    if (Gain < 0 && std::abs(Gain) > player->GetPower(POWER_RUNIC_POWER))
+        return SPELL_FAILED_NO_POWER;
+
     return SPELL_CAST_OK;
 }
 
