@@ -110,9 +110,13 @@ enum ShamanSpells
     SPELL_SHAMAN_GRIT                           = 1240011,
     SPELL_SHAMAN_LAVA_POOL_DEMORALIZE           = 1230023,
     SPELL_SHAMAN_MOLTEN_ASSAULT                 = 1260022,
+    SPELL_SHAMAN_RESTORATION_MASTERY_OVERHEAL_RESERVOIR = 1270002,
+    SPELL_SHAMAN_RESTORATION_MASTERY_SPIRITUAL_RESERVOIR = 1270000,
     SPELL_SHAMAN_RUTHLESSNESS                   = 1260008,
     SPELL_SHAMAN_MAELSTROM_DEFENSE              = 1240031,
     SPELL_SHAMAN_MAELSTROM_DEFENSE_DUMMY        = 1240032,
+    SPELL_SHAMAN_SPIRITUAL_AWAKENING            = 1260003,
+    SPELL_SHAMAN_SPIRITUAL_AWAKENING_HEAL       = 1260004,
     SPELL_SHAMAN_TOTEMIC_WRATH                  = 1250013,
     SPELL_SHAMAN_WINDFURY_PROC                  = 1260006
 };
@@ -2312,10 +2316,136 @@ class spell_sha_lesser_elemental_bash : public SpellScript
     }
 };
 
+// 1270000 - Mastery: Spiritual Reservoir
+class spell_sha_spiritual_reservoir_store : public AuraScript
+{
+    PrepareAuraScript(spell_sha_spiritual_reservoir_store);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_RESTORATION_MASTERY_OVERHEAL_RESERVOIR,
+            SPELL_SHAMAN_RESTORATION_MASTERY_SPIRITUAL_RESERVOIR
+        });
+    }
+
+    void OnProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        HealInfo* healInfo = eventInfo.GetHealInfo();
+
+        if (!healInfo)
+            return;
+
+        uint32 overheal = healInfo->GetHeal() - healInfo->GetEffectiveHeal();
+
+        // Aleist3r: overheal < 0 shouldn't ever happen but shit's whack sometimes and strange stuff do happen, so better safe than sorry
+        if (!overheal || overheal < 0)
+            return;
+
+        if (Unit* caster = GetTarget())
+            if (caster->HasAura(SPELL_SHAMAN_RESTORATION_MASTERY_OVERHEAL_RESERVOIR))
+            {
+                AuraEffect* overhealReservoir = caster->GetAuraEffect(SPELL_SHAMAN_RESTORATION_MASTERY_OVERHEAL_RESERVOIR, EFFECT_0);
+                int32 currentAmount = overhealReservoir->GetAmount();
+                int32 overhealMult = caster->GetAuraEffect(SPELL_SHAMAN_RESTORATION_MASTERY_SPIRITUAL_RESERVOIR, EFFECT_0)->GetAmount();
+                uint32 overhealAmt = uint32(CalculatePct(overheal, overhealMult));
+                int32 healthMult = caster->GetAuraEffect(SPELL_SHAMAN_RESTORATION_MASTERY_SPIRITUAL_RESERVOIR, EFFECT_1)->GetAmount();
+                uint32 maxReservoir = uint32(CalculatePct(caster->GetMaxHealth(), healthMult));
+                
+                if ((currentAmount + overhealAmt) > maxReservoir)
+                    overhealReservoir->SetAmount(maxReservoir);
+                else
+                    overhealReservoir->SetAmount(currentAmount + overhealAmt);
+            }
+    }
+
+    void Register() override
+    {
+        OnEffectProc += AuraEffectProcFn(spell_sha_spiritual_reservoir_store::OnProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
+// 1270003 - Spiritual Awakening
+class spell_sha_spiritual_awakening : public AuraScript
+{
+    PrepareAuraScript(spell_sha_spiritual_awakening);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_RESTORATION_MASTERY_OVERHEAL_RESERVOIR,
+            SPELL_SHAMAN_RESTORATION_MASTERY_SPIRITUAL_RESERVOIR,
+            SPELL_SHAMAN_SPIRITUAL_AWAKENING,
+            SPELL_SHAMAN_SPIRITUAL_AWAKENING_HEAL
+        });
+    }
+
+    void OnProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        HealInfo* healInfo = eventInfo.GetHealInfo();
+
+        if (!healInfo)
+            return;
+
+        Unit* healTarget = healInfo->GetTarget();
+
+        if (!healTarget)
+            return;
+
+        if (Unit* caster = GetTarget())
+            if (caster->HasAura(SPELL_SHAMAN_RESTORATION_MASTERY_OVERHEAL_RESERVOIR))
+            {
+                Unit* triggerTarget = nullptr;
+                Trinity::MostHPMissingGroupInRange u_check(healTarget, 100.f, 0);
+                Trinity::UnitLastSearcher<Trinity::MostHPMissingGroupInRange> searcher(healTarget, triggerTarget, u_check);
+                Cell::VisitAllObjects(healTarget, searcher, 100.f);
+
+                if (!triggerTarget)
+                    return;
+
+                int32 healthMult = caster->GetAuraEffect(SPELL_SHAMAN_RESTORATION_MASTERY_SPIRITUAL_RESERVOIR, EFFECT_1)->GetAmount();
+                uint32 maxReservoir = uint32(CalculatePct(caster->GetMaxHealth(), healthMult));
+                AuraEffect* overhealReservoir = caster->GetAuraEffect(SPELL_SHAMAN_RESTORATION_MASTERY_OVERHEAL_RESERVOIR, EFFECT_0);
+                int32 currentAmount = overhealReservoir->GetAmount();
+
+                if (!currentAmount)
+                    return;
+
+                int32 useAmount = CalculatePct(currentAmount, 33);
+                int32 reservoirPct = caster->GetAuraEffect(SPELL_SHAMAN_SPIRITUAL_AWAKENING, EFFECT_1)->GetAmount();
+                int32 restorePct = caster->GetAuraEffect(SPELL_SHAMAN_SPIRITUAL_AWAKENING, EFFECT_2)->GetAmount();
+
+                if (currentAmount < CalculatePct(maxReservoir, reservoirPct))
+                    overhealReservoir->SetAmount(CalculatePct(maxReservoir, restorePct));
+                else
+                    overhealReservoir->SetAmount(currentAmount - useAmount);
+
+                CastSpellExtraArgs args(TRIGGERED_FULL_MASK);
+                args.AddSpellBP0(useAmount);
+                caster->CastSpell(triggerTarget, SPELL_SHAMAN_SPIRITUAL_AWAKENING_HEAL, args);
+            }
+    }
+
+    void Register() override
+    {
+        OnEffectProc += AuraEffectProcFn(spell_sha_spiritual_awakening::OnProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
 // 1260005 - Windfury (Dummy Aura)
 class spell_sha_windfury_weapon_aura : public AuraScript
 {
     PrepareAuraScript(spell_sha_windfury_weapon_aura);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_WINDFURY_PROC
+        });
+    }
 
     void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
