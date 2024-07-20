@@ -38,7 +38,7 @@ enum ShamanSpells
     SPELL_SHAMAN_ANCESTRAL_AWAKENING_DUMMY      = 52759,
     SPELL_SHAMAN_ANCESTRAL_AWAKENING_PROC       = 52752,
     SPELL_SHAMAN_BIND_SIGHT                     = 6277,
-    SPELL_SHAMAN_CLEANSING_TOTEM_EFFECT         = 52025,
+    SPELL_SHAMAN_CLEANSING_TOTEM_EFFECT         = 1230070,
     SPELL_SHAMAN_EARTH_SHIELD_HEAL              = 379,
     SPELL_SHAMAN_ELEMENTAL_MASTERY              = 16166,
     SPELL_SHAMAN_ELEMENTAL_OATH                 = 51466,
@@ -88,22 +88,33 @@ enum ShamanSpells
     SPELL_SHAMAN_CHAIN_LIGHTNING_OVERLOAD_R1    = 45297,
     SPELL_SHAMAN_LIGHTNING_SHIELD_DAMAGE_R1     = 26364,
     SPELL_SHAMAN_SHAMANISTIC_RAGE_PROC          = 30824,
-    SPELL_SHAMAN_STONECLAW_TOTEM                = 55277,
+    SPELL_SHAMAN_STONECLAW_TOTEM                = 1230053,
     SPELL_SHAMAN_GLYPH_OF_STONECLAW_TOTEM       = 63298,
     SPELL_SHAMAN_MAELSTROM_POWER                = 70831,
     SPELL_SHAMAN_T10_ENHANCEMENT_4P_BONUS       = 70832,
     SPELL_SHAMAN_BLESSING_OF_THE_ETERNALS_R1    = 51554,
 
     // Duskhaven
+    SPELL_SHAMAN_AIRS_FURY                      = 1260007,
     SPELL_SHAMAN_AIRS_GRACE                     = 1240026,
     SPELL_SHAMAN_EARTHS_STOICISM                = 1240028,
     SPELL_SHAMAN_ELEMENTAL_BASH_DUMMY           = 1240029,
     SPELL_SHAMAN_ELEMENTAL_BASH_REVERBERATION   = 1240030,
+    SPELL_SHAMAN_ELEMENTAL_PROWESS              = 1250029,
+    SPELL_SHAMAN_FERAL_INSTINCTS_PROC           = 1260014,
+    SPELL_SHAMAN_FERAL_INSTINCTS_TALENT         = 1260013,
+    SPELL_SHAMAN_FIRE_NOVA_PROC                 = 1260031,
+    SPELL_SHAMAN_FLAME_SHOCK                    = 1230029,
+    SPELL_SHAMAN_FLAMETONGUE_AURA               = 1230008,
     SPELL_SHAMAN_FROSTBRAND_SLOWED              = 1230016,
     SPELL_SHAMAN_GRIT                           = 1240011,
     SPELL_SHAMAN_LAVA_POOL_DEMORALIZE           = 1230023,
+    SPELL_SHAMAN_MOLTEN_ASSAULT                 = 1260022,
+    SPELL_SHAMAN_RUTHLESSNESS                   = 1260008,
     SPELL_SHAMAN_MAELSTROM_DEFENSE              = 1240031,
-    SPELL_SHAMAN_MAELSTROM_DEFENSE_DUMMY        = 1240032
+    SPELL_SHAMAN_MAELSTROM_DEFENSE_DUMMY        = 1240032,
+    SPELL_SHAMAN_TOTEMIC_WRATH                  = 1250013,
+    SPELL_SHAMAN_WINDFURY_PROC                  = 1260006
 };
 
 enum ShamanSpellIcons
@@ -1154,7 +1165,7 @@ class spell_sha_item_t10_elemental_2p_bonus : public AuraScript
     }
 };
 
-// 60103 - Lava Lash
+// 1260021 - Lava Lash
 class spell_sha_lava_lash : public SpellScript
 {
     PrepareSpellScript(spell_sha_lava_lash);
@@ -1168,14 +1179,12 @@ class spell_sha_lava_lash : public SpellScript
     {
         if (Player* caster = GetCaster()->ToPlayer())
         {
-            int32 damage = GetEffectValue();
+            int32 pct = GetEffectValue();
             int32 hitDamage = GetHitDamage();
             if (Item* offhand = caster->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND))
             {
-                // Damage is increased by 25% if your off-hand weapon is enchanted with Flametongue.
-                if (AuraEffect const* aurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_SHAMAN, 0x200000, 0, 0))
-                    if (aurEff->GetBase()->GetCastItemGUID() == offhand->GetGUID())
-                        AddPct(hitDamage, damage);
+                if (caster->HasAura(SPELL_SHAMAN_FLAMETONGUE_AURA))
+                    AddPct(hitDamage, pct);
                 SetHitDamage(hitDamage);
             }
         }
@@ -1243,9 +1252,17 @@ class spell_sha_maelstrom_weapon : public AuraScript
         return true;
     }
 
+    void OnProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+    {
+        if (Unit* procTarget = eventInfo.GetProcTarget())
+            if (procTarget->HasAura(SPELL_SHAMAN_FERAL_INSTINCTS_TALENT))
+                procTarget->CastSpell(procTarget, SPELL_SHAMAN_FERAL_INSTINCTS_PROC, true);
+    }
+
     void Register() override
     {
         DoCheckEffectProc += AuraCheckEffectProcFn(spell_sha_maelstrom_weapon::CheckProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
+        OnEffectProc += AuraEffectProcFn(spell_sha_maelstrom_weapon::OnProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
     }
 };
 
@@ -1388,7 +1405,7 @@ class spell_sha_nature_guardian : public AuraScript
     }
 };
 
-// 6495 - Sentry Totem
+// 1230066 - Sentry Totem
 class spell_sha_sentry_totem : public AuraScript
 {
     PrepareAuraScript(spell_sha_sentry_totem);
@@ -1447,7 +1464,7 @@ class spell_sha_shamanistic_rage : public AuraScript
     }
 };
 
-// 55278, 55328, 55329, 55330, 55332, 55333, 55335, 58589, 58590, 58591 - Stoneclaw Totem
+// 55278, 55328, 55329, 55330, 55332, 55333, 55335, 58589, 58590, 58591, 1230052 - Stoneclaw Totem
 class spell_sha_stoneclaw_totem : public SpellScript
 {
     PrepareSpellScript(spell_sha_stoneclaw_totem);
@@ -1466,7 +1483,8 @@ class spell_sha_stoneclaw_totem : public SpellScript
             if (totem && totem->IsTotem())
             {
                 CastSpellExtraArgs args(TRIGGERED_FULL_MASK);
-                args.AddSpellMod(SPELLVALUE_BASE_POINT0, GetEffectValue());
+                int32 value = int32(CalculatePct(target->GetMaxHealth(), GetEffectValue()));
+                args.AddSpellMod(SPELLVALUE_BASE_POINT0, value);
                 GetCaster()->CastSpell(totem, SPELL_SHAMAN_STONECLAW_TOTEM, args);
             }
         }
@@ -1932,6 +1950,39 @@ class spell_sha_windfury_weapon : public AuraScript
 };
 
 // Duskhaven
+// 1260007 - Air's Fury
+class spell_sha_airs_fury : public AuraScript
+{
+    PrepareAuraScript(spell_sha_airs_fury);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_RUTHLESSNESS
+        });
+    }
+
+    void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* target = GetTarget())
+            target->CastSpell(target, SPELL_SHAMAN_RUTHLESSNESS, true);
+    }
+
+    void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* target = GetTarget())
+            if (target->HasAura(SPELL_SHAMAN_RUTHLESSNESS))
+                target->RemoveAura(SPELL_SHAMAN_RUTHLESSNESS);
+    }
+
+    void Register() override
+    {
+        OnEffectApply += AuraEffectApplyFn(spell_sha_airs_fury::OnApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        OnEffectRemove += AuraEffectRemoveFn(spell_sha_airs_fury::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
 // 1240017 - Elemental Bash
 class spell_sha_elemental_bash : public SpellScript
 {
@@ -2007,6 +2058,148 @@ class spell_sha_elemental_bash_aoe_proc : public SpellScript
     {
         OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_sha_elemental_bash_aoe_proc::RemoveInvalidTargets, EFFECT_ALL, TARGET_DEST_TARGET_ENEMY);
     }
+};
+
+// 1250030 - Elemental Prowess (Buff)
+class spell_sha_elemental_prowess_buff : public AuraScript
+{
+    PrepareAuraScript(spell_sha_elemental_prowess_buff);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_ELEMENTAL_PROWESS
+        });
+    }
+
+    void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* target = GetTarget())
+            if (Unit* owner = target->GetOwner())
+                if (!owner->HasAura(SPELL_SHAMAN_ELEMENTAL_PROWESS))
+                    PreventDefaultAction();
+    }
+
+    void Register() override
+    {
+        OnEffectApply += AuraEffectApplyFn(spell_sha_elemental_prowess_buff::HandleOnApply, EFFECT_0, SPELL_AURA_MOD_SPELL_POWER, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 1260030 - Fire Nova
+class spell_sha_fire_nova_dummy : public SpellScript
+{
+    PrepareSpellScript(spell_sha_fire_nova_dummy);
+
+    SpellCastResult CheckRequirement()
+    {
+        Unit* caster = GetCaster();
+        float max_range = GetSpellInfo()->GetEffect(EFFECT_0).CalcRadius();
+
+        Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(caster, caster, max_range);
+        Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(caster, targets, u_check);
+        Cell::VisitAllObjects(caster, searcher, max_range);
+
+        for (std::list<Unit*>::iterator tIter = targets.begin(); tIter != targets.end();)
+        {
+            if ((*tIter)->HasAura(SPELL_SHAMAN_FLAME_SHOCK))
+                if (((*tIter)->GetAura(SPELL_SHAMAN_FLAME_SHOCK)->GetCasterGUID() != caster->GetGUID()) || (*tIter)->IsTotem() || (*tIter)->IsSpiritService() || (*tIter)->IsCritter())
+                    targets.erase(tIter++);
+                else
+                    ++tIter;
+            else
+                targets.erase(tIter++);
+        }
+
+        if (targets.empty())
+        {
+            SetCustomCastResultMessage(SPELL_CUSTOM_ERROR_FLAME_SHOCK_NOT_ACTIVE);
+            return SPELL_FAILED_CUSTOM_ERROR;
+        }
+
+        return SPELL_CAST_OK;
+    }
+
+    void HandleAfterCast()
+    {
+        if (Unit* caster = GetCaster())
+        {
+            CastSpellExtraArgs args(TRIGGERED_FULL_MASK);
+
+            if (targets.size() == 1)
+            {
+                int32 spellDamage = sSpellMgr->GetSpellInfo(SPELL_SHAMAN_FIRE_NOVA_PROC)->GetEffect(EFFECT_0).CalcValue();
+                int32 spellPct = GetSpellInfo()->GetEffect(EFFECT_0).CalcValue();
+                int32 bonusDamage = int32(CalculatePct(spellDamage, spellPct));
+                args.AddSpellBP0(bonusDamage);
+            }
+
+            for (std::list<Unit*>::iterator itr = targets.begin(); itr != targets.end(); ++itr)
+                caster->CastSpell(*itr, SPELL_SHAMAN_FIRE_NOVA_PROC, args);
+        }
+    }
+
+    void Register() override
+    {
+        OnCheckCast += SpellCheckCastFn(spell_sha_fire_nova_dummy::CheckRequirement);
+        AfterCast += SpellCastFn(spell_sha_fire_nova_dummy::HandleAfterCast);
+    }
+
+private:
+    std::list<Unit*> targets;
+};
+
+// 1230029 - Flameshock
+class spell_sha_flameshock_aura : public AuraScript
+{
+    PrepareAuraScript(spell_sha_flameshock_aura);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_FLAME_SHOCK,
+            SPELL_SHAMAN_MOLTEN_ASSAULT
+        });
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        Unit* target = eventInfo.GetProcTarget();
+        Unit* caster = GetCaster();
+
+        if (!caster || !target)
+            return false;
+
+        if (caster->GetGUID() != eventInfo.GetDamageInfo()->GetAttacker()->GetGUID())
+            return false;
+
+        if (!caster->HasAura(SPELL_SHAMAN_MOLTEN_ASSAULT))
+            return false;
+        else
+        {
+            uint32 amount = sSpellMgr->GetSpellInfo(SPELL_SHAMAN_FLAME_SHOCK)->GetEffect(EFFECT_2).CalcValue();
+            _procTargetList = eventInfo.GetActor()->SelectNearbyTargets(eventInfo.GetProcTarget(), 8.f, amount);
+        }
+
+        return !_procTargetList.empty();
+    }
+
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
+    {
+        for (std::list<Unit*>::iterator itr = _procTargetList.begin(); itr != _procTargetList.end(); ++itr)
+            GetCaster()->CastSpell(*itr, SPELL_SHAMAN_FLAME_SHOCK, true);
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_sha_flameshock_aura::CheckProc);
+        OnEffectProc += AuraEffectProcFn(spell_sha_flameshock_aura::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+
+private:
+    std::list<Unit*> _procTargetList;
 };
 
 // 1240015 - Frostbrand Weapon
@@ -2116,6 +2309,78 @@ class spell_sha_lesser_elemental_bash : public SpellScript
     void Register() override
     {
         OnHit += SpellHitFn(spell_sha_lesser_elemental_bash::HandleOnHit);
+    }
+};
+
+// 1260005 - Windfury (Dummy Aura)
+class spell_sha_windfury_weapon_aura : public AuraScript
+{
+    PrepareAuraScript(spell_sha_windfury_weapon_aura);
+
+    void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* target = GetTarget())
+            target->CastSpell(target, SPELL_SHAMAN_WINDFURY_PROC, true);
+    }
+
+    void Register() override
+    {
+        OnEffectApply += AuraEffectApplyFn(spell_sha_windfury_weapon_aura::OnApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 1230065 - Wrath (Flametongue Totem)
+class spell_sha_wrath_flametongue_totem : public AuraScript
+{
+    PrepareAuraScript(spell_sha_wrath_flametongue_totem);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_TOTEMIC_WRATH
+        });
+    }
+
+    void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* target = GetTarget())
+            if (Unit* owner = target->GetOwner())
+                if (owner->HasAura(SPELL_SHAMAN_TOTEMIC_WRATH))
+                    PreventDefaultAction();
+    }
+
+    void Register() override
+    {
+        OnEffectApply += AuraEffectApplyFn(spell_sha_wrath_flametongue_totem::HandleOnApply, EFFECT_0, SPELL_AURA_MOD_SPELL_POWER, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+
+// 1250013 - Wrath (Totemic Wrath)
+class spell_sha_wrath_totemic_aura : public AuraScript
+{
+    PrepareAuraScript(spell_sha_wrath_totemic_aura);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_TOTEMIC_WRATH
+        });
+    }
+
+    void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* target = GetTarget())
+            if (Unit* owner = target->GetOwner())
+                if (!owner->HasAura(SPELL_SHAMAN_TOTEMIC_WRATH))
+                    PreventDefaultAction();
+    }
+
+    void Register() override
+    {
+        OnEffectApply += AuraEffectApplyFn(spell_sha_wrath_totemic_aura::HandleOnApply, EFFECT_0, SPELL_AURA_MOD_SPELL_POWER, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
