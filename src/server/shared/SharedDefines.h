@@ -1405,7 +1405,7 @@ enum SpellCustomErrors
     SPELL_CUSTOM_ERROR_92                               = 92, // ""
     SPELL_CUSTOM_ERROR_93                               = 93, // ""
     SPELL_CUSTOM_ERROR_94                               = 94, // ""
-    SPELL_CUSTOM_ERROR_95                               = 95, // ""
+    SPELL_CUSTOM_ERROR_FLAME_SHOCK_NOT_ACTIVE           = 95, // You must have at least one Flame Shock active.
     SPELL_CUSTOM_ERROR_MAX_NUMBER_OF_RECRUITS           = 96, // You already have the max number of recruits.
     SPELL_CUSTOM_ERROR_MAX_NUMBER_OF_VOLUNTEERS         = 97, // You already have the max number of volunteers.
     SPELL_CUSTOM_ERROR_FROSTMOURNE_RENDERED_RESURRECT   = 98, // Frostmourne has rendered you unable to resurrect.

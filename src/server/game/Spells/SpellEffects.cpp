@@ -2512,9 +2512,17 @@ void Spell::EffectDispel()
             if (owner->GetAura(56249))
                 owner->CastSpell(owner, 19658, args);
     }
-    // Purge with Electrified Purge
-    if (m_spellInfo->Id == 1230022 && m_caster->ToUnit()->HasAura(1230023))
-        m_caster->CastSpell(m_caster, 1230021, true);
+
+    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN)
+    {
+        // Purge with Electrified Purge
+        if (m_spellInfo->Id == 1230022 && m_caster->ToUnit()->HasAura(1230023))
+            m_caster->CastSpell(m_caster, 1230021, true);
+
+        // Purge/Cleanse Spirit with Inundate
+        if ((m_spellInfo->Id == 1230022 || m_spellInfo->Id == 1230038) && m_caster->ToUnit()->HasAura(1250019))
+            m_caster->CastSpell(m_caster, 1250020, true);
+    }
 }
 
 void Spell::EffectDualWield()

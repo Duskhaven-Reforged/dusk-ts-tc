@@ -2199,7 +2199,27 @@ void Unit::AttackerStateUpdate(Unit* victim, WeaponAttackType attType, bool extr
         // Send log damage message to client
 
         for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+        {
+            if (extra && damageInfo.Attacker->HasAura(1260005)) // Windfury Dummy Aura
+            {
+                float mult = float(sSpellMgr->GetSpellInfo(1260005)->GetEffect(EFFECT_0).CalcValue()) / 100;
+
+                if (damageInfo.Attacker->HasAura(1260019)) // Forceful Winds Proc
+                {
+                    uint32 stacks = damageInfo.Attacker->GetAura(1260019)->GetStackAmount();
+                    float tempMult = float(sSpellMgr->GetSpellInfo(1260019)->GetEffect(EFFECT_0).CalcValue()) / 100 * stacks;
+                    mult += tempMult;
+                }
+
+                // Aleist3r: why I am doing it here? Short answer, probably the fastest way to proc it from Windfury extra attack
+                // without trying to find some retarded workarounds; I may be wrong though
+                if (damageInfo.Attacker->HasAura(1260018)) // Forceful Winds Talent
+                    damageInfo.Attacker->CastSpell(damageInfo.Attacker, 1260019, true);
+
+                damageInfo.Damages[i].Damage *= mult;
+            }
             Unit::DealDamageMods(victim, damageInfo.Damages[i].Damage, &damageInfo.Damages[i].Absorb);
+        }
         SendAttackStateUpdate(&damageInfo);
 
         _lastDamagedTargetGuid = victim->GetGUID();
