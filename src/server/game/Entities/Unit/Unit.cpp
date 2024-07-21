@@ -1715,6 +1715,13 @@ void Unit::HandleEmoteCommand(Emote emoteId)
                 return aurEff->GetSpellInfo()->IsItemFitToSpellRequirements(weapon);
             });
 
+            arpPct += victim->GetTotalAuraMultiplier(SPELL_AURA_MOD_ARMOR_PENETRATION_PCT_FROM_CASTER, [attacker, spellInfo](AuraEffect const* aurEff) -> bool
+            {
+                if (aurEff->GetCasterGUID() == attacker->GetGUID() && aurEff->IsAffectedOnSpell(spellInfo))
+                    return true;
+                return false;
+            });
+
             // no more than 100%
             RoundToInterval(arpPct, 0.f, 100.f);
 

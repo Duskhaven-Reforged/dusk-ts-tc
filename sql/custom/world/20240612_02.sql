@@ -1,4 +1,4 @@
-INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
+REPLACE INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
 	 (9000002,0,11111,1.0,0,1,1,1,1,''),
 	 (9000002,1,20000,5.0,0,1,2,1,1,''),
 	 (9000002,90000,0,100.0,1,1,0,1,1,''),
@@ -6,7 +6,7 @@ INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,Lo
 	 (9000018,782,0,75.0,1,1,0,1,1,''),
 	 (9000021,90007,0,100.0,0,1,0,1,1,''),
 	 (9000026,90010,0,100.0,1,1,0,1,1,'');
-INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
+REPLACE INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
 	 (9000027,90012,0,100.0,1,1,0,1,1,''),
 	 (9000031,35126,0,100.0,1,1,0,1,1,''),
 	 (9000033,5842,0,100.0,1,1,0,1,1,''),
@@ -17,7 +17,7 @@ INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,Lo
 	 (9000061,90029,0,100.0,1,1,0,1,1,''),
 	 (9000075,90036,0,100.0,1,1,0,1,1,''),
 	 (9000080,90040,0,100.0,1,1,0,1,1,'');
-INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
+REPLACE INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
 	 (9000080,90041,0,35.0,0,1,0,1,1,''),
 	 (9000094,90046,0,20.0,1,1,0,1,1,''),
 	 (9000096,90047,0,100.0,0,1,0,1,1,''),
@@ -28,7 +28,7 @@ INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,Lo
 	 (9000151,90057,0,100.0,1,1,0,1,1,''),
 	 (9000200,90064,0,100.0,1,1,0,1,1,''),
 	 (9000206,90066,0,100.0,1,1,0,1,1,'');
-INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
+REPLACE INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
 	 (9000216,90069,0,100.0,0,1,0,1,1,''),
 	 (9000217,90070,0,100.0,0,1,0,1,1,''),
 	 (9000218,90071,0,100.0,0,1,0,1,1,''),
@@ -39,7 +39,7 @@ INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,Lo
 	 (9000223,90076,0,100.0,0,1,0,1,1,''),
 	 (9000224,90077,0,100.0,0,1,0,1,1,''),
 	 (9000225,90078,0,100.0,0,1,0,1,1,'');
-INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
+REPLACE INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
 	 (9000226,90079,0,100.0,0,1,0,1,1,''),
 	 (9000227,90080,0,100.0,0,1,0,1,1,''),
 	 (9000228,90081,0,100.0,0,1,0,1,1,''),
@@ -50,7 +50,7 @@ INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,Lo
 	 (9000237,90085,0,100.0,0,1,0,1,1,''),
 	 (9000238,90086,0,100.0,0,1,0,1,1,''),
 	 (9000239,90087,0,100.0,0,1,0,1,1,'');
-INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
+REPLACE INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
 	 (9000240,90088,0,100.0,0,1,0,1,1,''),
 	 (9000241,90089,0,100.0,0,1,0,1,1,''),
 	 (9000242,90090,0,100.0,0,1,0,1,1,''),
@@ -61,7 +61,7 @@ INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,Lo
 	 (9000249,90097,0,100.0,0,1,0,1,1,''),
 	 (9000251,90099,0,100.0,0,1,0,1,1,''),
 	 (9000253,90101,0,100.0,0,1,0,1,1,'');
-INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
+REPLACE INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
 	 (9000255,90103,0,100.0,0,1,0,1,1,''),
 	 (9000256,90104,0,100.0,0,1,0,1,1,''),
 	 (9000258,90106,0,100.0,0,1,0,1,1,''),
@@ -72,7 +72,7 @@ INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,Lo
 	 (10000010,11111,11111,5.0,0,1,0,1,1,''),
 	 (10000010,24730,24730,1.0,0,1,0,1,1,''),
 	 (10000010,44007,44007,5.0,0,1,0,1,1,'');
-INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
+REPLACE INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
 	 (10000010,100017,0,100.0,1,1,0,1,1,''),
 	 (10000013,727,0,5.0,0,1,0,1,1,''),
 	 (10000013,4562,0,5.0,0,1,0,1,1,''),
@@ -83,7 +83,7 @@ INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,Lo
 	 (10000013,8178,0,5.0,0,1,0,1,1,''),
 	 (10000013,8180,0,5.0,0,1,0,1,1,''),
 	 (10000017,118,0,5.0,0,1,0,1,1,'');
-INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
+REPLACE INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
 	 (10000017,100007,0,100.0,1,1,0,1,1,''),
 	 (10000017,100042,0,100.0,1,1,0,1,1,''),
 	 (10000060,100054,0,100.0,0,1,0,1,1,''),
@@ -94,7 +94,7 @@ INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,Lo
 	 (10000319,100095,0,100.0,0,1,0,1,1,''),
 	 (10000319,100096,0,100.0,0,1,0,1,1,'Temp item that can only be used in Dire Maul, expires after 2 mins'),
 	 (10000356,10138,0,5.0,0,1,0,1,1,'');
-INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
+REPLACE INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
 	 (10000356,10140,0,5.0,0,1,0,1,1,''),
 	 (10000356,10141,0,5.0,0,1,0,1,1,''),
 	 (10000356,10144,0,5.0,0,1,0,1,1,''),
@@ -105,7 +105,7 @@ INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,Lo
 	 (10000356,10230,0,5.0,0,1,0,1,1,''),
 	 (10000356,10235,0,5.0,0,1,0,1,1,''),
 	 (10000356,10258,0,5.0,0,1,0,1,1,'');
-INSERT INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
+REPLACE INTO creature_loot_template (Entry,Item,Reference,Chance,QuestRequired,LootMode,GroupId,MinCount,MaxCount,Comment) VALUES
 	 (10000356,10275,0,5.0,0,1,0,1,1,''),
 	 (10000356,10280,0,5.0,0,1,0,1,1,''),
 	 (10000356,10378,0,5.0,0,1,0,1,1,''),

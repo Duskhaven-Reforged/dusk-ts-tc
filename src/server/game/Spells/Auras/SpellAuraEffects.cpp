@@ -359,7 +359,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleAuraOpenStable,                            //292 SPELL_AURA_OPEN_STABLE
     &AuraEffect::HandleAuraOverrideSpells,                        //293 SPELL_AURA_OVERRIDE_SPELLS auras which probably add set of abilities to their target based on it's miscvalue
     &AuraEffect::HandleAuraPreventRegeneratePower,                //294 SPELL_AURA_PREVENT_REGENERATE_POWER
-    &AuraEffect::HandleUnused,                                    //295 0 spells in 3.3.5
+    &AuraEffect::HandleNoImmediateEffect,                         //295 SPELL_AURA_MOD_ARMOR_PENETRATION_PCT_FROM_CASTER
     &AuraEffect::HandleAuraSetVehicle,                            //296 SPELL_AURA_SET_VEHICLE_ID sets vehicle on target
     &AuraEffect::HandleNULL,                                      //297 Spirit Burst spells
     &AuraEffect::HandleNULL,                                      //298 70569 - Strangulating, maybe prevents talk or cast

@@ -188,7 +188,19 @@ enum SMART_EVENT
     SMART_EVENT_ON_SPELL_START           = 85,      // SpellID, CooldownMin, CooldownMax
     SMART_EVENT_ON_DESPAWN               = 86,      // NONE
 
-    SMART_EVENT_END                      = 87
+    SMART_EVENT_END                      = 87,
+
+    SMART_EVENT_AC_START                 = 100,
+
+    SMART_EVENT_NEAR_PLAYERS             = 101,      // min, radius, first timer, repeatMin, repeatMax
+    SMART_EVENT_NEAR_PLAYERS_NEGATION    = 102,      // max, radius, first timer, repeatMin, repeatMax
+    SMART_EVENT_NEAR_UNIT                = 103,      // type (0: creature 1: gob), entry, count, range, timer
+    SMART_EVENT_NEAR_UNIT_NEGATION       = 104,      // type (0: creature 1: gob), entry, count, range, timer
+    SMART_EVENT_AREA_CASTING             = 105,      // min, max, repeatMin, repeatMax, rangeMin, rangeMax
+    SMART_EVENT_AREA_RANGE               = 106,      // min, max, repeatMin, repeatMax, rangeMin, rangeMax
+    SMART_EVENT_SUMMONED_UNIT_EVADE      = 107,      // CreatureId(0 all), CooldownMin, CooldownMax
+
+    SMART_EVENT_AC_END                   = 108
 };
 
 struct SmartEvent
@@ -254,6 +266,14 @@ struct SmartEvent
             uint32 repeatMax;
             uint32 spellId;
         } targetCasting;
+
+        struct
+        {
+            uint32 hpDeficit;
+            uint32 radius;
+            uint32 repeatMin;
+            uint32 repeatMax;
+        } friendlyHealth;
 
         struct
         {
@@ -370,6 +390,17 @@ struct SmartEvent
 
         struct
         {
+            uint32 spell;
+            uint32 effIndex;
+        } dummy;
+
+        struct
+        {
+            uint32 phasemask;
+        } eventPhaseChange;
+
+        struct
+        {
             uint32 gameEventId;
         } gameEvent;
 
@@ -419,6 +450,42 @@ struct SmartEvent
             uint32 cooldownMin;
             uint32 cooldownMax;
         } spellCast;
+
+        struct
+        {
+            uint32 minCount;
+            uint32 radius;
+            uint32 firstTimer;
+            uint32 repeatMin;
+            uint32 repeatMax;
+        } nearPlayer;
+
+        struct
+        {
+            uint32 maxCount;
+            uint32 radius;
+            uint32 firstTimer;
+            uint32 repeatMin;
+            uint32 repeatMax;
+        } nearPlayerNegation;
+
+        struct
+        {
+            uint32 type;
+            uint32 entry;
+            uint32 count;
+            uint32 range;
+            uint32 timer;
+        } nearUnit;
+
+        struct
+        {
+            uint32 type;
+            uint32 entry;
+            uint32 count;
+            uint32 range;
+            uint32 timer;
+        } nearUnitNegation;
 
         struct
         {
@@ -586,11 +653,10 @@ enum SMART_ACTION
     SMART_ACTION_INVOKER_CAST                       = 134,    // spellID, castFlags
     SMART_ACTION_PLAY_CINEMATIC                     = 135,    // entry, cinematic
     SMART_ACTION_SET_MOVEMENT_SPEED                 = 136,    // movementType, speedInteger, speedFraction
-    SMART_ACTION_PLAY_SPELL_VISUAL_KIT              = 137,    // spellVisualKitId (RESERVED, PENDING CHERRYPICK)
+
     SMART_ACTION_OVERRIDE_LIGHT                     = 138,    // zoneId, overrideLightID, transitionMilliseconds
     SMART_ACTION_OVERRIDE_WEATHER                   = 139,    // zoneId, weatherId, intensity
-    SMART_ACTION_SET_AI_ANIM_KIT                    = 140,    // DEPRECATED, DO REUSE (it was never used in any branch, treat as free action id)
-    SMART_ACTION_SET_HOVER                          = 141,    // 0/1
+
     SMART_ACTION_SET_HEALTH_PCT                     = 142,    // percent
     SMART_ACTION_CREATE_CONVERSATION                = 143,    // don't use on 3.3.5a
     SMART_ACTION_SET_IMMUNE_PC                      = 144,    // 0/1
@@ -600,7 +666,44 @@ enum SMART_ACTION
     SMART_ACTION_ADD_TO_STORED_TARGET_LIST          = 148,    // varID
     SMART_ACTION_BECOME_PERSONAL_CLONE_FOR_PLAYER   = 149,    // don't use on 3.3.5a
     SMART_ACTION_TRIGGER_GAME_EVENT                 = 150,    // eventId, useSaiTargetAsGameEventSource (RESERVED, PENDING CHERRYPICK)
-    SMART_ACTION_DO_ACTION                          = 151,    // actionId (RESERVED, PENDING CHERRYPICK)
+
+
+    SMART_ACTION_AC_START                           = 200,    // placeholder
+
+    SMART_ACTION_MOVE_TO_POS_TARGET                 = 201,    // pointId
+    // SMART_ACTION_SET_GO_STATE                    = 202,    // state // Replaced by SMART_ACTION_GO_SET_GO_STATE
+    SMART_ACTION_EXIT_VEHICLE                       = 203,    // none
+    SMART_ACTION_SET_UNIT_MOVEMENT_FLAGS            = 204,    // flags
+    SMART_ACTION_SET_COMBAT_DISTANCE                = 205,    // combatDistance
+    SMART_ACTION_SET_CASTER_COMBAT_DIST             = 206,    // followDistance, resetToMax
+    SMART_ACTION_SET_HOVER                          = 207,    // 0/1
+    SMART_ACTION_ADD_IMMUNITY                       = 208,    // type, id, value
+    SMART_ACTION_REMOVE_IMMUNITY                    = 209,    // type, id, value
+    SMART_ACTION_FALL                               = 210,    //
+    SMART_ACTION_SET_EVENT_FLAG_RESET               = 211,    // 0/1
+    SMART_ACTION_STOP_MOTION                        = 212,    // stopMoving, movementExpired
+    SMART_ACTION_NO_ENVIRONMENT_UPDATE              = 213,
+    SMART_ACTION_ZONE_UNDER_ATTACK                  = 214,
+    SMART_ACTION_LOAD_GRID                          = 215,
+    SMART_ACTION_MUSIC                              = 216,    // SoundId, onlySelf, type
+    SMART_ACTION_RANDOM_MUSIC                       = 217,    // SoundId1, SoundId2, SoundId3, SoundId4, onlySelf, type
+
+    SMART_ACTION_CUSTOM_CAST                        = 218,    // spellId, castflag, bp0, bp1, bp2
+    SMART_ACTION_CONE_SUMMON                        = 219,    // entry, duration (0 = perm), dist between rings, dist between earch summon in a row, length of cone, width of cone (angle)
+    SMART_ACTION_PLAYER_TALK                        = 220,    // acore_string.entry, yell? (0/1)
+    SMART_ACTION_VORTEX_SUMMON                      = 221,    // entry, duration (0 = perm), spiral scaling, spiral appearance, range max, phi_delta     <-- yes confusing math, try it ingame and see, my lovely AC boys!
+    SMART_ACTION_CU_ENCOUNTER_START                 = 222,    // Resets cooldowns on all targets and removes Heroism debuff(s)
+    SMART_ACTION_DO_ACTION                          = 223,    // ActionId
+    SMART_ACTION_SET_GUID                           = 225,    // Sends the invoker's or the base object's own ObjectGuid to target
+    SMART_ACTION_DISABLE                            = 226,    // state
+    SMART_ACTION_SET_SCALE                          = 227,    // scale
+    SMART_ACTION_SUMMON_RADIAL                      = 228,    // summonEntry, summonDuration, repetitions, startAngle, stepAngle, dist
+    SMART_ACTION_PLAY_SPELL_VISUAL                  = 229,    // visualId, visualIdImpact
+    SMART_ACTION_FOLLOW_GROUP                       = 230,    // followState, followType, dist
+    SMART_ACTION_SET_ORIENTATION_TARGET             = 231,    // type, target_type, target_param1, target_param2, target_param3, target_param4
+
+    SMART_ACTION_AC_END                             = 232,    // placeholder
+
     // @tswow-begin custom actions
     SMART_ACTION_SEND_WORLDSTATE                    = 270,    // id, value
     SMART_ACTION_SEND_GAME_EVENT_STATE              = 271,    // gameEventId

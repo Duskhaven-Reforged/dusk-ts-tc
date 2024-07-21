@@ -5053,7 +5053,7 @@ void Spell::TakeRunePower(bool didHit)
     // - Frost rune
     // - Death rune, originally a Frost rune
     // - Death rune, any kind
-    runeCost[RUNE_DEATH] = 0;                               // calculated later
+    // runeCost[RUNE_DEATH] = 0;                               // calculated later
     // for (uint32 i = 0; i < MAX_RUNES; ++i)
     // {
     //     RuneType rune = player->GetCurrentRune(i);
@@ -5089,7 +5089,7 @@ void Spell::TakeRunePower(bool didHit)
     //         }
     //     }
     // }
-
+    
     // Grab any Death rune
     if (runeCost[RUNE_DEATH] > 0)
     {
@@ -5113,9 +5113,12 @@ void Spell::TakeRunePower(bool didHit)
     }
 
     // you can gain some runic power when use runes
-    if (didHit)
+    if (didHit) {
+        FIRE(Player,OnRunesSpent, TSPlayer(m_caster->ToPlayer()), runeCost[RUNE_BLOOD] + runeCost[RUNE_UNHOLY] + runeCost[RUNE_FROST]);
+
         if (int32 rp = int32(runeCostData->RunicPower * sWorld->getRate(RATE_POWER_RUNICPOWER_INCOME)))
             player->ModifyPower(POWER_RUNIC_POWER, int32(rp));
+    }
 }
 
 void Spell::TakeReagents()
