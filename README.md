@@ -86,7 +86,6 @@ Read file [COPYING](COPYING).
 
 Read file [AUTHORS](AUTHORS).
 
-
 ## Links
 
 * [Website](https://www.trinitycore.org)
