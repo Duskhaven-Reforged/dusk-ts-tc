@@ -376,7 +376,7 @@ enum AuraType : uint32
     SPELL_AURA_SET_VEHICLE_ID                               = 296,
     SPELL_AURA_BLOCK_SPELL_FAMILY                           = 297,
     SPELL_AURA_STRANGULATE                                  = 298,
-    SPELL_AURA_299                                          = 299,
+    SPELL_AURA_PROC_TRIGGER_COPY_OF_TRIGGER                 = 299,
     SPELL_AURA_SHARE_DAMAGE_PCT                             = 300,
     SPELL_AURA_SCHOOL_HEAL_ABSORB                           = 301,
     SPELL_AURA_302                                          = 302,

@@ -845,12 +845,17 @@ void Spell::EffectTriggerSpell()
 
     CastSpellExtraArgs args(m_originalCasterGUID);
     // set basepoints for trigger with value effect
-    if (effectInfo->Effect == SPELL_EFFECT_TRIGGER_SPELL_WITH_VALUE)
+    if (effectInfo->Effect == SPELL_EFFECT_TRIGGER_SPELL_WITH_VALUE) { 
         for (uint32 i = 0; i < MAX_SPELL_EFFECTS; ++i) {
             args.AddSpellMod(SpellValueMod(SPELLVALUE_BASE_POINT0 + i), damage);
             if (effectInfo->MiscValueB > 0)
                 args.AddSpellMod(SpellValueMod(SPELLVALUE_DURATION), effectInfo->MiscValueB);
         }
+    } else {
+        if (effectInfo->MiscValue == 8)
+            args.AddSpellMod(SpellValueMod(SPELLVALUE_AURA_STACK), effectInfo->MiscValueB);
+    }
+
 
     // original caster guid only for GO cast
     m_caster->CastSpell(std::move(targets), spellInfo->Id, args);
@@ -3193,183 +3198,186 @@ void Spell::EffectWeaponDmg()
     int32 fixed_bonus = 0;
     int32 spell_bonus = 0;                                  // bonus specific for spell
 
-    switch (m_spellInfo->SpellFamilyName)
-    {
-        case SPELLFAMILY_WARRIOR:
-        {
-            // Devastate (player ones)
-            if (m_spellInfo->SpellFamilyFlags[1] & 0x40)
-            {
-                unitCaster->CastSpell(unitTarget, 58567, true);
-                // 58388 - Glyph of Devastate dummy aura.
-                if (unitCaster->HasAura(58388))
-                    unitCaster->CastSpell(unitTarget, 58567, true);
+    // switch (m_spellInfo->SpellFamilyName)
+    // {
+    //     case SPELLFAMILY_WARRIOR:
+    //     {
+    //         // Devastate (player ones)
+    //         if (m_spellInfo->SpellFamilyFlags[1] & 0x40)
+    //         {
+    //             unitCaster->CastSpell(unitTarget, 58567, true);
+    //             // 58388 - Glyph of Devastate dummy aura.
+    //             if (unitCaster->HasAura(58388))
+    //                 unitCaster->CastSpell(unitTarget, 58567, true);
 
-                if (Aura* aur = unitTarget->GetAura(58567, unitCaster->GetGUID()))
-                    fixed_bonus += (aur->GetStackAmount() - 1) * CalculateDamage(m_spellInfo->GetEffect(EFFECT_2)); // subtract 1 so fixed bonus is not applied twice
-            }
-            else if (m_spellInfo->SpellFamilyFlags[0] & 0x8000000) // Mocking Blow
-            {
-                if (unitTarget->IsImmunedToSpellEffect(m_spellInfo, m_spellInfo->GetEffect(EFFECT_1), unitCaster) || unitTarget->GetTypeId() == TYPEID_PLAYER)
-                {
-                    m_damage = 0;
-                    return;
-                }
-            }
-            break;
-        }
-        case SPELLFAMILY_ROGUE:
-        {
-            // Fan of Knives, Hemorrhage, Ghostly Strike
-            if ((m_spellInfo->SpellFamilyFlags[1] & 0x40000)
-                || (m_spellInfo->SpellFamilyFlags[0] & 0x6000000))
-            {
-                // Hemorrhage
-                if (m_spellInfo->SpellFamilyFlags[0] & 0x2000000)
-                    AddComboPointGain(unitTarget, 1);
+    //             if (Aura* aur = unitTarget->GetAura(58567, unitCaster->GetGUID()))
+    //                 fixed_bonus += (aur->GetStackAmount() - 1) * CalculateDamage(m_spellInfo->GetEffect(EFFECT_2)); // subtract 1 so fixed bonus is not applied twice
+    //         }
+    //         else if (m_spellInfo->SpellFamilyFlags[0] & 0x8000000) // Mocking Blow
+    //         {
+    //             if (unitTarget->IsImmunedToSpellEffect(m_spellInfo, m_spellInfo->GetEffect(EFFECT_1), unitCaster) || unitTarget->GetTypeId() == TYPEID_PLAYER)
+    //             {
+    //                 m_damage = 0;
+    //                 return;
+    //             }
+    //         }
+    //         break;
+    //     }
+    //     case SPELLFAMILY_ROGUE:
+    //     {
+    //         // Fan of Knives, Hemorrhage, Ghostly Strike
+    //         if ((m_spellInfo->SpellFamilyFlags[1] & 0x40000)
+    //             || (m_spellInfo->SpellFamilyFlags[0] & 0x6000000))
+    //         {
+    //             // Hemorrhage
+    //             if (m_spellInfo->SpellFamilyFlags[0] & 0x2000000)
+    //                 AddComboPointGain(unitTarget, 1);
 
-                // 50% more damage with daggers
-                if (unitCaster->GetTypeId() == TYPEID_PLAYER)
-                    if (Item* item = unitCaster->ToPlayer()->GetWeaponForAttack(m_attackType, true))
-                        if (item->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_DAGGER)
-                            totalDamagePercentMod *= 1.5f;
-            }
-            // Mutilate (for each hand)
-            else if (m_spellInfo->SpellFamilyFlags[1] & 0x6)
-            {
-                bool found = false;
-                // fast check
-                if (unitTarget->HasAuraState(AURA_STATE_DEADLY_POISON, m_spellInfo, unitCaster))
-                    found = true;
-                // full aura scan
-                else
-                {
-                    Unit::AuraApplicationMap const& auras = unitTarget->GetAppliedAuras();
-                    for (Unit::AuraApplicationMap::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
-                    {
-                        if (itr->second->GetBase()->GetSpellInfo()->Dispel == DISPEL_POISON)
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
+    //             // 50% more damage with daggers
+    //             if (unitCaster->GetTypeId() == TYPEID_PLAYER)
+    //                 if (Item* item = unitCaster->ToPlayer()->GetWeaponForAttack(m_attackType, true))
+    //                     if (item->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_DAGGER)
+    //                         totalDamagePercentMod *= 1.5f;
+    //         }
+    //         // Mutilate (for each hand)
+    //         else if (m_spellInfo->SpellFamilyFlags[1] & 0x6)
+    //         {
+    //             bool found = false;
+    //             // fast check
+    //             if (unitTarget->HasAuraState(AURA_STATE_DEADLY_POISON, m_spellInfo, unitCaster))
+    //                 found = true;
+    //             // full aura scan
+    //             else
+    //             {
+    //                 Unit::AuraApplicationMap const& auras = unitTarget->GetAppliedAuras();
+    //                 for (Unit::AuraApplicationMap::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
+    //                 {
+    //                     if (itr->second->GetBase()->GetSpellInfo()->Dispel == DISPEL_POISON)
+    //                     {
+    //                         found = true;
+    //                         break;
+    //                     }
+    //                 }
+    //             }
 
-                if (found)
-                    totalDamagePercentMod *= 1.2f;          // 120% if poisoned
-            }
-            break;
-        }
-        case SPELLFAMILY_PALADIN:
-        {
-            // Seal of Command Unleashed
-            if (m_spellInfo->Id == 20467)
-            {
-                spell_bonus += int32(0.08f * unitCaster->GetTotalAttackPowerValue(BASE_ATTACK));
-                spell_bonus += int32(0.13f * unitCaster->SpellBaseDamageBonusDone(m_spellInfo->GetSchoolMask()));
-            }
-            break;
-        }
-        case SPELLFAMILY_SHAMAN:
-        {
-            // Skyshatter Harness item set bonus
-            // Stormstrike
-            if (AuraEffect* aurEff = unitCaster->IsScriptOverriden(m_spellInfo, 5634))
-                unitCaster->CastSpell(nullptr, 38430, aurEff);
-            break;
-        }
-        case SPELLFAMILY_DRUID:
-        {
-            // Mangle (Cat): CP
-            if (m_spellInfo->SpellFamilyFlags[1] & 0x400)
-                AddComboPointGain(unitTarget, 1);
+    //             if (found)
+    //                 totalDamagePercentMod *= 1.2f;          // 120% if poisoned
+    //         }
+    //         break;
+    //     }
+    //     case SPELLFAMILY_PALADIN:
+    //     {
+    //         // Seal of Command Unleashed
+    //         if (m_spellInfo->Id == 20467)
+    //         {
+    //             spell_bonus += int32(0.08f * unitCaster->GetTotalAttackPowerValue(BASE_ATTACK));
+    //             spell_bonus += int32(0.13f * unitCaster->SpellBaseDamageBonusDone(m_spellInfo->GetSchoolMask()));
+    //         }
+    //         break;
+    //     }
+    //     case SPELLFAMILY_SHAMAN:
+    //     {
+    //         // Skyshatter Harness item set bonus
+    //         // Stormstrike
+    //         if (AuraEffect* aurEff = unitCaster->IsScriptOverriden(m_spellInfo, 5634))
+    //             unitCaster->CastSpell(nullptr, 38430, aurEff);
+    //         break;
+    //     }
+    //     case SPELLFAMILY_DRUID:
+    //     {
+    //         // Mangle (Cat): CP
+    //         if (m_spellInfo->SpellFamilyFlags[1] & 0x400)
+    //             AddComboPointGain(unitTarget, 1);
 
-            // Shred, Maul - Rend and Tear
-            else if (m_spellInfo->SpellFamilyFlags[0] & 0x00008800 && unitTarget->HasAuraState(AURA_STATE_BLEEDING))
-            {
-                if (AuraEffect const* rendAndTear = unitCaster->GetDummyAuraEffect(SPELLFAMILY_DRUID, 2859, 0))
-                    AddPct(totalDamagePercentMod, rendAndTear->GetAmount());
-            }
-            break;
-        }
-        case SPELLFAMILY_HUNTER:
-        {
-            // Kill Shot - bonus damage from Ranged Attack Power
-            if (m_spellInfo->SpellFamilyFlags[1] & 0x800000)
-                spell_bonus += int32(0.4f * unitCaster->GetTotalAttackPowerValue(RANGED_ATTACK));
-            break;
-        }
-        case SPELLFAMILY_DEATHKNIGHT:
-        {
-            // Plague Strike
-            if (m_spellInfo->SpellFamilyFlags[0] & 0x1)
-            {
-                // Glyph of Plague Strike
-                if (AuraEffect const* aurEff = unitCaster->GetAuraEffect(58657, EFFECT_0))
-                    AddPct(totalDamagePercentMod, aurEff->GetAmount());
-                break;
-            }
-            // Blood Strike
-            if (m_spellInfo->SpellFamilyFlags[0] & 0x400000)
-            {
-                float bonusPct = m_spellInfo->GetEffect(EFFECT_2).CalcValue() * unitTarget->GetDiseasesByCaster(unitCaster->GetGUID()) / 2.0f;
-                // Death Knight T8 Melee 4P Bonus
-                if (AuraEffect const* aurEff = unitCaster->GetAuraEffect(64736, EFFECT_0))
-                    AddPct(bonusPct, aurEff->GetAmount());
-                AddPct(totalDamagePercentMod, bonusPct);
+    //         // Shred, Maul - Rend and Tear
+    //         else if (m_spellInfo->SpellFamilyFlags[0] & 0x00008800 && unitTarget->HasAuraState(AURA_STATE_BLEEDING))
+    //         {
+    //             if (AuraEffect const* rendAndTear = unitCaster->GetDummyAuraEffect(SPELLFAMILY_DRUID, 2859, 0))
+    //                 AddPct(totalDamagePercentMod, rendAndTear->GetAmount());
+    //         }
+    //         break;
+    //     }
+    //     case SPELLFAMILY_HUNTER:
+    //     {
+    //         // Kill Shot - bonus damage from Ranged Attack Power
+    //         if (m_spellInfo->SpellFamilyFlags[1] & 0x800000)
+    //             spell_bonus += int32(0.4f * unitCaster->GetTotalAttackPowerValue(RANGED_ATTACK));
+    //         break;
+    //     }
+    //     case SPELLFAMILY_DEATHKNIGHT:
+    //     {
+    //         // Plague Strike
+    //         if (m_spellInfo->SpellFamilyFlags[0] & 0x1)
+    //         {
+    //             // Glyph of Plague Strike
+    //             if (AuraEffect const* aurEff = unitCaster->GetAuraEffect(58657, EFFECT_0))
+    //                 AddPct(totalDamagePercentMod, aurEff->GetAmount());
+    //             break;
+    //         }
+    //         // Blood Strike
+    //         if (m_spellInfo->SpellFamilyFlags[0] & 0x400000)
+    //         {
+    //             float bonusPct = m_spellInfo->GetEffect(EFFECT_2).CalcValue() * unitTarget->GetDiseasesByCaster(unitCaster->GetGUID()) / 2.0f;
+    //             // Death Knight T8 Melee 4P Bonus
+    //             if (AuraEffect const* aurEff = unitCaster->GetAuraEffect(64736, EFFECT_0))
+    //                 AddPct(bonusPct, aurEff->GetAmount());
+    //             AddPct(totalDamagePercentMod, bonusPct);
 
-                // Glyph of Blood Strike
-                if (unitCaster->GetAuraEffect(59332, EFFECT_0))
-                    if (unitTarget->HasAuraType(SPELL_AURA_MOD_DECREASE_SPEED))
-                       AddPct(totalDamagePercentMod, 20);
-                break;
-            }
-            // Death Strike
-            if (m_spellInfo->SpellFamilyFlags[0] & 0x10)
-            {
-                // Glyph of Death Strike
-                if (AuraEffect const* aurEff = unitCaster->GetAuraEffect(59336, EFFECT_0))
-                    if (uint32 runic = std::min<uint32>(unitCaster->GetPower(POWER_RUNIC_POWER), aurEff->GetSpellInfo()->GetEffect(EFFECT_1).CalcValue()))
-                        AddPct(totalDamagePercentMod, runic);
-                break;
-            }
-            // Obliterate (12.5% more damage per disease)
-            if (m_spellInfo->SpellFamilyFlags[1] & 0x20000)
-            {
-                bool consumeDiseases = true;
-                // Annihilation
-                if (AuraEffect const* aurEff = unitCaster->GetDummyAuraEffect(SPELLFAMILY_DEATHKNIGHT, 2710, EFFECT_0))
-                    // Do not consume diseases if roll sucesses
-                    if (roll_chance_i(aurEff->GetAmount()))
-                        consumeDiseases = false;
+    //             // Glyph of Blood Strike
+    //             if (unitCaster->GetAuraEffect(59332, EFFECT_0))
+    //                 if (unitTarget->HasAuraType(SPELL_AURA_MOD_DECREASE_SPEED))
+    //                    AddPct(totalDamagePercentMod, 20);
+    //             break;
+    //         }
+    //         // Death Strike
+    //         if (m_spellInfo->SpellFamilyFlags[0] & 0x10)
+    //         {
+    //             // Glyph of Death Strike
+    //             if (AuraEffect const* aurEff = unitCaster->GetAuraEffect(59336, EFFECT_0))
+    //                 if (uint32 runic = std::min<uint32>(unitCaster->GetPower(POWER_RUNIC_POWER), aurEff->GetSpellInfo()->GetEffect(EFFECT_1).CalcValue()))
+    //                     AddPct(totalDamagePercentMod, runic);
+    //             break;
+    //         }
+    //         // Obliterate (12.5% more damage per disease)
+    //         if (m_spellInfo->SpellFamilyFlags[1] & 0x20000)
+    //         {
+    //             bool consumeDiseases = true;
+    //             // Annihilation
+    //             if (AuraEffect const* aurEff = unitCaster->GetDummyAuraEffect(SPELLFAMILY_DEATHKNIGHT, 2710, EFFECT_0))
+    //                 // Do not consume diseases if roll sucesses
+    //                 if (roll_chance_i(aurEff->GetAmount()))
+    //                     consumeDiseases = false;
 
-                float bonusPct = m_spellInfo->GetEffect(EFFECT_2).CalcValue() * unitTarget->GetDiseasesByCaster(unitCaster->GetGUID(), consumeDiseases) / 2.0f;
-                // Death Knight T8 Melee 4P Bonus
-                if (AuraEffect const* aurEff = unitCaster->GetAuraEffect(64736, EFFECT_0))
-                    AddPct(bonusPct, aurEff->GetAmount());
-                AddPct(totalDamagePercentMod, bonusPct);
-                break;
-            }
-            // Blood-Caked Strike - Blood-Caked Blade
-            if (m_spellInfo->SpellIconID == 1736)
-            {
-                AddPct(totalDamagePercentMod, unitTarget->GetDiseasesByCaster(unitCaster->GetGUID()) * 50.0f);
-                break;
-            }
-            // Heart Strike
-            if (m_spellInfo->SpellFamilyFlags[0] & 0x1000000)
-            {
-                float bonusPct = m_spellInfo->GetEffect(EFFECT_2).CalcValue() * unitTarget->GetDiseasesByCaster(unitCaster->GetGUID());
-                // Death Knight T8 Melee 4P Bonus
-                if (AuraEffect const* aurEff = unitCaster->GetAuraEffect(64736, EFFECT_0))
-                    AddPct(bonusPct, aurEff->GetAmount());
+    //             float bonusPct = m_spellInfo->GetEffect(EFFECT_2).CalcValue() * unitTarget->GetDiseasesByCaster(unitCaster->GetGUID(), consumeDiseases) / 2.0f;
+    //             // Death Knight T8 Melee 4P Bonus
+    //             if (AuraEffect const* aurEff = unitCaster->GetAuraEffect(64736, EFFECT_0))
+    //                 AddPct(bonusPct, aurEff->GetAmount());
+    //             AddPct(totalDamagePercentMod, bonusPct);
+    //             break;
+    //         }
+    //         // Blood-Caked Strike - Blood-Caked Blade
+    //         if (m_spellInfo->SpellIconID == 1736)
+    //         {
+    //             AddPct(totalDamagePercentMod, unitTarget->GetDiseasesByCaster(unitCaster->GetGUID()) * 50.0f);
+    //             break;
+    //         }
+    //         // Heart Strike
+    //         if (m_spellInfo->SpellFamilyFlags[0] & 0x1000000)
+    //         {
+    //             float bonusPct = m_spellInfo->GetEffect(EFFECT_2).CalcValue() * unitTarget->GetDiseasesByCaster(unitCaster->GetGUID());
+    //             // Death Knight T8 Melee 4P Bonus
+    //             if (AuraEffect const* aurEff = unitCaster->GetAuraEffect(64736, EFFECT_0))
+    //                 AddPct(bonusPct, aurEff->GetAmount());
 
-                AddPct(totalDamagePercentMod, bonusPct);
-                break;
-            }
-            break;
-        }
-    }
+    //             AddPct(totalDamagePercentMod, bonusPct);
+    //             break;
+    //         }
+    //         break;
+    //     }
+    // }
+
+    if (unitCaster->IsPlayer())
+        FIRE(Player, OnCustomScriptedWeaponDamageMod, TSPlayer(const_cast<Player*>(unitCaster->ToPlayer())), TSUnit(const_cast<Unit*>(unitTarget)), TSSpellInfo(m_spellInfo), TSMutableNumber<float>(&totalDamagePercentMod), TSMutableNumber<int32>(&fixed_bonus), TSMutableNumber<int32>(&spell_bonus));
 
     bool normalized = false;
     float weaponDamagePercentMod = 1.0f;

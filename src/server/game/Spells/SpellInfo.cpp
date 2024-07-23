@@ -3993,6 +3993,7 @@ bool _isPositiveEffectImpl(SpellInfo const* spellInfo, SpellEffectInfo const& ef
             case SPELL_AURA_MOD_THREAT:
             case SPELL_AURA_PROC_TRIGGER_SPELL_WITH_VALUE:
             case SPELL_AURA_TRIGGER_SPELL_WITH_PCT_OF_TRIGGER:
+            case SPELL_AURA_PROC_TRIGGER_COPY_OF_TRIGGER:
                 // check target for positive and negative spells
                 if (!_isPositiveTarget(effect))
                     return false;

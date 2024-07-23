@@ -7296,7 +7296,7 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
     }
 
     if (IsPlayer())
-        FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&DoneTotalMod), TSNumber<uint8>(1));
+        FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&DoneTotalMod), TSNumber<uint8>(damageTypeMask));
 
     // damage bonus against caster
     AuraEffectList const& mDamageDoneVersusCaster = GetAuraEffectsByType(SPELL_AURA_MOD_SCHOOL_MASK_DAMAGE_VS_CASTER);
@@ -7372,7 +7372,7 @@ uint32 Unit::SpellDamageBonusTaken(Unit* caster, SpellInfo const* spellProto, ui
     }
 
     if (IsPlayer())
-        FIRE(Player, OnCustomScriptedDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(caster)), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&TakenTotalMod), TSNumber<uint8>(1));
+        FIRE(Player, OnCustomScriptedDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(caster)), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&TakenTotalMod), TSNumber<uint8>(1 << damagetype));
 
     // Sanctified Wrath (bypass damage reduction)
     if (caster && TakenTotalMod < 1.0f)
@@ -11428,6 +11428,44 @@ std::list<Unit*> Unit::SelectNearbyTargets(Unit* exclude, float dist, uint32 amo
 
     if (exclude)
         tempTargets.remove(exclude);
+
+    // remove not LoS targets
+    for (std::list<Unit*>::iterator tIter = tempTargets.begin(); tIter != tempTargets.end();)
+    {
+        if (!IsWithinLOSInMap(*tIter) || (*tIter)->IsTotem() || (*tIter)->IsSpiritService() || (*tIter)->IsCritter())
+            tempTargets.erase(tIter++);
+        else
+            ++tIter;
+    }
+
+    // add unique target to list
+    for (uint32 i = 0; i < amount; ++i)
+    {
+        Unit* tempUnit = Trinity::Containers::SelectRandomContainerElement(tempTargets);
+        tempTargets.remove(tempUnit);
+
+        if (std::find(targets.begin(), targets.end(), tempUnit) == targets.end())
+            targets.push_back(tempUnit);
+    }
+
+    return targets;
+}
+
+std::list<Unit*> Unit::SelectNearbyTargets(std::list<Unit*> exclude, float dist, uint32 amount) const
+{
+    std::list<Unit*> targets;
+    std::list<Unit*> tempTargets;
+    Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(this, this, dist);
+    Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(this, tempTargets, u_check);
+    Cell::VisitAllObjects(this, searcher, dist);
+
+    // remove current target
+    if (GetVictim())
+        tempTargets.remove(GetVictim());
+
+    if (!exclude.empty())
+        for (auto unit : exclude)
+            tempTargets.remove(unit);
 
     // remove not LoS targets
     for (std::list<Unit*>::iterator tIter = tempTargets.begin(); tIter != tempTargets.end();)

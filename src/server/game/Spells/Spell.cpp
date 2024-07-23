@@ -5343,6 +5343,7 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
             Unit::AuraEffectList const& ignore = unitCaster->GetAuraEffectsByType(SPELL_AURA_MOD_IGNORE_SHAPESHIFT);
             for (AuraEffect const* aurEff : ignore)
             {
+                TC_LOG_INFO("server.worldserver", "SPELL {}", m_spellInfo->Id);
                 if (!aurEff->IsAffectedOnSpell(m_spellInfo))
                     continue;
 

@@ -473,14 +473,7 @@ bool Aura::CanPeriodicTickCrit(Unit const* caster) const
     if (GetSpellInfo()->HasAttribute(SPELL_ATTR2_CANT_CRIT))
         return false;
 
-    if (caster->HasAuraTypeWithAffectMask(SPELL_AURA_ABILITY_PERIODIC_CRIT, GetSpellInfo()))
-        return true;
-
-    // Rupture - since 3.3.3 can crit
-    if (GetSpellInfo()->SpellIconID == 500 && GetSpellInfo()->SpellFamilyName == SPELLFAMILY_ROGUE)
-        return true;
-
-    return false;
+    return true;
 }
 
 float Aura::CalcPeriodicCritChance(Unit const* caster) const
@@ -1045,7 +1038,7 @@ bool Aura::ModStackAmount(int32 num, AuraRemoveMode removeMode /*= AURA_REMOVE_B
         return true;
     }
 
-    bool refresh = stackAmount >= GetStackAmount() && (maxStackAmount || !m_spellInfo->HasAttribute(SPELL_ATTR1_DONT_REFRESH_DURATION_ON_RECAST));
+    bool refresh = stackAmount >= GetStackAmount() && maxStackAmount && !m_spellInfo->HasAttribute(SPELL_ATTR1_DONT_REFRESH_DURATION_ON_RECAST);
 
     // Update stack amount
     SetStackAmount(stackAmount);

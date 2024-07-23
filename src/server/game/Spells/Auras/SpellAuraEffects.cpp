@@ -363,7 +363,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleAuraSetVehicle,                            //296 SPELL_AURA_SET_VEHICLE_ID sets vehicle on target
     &AuraEffect::HandleNULL,                                      //297 Spirit Burst spells
     &AuraEffect::HandleNULL,                                      //298 70569 - Strangulating, maybe prevents talk or cast
-    &AuraEffect::HandleUnused,                                    //299 unused
+    &AuraEffect::HandleNoImmediateEffect,                         //299 SPELL_AURA_PROC_TRIGGER_COPY_OF_TRIGGER
     &AuraEffect::HandleNoImmediateEffect,                         //300 SPELL_AURA_SHARE_DAMAGE_PCT implemented in Unit::DealDamage
     &AuraEffect::HandleNoImmediateEffect,                         //301 SPELL_AURA_SCHOOL_HEAL_ABSORB implemented in Unit::CalcHealAbsorb
     &AuraEffect::HandleUnused,                                    //302 0 spells in 3.3.5
@@ -1274,6 +1274,9 @@ void AuraEffect::HandleProc(AuraApplication* aurApp, ProcEventInfo& eventInfo)
             break;
         case SPELL_AURA_TRIGGER_SPELL_WITH_PCT_OF_TRIGGER:
             HandleProcTriggerSpellWithPctOfTriggerer(aurApp, eventInfo);
+            break;
+        case SPELL_AURA_PROC_TRIGGER_COPY_OF_TRIGGER:
+            HandleProcTriggerSpellCopyOfTrigger(aurApp, eventInfo);
             break;
         default:
             break;
@@ -6057,6 +6060,7 @@ void AuraEffect::HandleRaidProcFromChargeWithValueAuraProc(AuraApplication* aurA
     target->CastSpell(target, triggerSpellId, args);
 }
 
+// @dh-begin
 void AuraEffect::HandleProcTriggerSpellWithPctOfTriggerer(AuraApplication* aurApp, ProcEventInfo& eventInfo)
 {
         Unit* triggerCaster = aurApp->GetTarget();
@@ -6077,7 +6081,42 @@ void AuraEffect::HandleProcTriggerSpellWithPctOfTriggerer(AuraApplication* aurAp
         }
 }
 
-// @dh-begin
+void AuraEffect::HandleProcTriggerSpellCopyOfTrigger(AuraApplication* aurApp, ProcEventInfo& eventInfo)
+{
+    Unit* triggerCaster = aurApp->GetTarget();
+    Unit* triggerTarget = eventInfo.GetProcTarget();
+
+    Unit* target;
+    SpellInfo const* triggering;
+    int32 amount = 0;
+    if (auto damageInfo = eventInfo.GetDamageInfo()) {
+        triggering = damageInfo->GetSpellInfo();
+        target = damageInfo->GetVictim();
+        amount = damageInfo->GetDamage();
+    }
+    else if (auto healInfo = eventInfo.GetHealInfo()) {
+        triggering = healInfo->GetSpellInfo();
+        target = healInfo->GetTarget();
+        amount = healInfo->GetHeal() + healInfo->GetAbsorb();
+    }
+
+    if (auto pct = triggering->GetEffect(GetEffIndex()).MiscValue) {
+        amount = CalculatePct(amount, pct);
+    }
+
+    if (auto proc = eventInfo.GetProcSpell())
+        if (proc->IsTriggered() && triggering->GetEffect(GetEffIndex()).MiscValueB < 1)
+            return;
+
+    if (triggering)
+    {
+        CastSpellExtraArgs args;
+        args.AddSpellMod(SPELLVALUE_BASE_POINT0, amount);
+        args.SetOriginalCaster(triggerCaster->GetGUID());
+        triggerCaster->CastSpell(target, triggering->Id, args);
+    }
+}
+
 void AuraEffect::HandleModSpellDamagePercentFromArmor(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
 {
     if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
