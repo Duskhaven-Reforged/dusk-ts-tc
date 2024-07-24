@@ -658,15 +658,20 @@ class spell_sha_flametongue_weapon : public AuraScript
         if (!player)
             return false;
 
-        Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
-        if (!item)
+        Item* mh = player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
+        Item* oh = player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
+        
+        if (mh->GetTemplate()->InventoryType != INVTYPE_2HWEAPON || (!mh && !oh))
             return false;
 
-        WeaponAttackType attType = Player::GetAttackBySlot(item->GetSlot());
+        WeaponAttackType attType;
+
+        if (player->IsTwoHandUsed() || !oh)
+            attType = player->GetAttackBySlot(mh->GetSlot()); 
+        else
+            attType = player->GetAttackBySlot(oh->GetSlot());
+
         if (attType != BASE_ATTACK && attType != OFF_ATTACK)
-            return false;
-
-        if (attType == BASE_ATTACK && (item->GetTemplate()->InventoryType != INVTYPE_WEAPON || item->GetTemplate()->InventoryType != INVTYPE_WEAPONOFFHAND))
             return false;
 
         if (((attType == BASE_ATTACK) && !(eventInfo.GetTypeMask() & PROC_FLAG_DONE_MAINHAND_ATTACK)) ||
