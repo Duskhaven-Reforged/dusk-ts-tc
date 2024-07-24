@@ -28,7 +28,10 @@ enum ShamanSpells
     SPELL_SHAMAN_ANGEREDEARTH   = 36213,
     SPELL_SHAMAN_FIREBLAST      = 57984,
     SPELL_SHAMAN_FIRENOVA       = 12470,
-    SPELL_SHAMAN_FIRESHIELD     = 13376
+    SPELL_SHAMAN_FIRESHIELD     = 13376,
+    // Duskhaven
+    SPELL_SHAMAN_WIND_GUST      = 1250027,
+    SPELL_SHAMAN_CALL_LIGHTNING = 1250033,
 };
 
 enum ShamanEvents
@@ -38,7 +41,10 @@ enum ShamanEvents
     // Fire Elemental
     EVENT_SHAMAN_FIRENOVA       = 1,
     EVENT_SHAMAN_FIRESHIELD     = 2,
-    EVENT_SHAMAN_FIREBLAST      = 3
+    EVENT_SHAMAN_FIREBLAST      = 3,
+    // Storm Elemental
+    EVENT_SHAMAN_WIND_GUST      = 1,
+    EVENT_SHAMAN_CALL_LIGHTNING = 2
 };
 
 struct npc_pet_shaman_earth_elemental : public ScriptedAI
@@ -121,8 +127,54 @@ private:
     EventMap _events;
 };
 
+struct npc_pet_shaman_storm_elemental : public ScriptedAI
+{
+    npc_pet_shaman_storm_elemental(Creature* creature) : ScriptedAI(creature) { }
+
+    void Reset() override
+    {
+        _events.Reset();
+        _events.ScheduleEvent(EVENT_SHAMAN_WIND_GUST, 0s);
+        _events.ScheduleEvent(EVENT_SHAMAN_CALL_LIGHTNING, 30s, 40s);
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (!UpdateVictim())
+            return;
+
+        if (me->HasUnitState(UNIT_STATE_CASTING))
+            return;
+
+        _events.Update(diff);
+
+        while (uint32 eventId = _events.ExecuteEvent())
+        {
+            switch (eventId)
+            {
+                case EVENT_SHAMAN_WIND_GUST:
+                    DoCastVictim(EVENT_SHAMAN_WIND_GUST);
+                    _events.ScheduleEvent(EVENT_SHAMAN_WIND_GUST, 0s);
+                    break;
+                case EVENT_SHAMAN_CALL_LIGHTNING:
+                    DoCast(SPELL_SHAMAN_CALL_LIGHTNING);
+                    _events.ScheduleEvent(EVENT_SHAMAN_CALL_LIGHTNING, 30s, 40s);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        DoMeleeAttackIfReady();
+    }
+
+private:
+    EventMap _events;
+};
+
 void AddSC_shaman_pet_scripts()
 {
     RegisterCreatureAI(npc_pet_shaman_earth_elemental);
     RegisterCreatureAI(npc_pet_shaman_fire_elemental);
+    RegisterCreatureAI(npc_pet_shaman_storm_elemental);
 }
