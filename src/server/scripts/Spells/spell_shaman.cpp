@@ -95,9 +95,16 @@ enum ShamanSpells
     SPELL_SHAMAN_BLESSING_OF_THE_ETERNALS_R1    = 51554,
 
     // Duskhaven
+    SPELL_SHAMAN_ACID_RAIN                      = 1270012,
     SPELL_SHAMAN_AIRS_FURY                      = 1260007,
     SPELL_SHAMAN_AIRS_GRACE                     = 1240026,
+    SPELL_SHAMAN_ASTRAL_ALIGNMENT               = 1270019,
+    SPELL_SHAMAN_CHAIN_LIGHTNING                = 1230019,
+    SPELL_SHAMAN_CHAIN_LIGHTNING_PROC           = 1250004,
     SPELL_SHAMAN_EARTHS_STOICISM                = 1240028,
+    SPELL_SHAMAN_EEP_FIRST                      = 1270021, // Man, those three are mouthful
+    SPELL_SHAMAN_EEP_SECOND                     = 1270022, // first time abbreviating talent name
+    SPELL_SHAMAN_EEP_TALENT                     = 1270020, // lmao
     SPELL_SHAMAN_ELEMENTAL_BASH_DUMMY           = 1240029,
     SPELL_SHAMAN_ELEMENTAL_BASH_REVERBERATION   = 1240030,
     SPELL_SHAMAN_ELEMENTAL_PROWESS              = 1250029,
@@ -106,18 +113,31 @@ enum ShamanSpells
     SPELL_SHAMAN_FIRE_NOVA_PROC                 = 1260031,
     SPELL_SHAMAN_FLAME_SHOCK                    = 1230029,
     SPELL_SHAMAN_FLAMETONGUE_AURA               = 1230008,
+    SPELL_SHAMAN_FLOW_OF_THE_TIDES              = 1270034,
     SPELL_SHAMAN_FROSTBRAND_SLOWED              = 1230016,
+    SPELL_SHAMAN_GREATER_HEALING_WAVE_COUNTER   = 1230016,
+    SPELL_SHAMAN_GREATER_HEALING_WAVE_DUMMY     = 1270017,
+    SPELL_SHAMAN_GREATER_HEALING_WAVE_HEAL      = 1270018,
     SPELL_SHAMAN_GRIT                           = 1240011,
+    SPELL_SHAMAN_ICEFURY                        = 1250032,
+    SPELL_SHAMAN_ICEFURY_PROC                   = 1250002,
+    SPELL_SHAMAN_LAVA_BURST                     = 1230017,
+    SPELL_SHAMAN_LAVA_BURST_PROC                = 1250003,
     SPELL_SHAMAN_LAVA_POOL_DEMORALIZE           = 1230023,
+    SPELL_SHAMAN_LIGHTNING_BOLT                 = 1230002,
+    SPELL_SHAMAN_LIGHTNING_BOLT_PROC            = 1250001,
+    SPELL_SHAMAN_MASTERY_ELEMENTAL_OVERLOAD     = 1250000,
     SPELL_SHAMAN_MOLTEN_ASSAULT                 = 1260022,
     SPELL_SHAMAN_RESTORATION_MASTERY_OVERHEAL_RESERVOIR = 1270002,
     SPELL_SHAMAN_RESTORATION_MASTERY_SPIRITUAL_RESERVOIR = 1270000,
     SPELL_SHAMAN_RUTHLESSNESS                   = 1260008,
     SPELL_SHAMAN_MAELSTROM_DEFENSE              = 1240031,
     SPELL_SHAMAN_MAELSTROM_DEFENSE_DUMMY        = 1240032,
+    SPELL_SHAMAN_OVERFLOWING_SHORES             = 1270013,
     SPELL_SHAMAN_SPIRITUAL_AWAKENING            = 1260003,
     SPELL_SHAMAN_SPIRITUAL_AWAKENING_HEAL       = 1260004,
     SPELL_SHAMAN_TOTEMIC_WRATH                  = 1250013,
+    SPELL_SHAMAN_WATERS_CALMING_PRESENCE        = 1230073,
     SPELL_SHAMAN_WINDFURY_PROC                  = 1260006
 };
 
@@ -315,7 +335,7 @@ class spell_sha_bloodlust : public SpellScript
     }
 };
 
-// -1064 - Chain Heal
+// 1230000 - Chain Heal
 class spell_sha_chain_heal : public SpellScript
 {
     PrepareSpellScript(spell_sha_chain_heal);
@@ -330,20 +350,26 @@ public:
 private:
     void HandleHeal(SpellEffIndex /*effIndex*/)
     {
-        if (firstHeal)
+        if (GetCaster()->HasAura(SPELL_SHAMAN_FLOW_OF_THE_TIDES))
         {
-            // Check if the target has Riptide
-            if (AuraEffect* aurEff = GetHitUnit()->GetAuraEffect(SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_SHAMAN, 0, 0, 0x10, GetCaster()->GetGUID()))
+            if (firstHeal)
             {
-                riptide = true;
-                // Consume it
-                GetHitUnit()->RemoveAura(aurEff->GetBase());
+                // Check if the target has Riptide
+                if (AuraEffect* aurEff = GetHitUnit()->GetAuraEffect(SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_SHAMAN, 0, 0x4, 0, GetCaster()->GetGUID()))
+                {
+                    riptide = true;
+                    // Consume it
+                    GetHitUnit()->RemoveAura(aurEff->GetBase());
+                }
+                firstHeal = false;
             }
-            firstHeal = false;
+            // Riptide increases the Chain Heal effect by 40%
+            if (riptide)
+            {
+                float mult = 1.f + (sSpellMgr->GetSpellInfo(SPELL_SHAMAN_FLOW_OF_THE_TIDES)->GetEffect(EFFECT_1).CalcValue() / 100);
+                SetHitHeal(GetHitHeal() * mult);
+            }
         }
-        // Riptide increases the Chain Heal effect by 25%
-        if (riptide)
-            SetHitHeal(GetHitHeal() * 1.25f);
     }
 
     void Register() override
@@ -616,7 +642,7 @@ class spell_sha_flame_shock : public AuraScript
     }
 };
 
-// -10400 - Flametongue Weapon (Passive)
+// 1230008 - Flametongue Weapon
 class spell_sha_flametongue_weapon : public AuraScript
 {
     PrepareAuraScript(spell_sha_flametongue_weapon);
@@ -632,12 +658,15 @@ class spell_sha_flametongue_weapon : public AuraScript
         if (!player)
             return false;
 
-        Item* item = player->GetItemByGuid(GetAura()->GetCastItemGUID());
-        if (!item || !item->IsEquipped())
+        Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
+        if (!item)
             return false;
 
         WeaponAttackType attType = Player::GetAttackBySlot(item->GetSlot());
         if (attType != BASE_ATTACK && attType != OFF_ATTACK)
+            return false;
+
+        if (attType == BASE_ATTACK && (item->GetTemplate()->InventoryType != INVTYPE_WEAPON || item->GetTemplate()->InventoryType != INVTYPE_WEAPONOFFHAND))
             return false;
 
         if (((attType == BASE_ATTACK) && !(eventInfo.GetTypeMask() & PROC_FLAG_DONE_MAINHAND_ATTACK)) ||
@@ -1987,6 +2016,76 @@ class spell_sha_airs_fury : public AuraScript
     }
 };
 
+// 1230012 - Brimming with Life
+class spell_sha_brimming_with_life : public AuraScript
+{
+    PrepareAuraScript(spell_sha_brimming_with_life);
+
+    void HandlePeriodic(AuraEffect const* /*aurEff*/)
+    {
+        if (Unit* caster = GetTarget())
+            if (caster->GetHealth() < caster->GetMaxHealth())
+                PreventDefaultAction();
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_sha_brimming_with_life::HandlePeriodic, EFFECT_1, SPELL_AURA_MOD_RECOVERY_RATE);
+    }
+};
+
+// 1270021 - Earth's Empowering Petrichor Proc 1
+class spell_sha_earths_empowering_petrichor_aura_one : public AuraScript
+{
+    PrepareAuraScript(spell_sha_earths_empowering_petrichor_aura_one);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_EEP_SECOND
+        });
+    }
+
+    void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* caster = GetTarget())
+            if (caster->HasAura(SPELL_SHAMAN_EEP_SECOND))
+                caster->RemoveAura(SPELL_SHAMAN_EEP_SECOND);
+    }
+
+    void Register() override
+    {
+        AfterEffectRemove += AuraEffectRemoveFn(spell_sha_earths_empowering_petrichor_aura_one::OnRemove, EFFECT_0, SPELL_AURA_ADD_PCT_MODIFIER, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 1270022 - Earth's Empowering Petrichor Proc 2
+class spell_sha_earths_empowering_petrichor_aura_two : public AuraScript
+{
+    PrepareAuraScript(spell_sha_earths_empowering_petrichor_aura_two);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_EEP_FIRST
+        });
+    }
+
+    void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* caster = GetTarget())
+            if (caster->HasAura(SPELL_SHAMAN_EEP_FIRST))
+                caster->RemoveAura(SPELL_SHAMAN_EEP_FIRST);
+    }
+
+    void Register() override
+    {
+        AfterEffectRemove += AuraEffectRemoveFn(spell_sha_earths_empowering_petrichor_aura_two::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
 // 1240017 - Elemental Bash
 class spell_sha_elemental_bash : public SpellScript
 {
@@ -2232,6 +2331,93 @@ class spell_sha_frostbrand_weapon_proc : public SpellScript
     }
 };
 
+// 1270014 - Greater Healing Wave
+class spell_sha_greater_healing_wave : public AuraScript
+{
+    PrepareAuraScript(spell_sha_greater_healing_wave);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_GREATER_HEALING_WAVE_DUMMY,
+            SPELL_SHAMAN_GREATER_HEALING_WAVE_HEAL
+        });
+    }
+
+    void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* caster = GetTarget();
+
+        if (!caster || !caster->IsAlive())
+            return;
+
+        std::list<Unit*> TargetList;
+        Trinity::AnyFriendlyUnitInObjectRangeCheck checker(caster, caster, 40.0f);
+        Trinity::UnitListSearcher<Trinity::AnyFriendlyUnitInObjectRangeCheck> searcher(caster, TargetList, checker);
+        Cell::VisitAllObjects(caster, searcher, 40.0f);
+
+        for (std::list<Unit*>::iterator itr = TargetList.begin(); itr != TargetList.end(); ++itr)
+            if (!(*itr)->HasAura(SPELL_SHAMAN_GREATER_HEALING_WAVE_DUMMY))
+                TargetList.erase(itr++);
+            else
+                if ((*itr)->GetAura(SPELL_SHAMAN_GREATER_HEALING_WAVE_DUMMY)->GetCasterGUID() != caster->GetGUID())
+                    TargetList.erase(itr++);
+
+        if (!TargetList.empty())
+            caster->CastSpell(TargetList.front(), SPELL_SHAMAN_GREATER_HEALING_WAVE_HEAL, true);
+    }
+
+    void Register() override
+    {
+        OnEffectRemove += AuraEffectRemoveFn(spell_sha_greater_healing_wave::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 1270018 - Greater Healing Wave (Heal)
+class spell_sha_greater_healing_wave_heal : public SpellScript
+{
+    PrepareSpellScript(spell_sha_greater_healing_wave_heal);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_GREATER_HEALING_WAVE_COUNTER,
+            SPELL_SHAMAN_GREATER_HEALING_WAVE_DUMMY
+        });
+    }
+
+    void CalculateHeal(SpellEffIndex effIndex)
+    {
+        if (Unit* caster = GetCaster())
+            if (Unit* target = GetHitUnit())
+            {
+                if (!caster->HasAura(SPELL_SHAMAN_GREATER_HEALING_WAVE_COUNTER) || !target)
+                    return;
+                else
+                {
+                    if (!target->HasAura(SPELL_SHAMAN_GREATER_HEALING_WAVE_DUMMY))
+                        return;
+
+                    target->RemoveAura(SPELL_SHAMAN_GREATER_HEALING_WAVE_DUMMY);
+
+                    int32 damage = GetHitDamage();
+                    uint32 auraCount = caster->GetAura(SPELL_SHAMAN_GREATER_HEALING_WAVE_COUNTER)->GetStackAmount();
+                    damage = damage * auraCount / 40;
+
+                    SetHitDamage(damage);
+                    caster->RemoveAura(SPELL_SHAMAN_GREATER_HEALING_WAVE_COUNTER);
+                }
+            }
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_sha_greater_healing_wave_heal::CalculateHeal, EFFECT_0, SPELL_EFFECT_HEAL);
+    }
+};
+
 // 1240011 - Grit
 class spell_sha_grit : public AuraScript
 {
@@ -2260,6 +2446,69 @@ class spell_sha_grit : public AuraScript
     void Register() override
     {
         DoCheckEffectProc += AuraCheckEffectProcFn(spell_sha_grit::CheckProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
+    }
+};
+
+// 1270011 - Healing Rain
+class spell_sha_healing_rain : public AuraScript
+{
+    PrepareAuraScript(spell_sha_healing_rain);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_ACID_RAIN
+        });
+    }
+
+    void HandlePeriodicDamage(AuraEffect const* /*aurEff*/)
+    {
+        Unit* caster = GetCaster();
+
+        if (!caster || !caster->HasAura(SPELL_SHAMAN_ACID_RAIN))
+            PreventDefaultAction();
+    }
+
+    void OnRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+    {
+        Unit* caster = GetCaster();
+
+        if (!caster || !caster->HasAura(SPELL_SHAMAN_EEP_TALENT) || !IsExpired())
+            return;
+
+        caster->CastSpell(caster, SPELL_SHAMAN_EEP_FIRST, true);
+        caster->CastSpell(caster, SPELL_SHAMAN_EEP_SECOND, true);
+    }
+
+    void Register() override
+    {
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_sha_healing_rain::HandlePeriodicDamage, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE);
+        AfterEffectRemove += AuraEffectRemoveFn(spell_sha_healing_rain::OnRemove, EFFECT_0, SPELL_AURA_PERIODIC_HEAL, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+class spell_sha_healing_rain_spell : public SpellScript
+{
+    PrepareSpellScript(spell_sha_healing_rain_spell);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+        {
+            SPELL_SHAMAN_OVERFLOWING_SHORES
+        });
+    }
+
+    void HandleHitEffect(SpellEffIndex effIndex)
+    {
+        if (!GetCaster()->HasAura(SPELL_SHAMAN_OVERFLOWING_SHORES))
+            PreventHitEffect(effIndex);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_sha_healing_rain_spell::HandleHitEffect, EFFECT_2, SPELL_EFFECT_HEAL);
     }
 };
 
@@ -2316,6 +2565,52 @@ class spell_sha_lesser_elemental_bash : public SpellScript
     }
 };
 
+// 1250000 - Mastery: Elemental Overload
+class spell_sha_elemental_overload : public AuraScript
+{
+    PrepareAuraScript(spell_sha_elemental_overload);
+
+    void OnProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    {
+        DamageInfo* dmgInfo = eventInfo.GetDamageInfo();
+        Unit* caster = GetTarget();
+        Unit* target = dmgInfo->GetVictim();
+        uint32 spellId = 0;
+        int32 mult = caster->GetAuraEffect(SPELL_SHAMAN_MASTERY_ELEMENTAL_OVERLOAD, EFFECT_0)->GetAmount();
+        int32 damage = CalculatePct(dmgInfo->GetDamage(), mult);
+
+        switch (dmgInfo->GetSpellInfo()->Id)
+        {
+            case SPELL_SHAMAN_CHAIN_LIGHTNING:
+                spellId = SPELL_SHAMAN_CHAIN_LIGHTNING_PROC;
+                break;
+            case SPELL_SHAMAN_ICEFURY:
+                spellId = SPELL_SHAMAN_ICEFURY_PROC;
+                break;
+            case SPELL_SHAMAN_LAVA_BURST:
+                spellId = SPELL_SHAMAN_LAVA_BURST_PROC;
+                break;
+            case SPELL_SHAMAN_LIGHTNING_BOLT:
+                spellId = SPELL_SHAMAN_LIGHTNING_BOLT_PROC;
+                break;
+            default:
+                break;
+        }
+
+        if (!dmgInfo || !caster || !target || !spellId || !damage)
+            return;
+
+        CastSpellExtraArgs args(aurEff);
+        args.AddSpellBP0(damage);
+        caster->CastSpell(target, spellId, args);
+    }
+
+    void Register() override
+    {
+        OnEffectProc += AuraEffectProcFn(spell_sha_elemental_overload::OnProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
 // 1270000 - Mastery: Spiritual Reservoir
 class spell_sha_spiritual_reservoir_store : public AuraScript
 {
@@ -2332,32 +2627,44 @@ class spell_sha_spiritual_reservoir_store : public AuraScript
 
     void OnProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
     {
+        Unit* caster = GetTarget();
+        DamageInfo* damageInfo = eventInfo.GetDamageInfo();
         HealInfo* healInfo = eventInfo.GetHealInfo();
 
-        if (!healInfo)
-            return;
+        if (!caster->HasAura(SPELL_SHAMAN_ASTRAL_ALIGNMENT))
+            if (!healInfo)
+                return;
 
         uint32 overheal = healInfo->GetHeal() - healInfo->GetEffectiveHeal();
 
-        // Aleist3r: overheal < 0 shouldn't ever happen but shit's whack sometimes and strange stuff do happen, so better safe than sorry
-        if (!overheal || overheal < 0)
-            return;
+        if (!caster->HasAura(SPELL_SHAMAN_ASTRAL_ALIGNMENT))
+            if (!overheal)
+                return;
 
-        if (Unit* caster = GetTarget())
-            if (caster->HasAura(SPELL_SHAMAN_RESTORATION_MASTERY_OVERHEAL_RESERVOIR))
+        if (caster && caster->HasAura(SPELL_SHAMAN_RESTORATION_MASTERY_OVERHEAL_RESERVOIR))
+        {
+            if (overheal < 0)
+                overheal = 0;
+        
+            AuraEffect* overhealReservoir = caster->GetAuraEffect(SPELL_SHAMAN_RESTORATION_MASTERY_OVERHEAL_RESERVOIR, EFFECT_0);
+            int32 currentAmount = overhealReservoir->GetAmount();
+            int32 overhealMult = caster->GetAuraEffect(SPELL_SHAMAN_RESTORATION_MASTERY_SPIRITUAL_RESERVOIR, EFFECT_0)->GetAmount();
+            uint32 overhealAmt = uint32(CalculatePct(overheal, overhealMult));
+            int32 healthMult = caster->GetAuraEffect(SPELL_SHAMAN_RESTORATION_MASTERY_SPIRITUAL_RESERVOIR, EFFECT_1)->GetAmount();
+            uint32 maxReservoir = uint32(CalculatePct(caster->GetMaxHealth(), healthMult));
+            int32 damageDone = 0;
+        
+            if (damageInfo && damageInfo->GetAttacker() == caster)
             {
-                AuraEffect* overhealReservoir = caster->GetAuraEffect(SPELL_SHAMAN_RESTORATION_MASTERY_OVERHEAL_RESERVOIR, EFFECT_0);
-                int32 currentAmount = overhealReservoir->GetAmount();
-                int32 overhealMult = caster->GetAuraEffect(SPELL_SHAMAN_RESTORATION_MASTERY_SPIRITUAL_RESERVOIR, EFFECT_0)->GetAmount();
-                uint32 overhealAmt = uint32(CalculatePct(overheal, overhealMult));
-                int32 healthMult = caster->GetAuraEffect(SPELL_SHAMAN_RESTORATION_MASTERY_SPIRITUAL_RESERVOIR, EFFECT_1)->GetAmount();
-                uint32 maxReservoir = uint32(CalculatePct(caster->GetMaxHealth(), healthMult));
-                
-                if ((currentAmount + overhealAmt) > maxReservoir)
-                    overhealReservoir->SetAmount(maxReservoir);
-                else
-                    overhealReservoir->SetAmount(currentAmount + overhealAmt);
+                int32 damagePct = sSpellMgr->GetSpellInfo(SPELL_SHAMAN_ASTRAL_ALIGNMENT)->GetEffect(EFFECT_0).CalcValue();
+                damageDone = CalculatePct(damageInfo->GetDamage(), damagePct);
             }
+            
+            if ((currentAmount + overhealAmt + damageDone) > maxReservoir)
+                overhealReservoir->SetAmount(maxReservoir);
+            else
+                overhealReservoir->SetAmount(currentAmount + overhealAmt + damageDone);
+        }
     }
 
     void Register() override
@@ -2431,6 +2738,25 @@ class spell_sha_spiritual_awakening : public AuraScript
     void Register() override
     {
         OnEffectProc += AuraEffectProcFn(spell_sha_spiritual_awakening::OnProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+};
+
+// 1230074 - Water's Calming Presence
+class spell_sha_waters_calming_presence : public AuraScript
+{
+    PrepareAuraScript(spell_sha_waters_calming_presence);
+
+    void HandleOnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+    {
+        if (Unit* target = GetTarget())
+            if (Unit* owner = target->GetOwner())
+                if (!owner->HasAura(SPELL_SHAMAN_WATERS_CALMING_PRESENCE))
+                    PreventDefaultAction();
+    }
+
+    void Register() override
+    {
+        OnEffectApply += AuraEffectApplyFn(spell_sha_waters_calming_presence::HandleOnApply, EFFECT_0, SPELL_AURA_MOD_POWER_REGEN_PERCENT, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -2568,10 +2894,28 @@ void AddSC_shaman_spell_scripts()
     RegisterSpellScript(spell_sha_t10_restoration_4p_bonus);
     RegisterSpellScript(spell_sha_windfury_weapon);
     // Duskhaven
+    RegisterSpellScript(spell_sha_airs_fury);
+    RegisterSpellScript(spell_sha_brimming_with_life);
+    RegisterSpellScript(spell_sha_earths_empowering_petrichor_aura_one);
+    RegisterSpellScript(spell_sha_earths_empowering_petrichor_aura_two);
     RegisterSpellScript(spell_sha_elemental_bash);
     RegisterSpellScript(spell_sha_elemental_bash_aoe_proc);
+    RegisterSpellScript(spell_sha_elemental_prowess_buff);
+    RegisterSpellScript(spell_sha_fire_nova_dummy);
+    RegisterSpellScript(spell_sha_flameshock_aura);
     RegisterSpellScript(spell_sha_frostbrand_weapon_proc);
+    RegisterSpellScript(spell_sha_greater_healing_wave);
+    RegisterSpellScript(spell_sha_greater_healing_wave_heal);
     RegisterSpellScript(spell_sha_grit);
+    RegisterSpellScript(spell_sha_healing_rain);
+    RegisterSpellScript(spell_sha_healing_rain_spell);
     RegisterSpellScript(spell_sha_lava_pool_totem_dmg);
     RegisterSpellScript(spell_sha_lesser_elemental_bash);
+    RegisterSpellScript(spell_sha_elemental_overload);
+    RegisterSpellScript(spell_sha_spiritual_reservoir_store);
+    RegisterSpellScript(spell_sha_spiritual_awakening);
+    RegisterSpellScript(spell_sha_waters_calming_presence);
+    RegisterSpellScript(spell_sha_windfury_weapon_aura);
+    RegisterSpellScript(spell_sha_wrath_flametongue_totem);
+    RegisterSpellScript(spell_sha_wrath_totemic_aura);
 }
