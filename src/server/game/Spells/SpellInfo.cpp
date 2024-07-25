@@ -3390,7 +3390,7 @@ uint32 SpellInfo::CalcCastTime(Spell* spell /*= nullptr*/) const
 
     int32 castTime = CastTimeEntry->Base;
 
-    if (spell)
+    if (spell && !HasAttribute(SPELL_ATTR1_CU_CAST_TIME_UNAFFECTED_BY_HASTE))
         spell->GetCaster()->ModSpellCastTime(this, castTime, spell);
 
     if (HasAttribute(SPELL_ATTR0_REQ_AMMO) && (!IsAutoRepeatRangedSpell()))

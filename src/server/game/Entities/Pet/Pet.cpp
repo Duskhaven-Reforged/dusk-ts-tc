@@ -874,7 +874,7 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
     if (IsPet() && GetOwner()->GetTypeId() == TYPEID_PLAYER)
     {
         if (GetOwner()->GetClass() == CLASS_WARLOCK
-            || GetOwner()->GetClass() == CLASS_SHAMAN        // Fire Elemental
+            /*|| GetOwner()->GetClass() == CLASS_SHAMAN        // Fire Elemental*/
             || GetOwner()->GetClass() == CLASS_DEATH_KNIGHT) // Risen Ghoul
         {
             petType = SUMMON_PET;
@@ -1108,6 +1108,22 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
                     SetBonusDamage(int32(GetOwner()->GetTotalAttackPowerValue(BASE_ATTACK) * 0.006f));
                     SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel - 30 - (petlevel / 4)));
                     SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(petlevel - 30 + (petlevel / 4)));
+                    break;
+                }
+                case 44020: // Storm Elemental
+                case 44021:
+                case 44022: // Earth Elemental
+                case 44023:
+                case 44024: // Fire Elemental
+                case 44025:
+                {
+                    Unit* owner = GetOwner();
+                    SetStatFlatModifier(UNIT_MOD_STAT_STAMINA, BASE_VALUE, float(owner->GetStat(STAT_STAMINA)) * 0.75f);
+                    SetStatFlatModifier(UNIT_MOD_STAT_INTELLECT, BASE_VALUE, float(owner->GetStat(STAT_INTELLECT)) * 0.3f);
+                    SetBonusDamage(int32(owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_ALL) * 0.5f));
+                    SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel * 4 - petlevel));
+                    SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(petlevel * 4 + petlevel));
+                    SetStatFlatModifier(UNIT_MOD_ATTACK_POWER, BASE_VALUE, float(owner->GetTotalAttackPowerValue(BASE_ATTACK)) * 4.f);
                     break;
                 }
                 default:
