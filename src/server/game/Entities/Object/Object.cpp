@@ -2362,9 +2362,9 @@ int32 WorldObject::ModSpellDuration(SpellInfo const* spellInfo, WorldObject cons
         };
 
         // Find total mod value (negative bonus)
-        int32 durationMod_always = unitTarget->GetTotalAuraModifier(SPELL_AURA_MECHANIC_DURATION_MOD, mechanicCheck);
+        int32 durationMod_always = unitTarget->GetTotalAuraModifierByMiscMask(SPELL_AURA_MECHANIC_DURATION_MOD, mechanicMask);
         // Find max mod (negative bonus)
-        int32 durationMod_not_stack = unitTarget->GetMaxNegativeAuraModifier(SPELL_AURA_MECHANIC_DURATION_MOD_NOT_STACK, mechanicCheck);
+        int32 durationMod_not_stack = unitTarget->GetTotalAuraModifierByMiscMask(SPELL_AURA_MECHANIC_DURATION_MOD_NOT_STACK, mechanicMask);
 
         // Select strongest negative mod
         int32 durationMod = std::min(durationMod_always, durationMod_not_stack);

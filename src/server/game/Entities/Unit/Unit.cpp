@@ -761,7 +761,7 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
         if (spellProto)
         {
             if (!spellProto->HasAttribute(SPELL_ATTR4_DAMAGE_DOESNT_BREAK_AURAS))
-                victim->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TAKE_DAMAGE, spellProto->Id);
+                victim->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TAKE_DAMAGE, spellProto->Id, attacker);
         }
         else
             victim->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TAKE_DAMAGE, 0);
@@ -4323,7 +4323,7 @@ void Unit::RemoveNotOwnSingleTargetAuras(uint32 newPhase)
     }
 }
 
-void Unit::RemoveAurasWithInterruptFlags(uint32 flag, uint32 except)
+void Unit::RemoveAurasWithInterruptFlags(uint32 flag, uint32 except, Unit* caster, DamageEffectType damagetype)
 {
     if (!(m_interruptMask & flag))
         return;
@@ -4333,7 +4333,13 @@ void Unit::RemoveAurasWithInterruptFlags(uint32 flag, uint32 except)
     {
         Aura* aura = (*iter)->GetBase();
         ++iter;
-        if ((aura->GetSpellInfo()->AuraInterruptFlags & flag) && (!except || aura->GetId() != except))
+
+        bool CanBeBrokenBySpell = true;
+        auto ExceptInfo = sSpellMgr->GetSpellInfo(except);
+        if (caster->IsPlayer() && ExceptInfo)
+            FIRE_ID(aura->GetSpellInfo()->events.id, Spell, CanAuraBeBrokenBySpell, TSUnit(caster), TSUnit(this), TSAura(aura), TSSpellInfo(ExceptInfo), TSNumber<uint8>(damagetype), TSMutable<bool, bool>(&CanBeBrokenBySpell));
+        
+        if ((aura->GetSpellInfo()->AuraInterruptFlags & flag) && (!except || aura->GetId() != except) && CanBeBrokenBySpell)
         {
             uint32 removedAuras = m_removedAurasCount;
             RemoveAura(aura);
