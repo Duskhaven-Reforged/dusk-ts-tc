@@ -22,8 +22,9 @@
  */
 
 #include "ScriptMgr.h"
-#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "Item.h"
+#include "CellImpl.h"
 #include "ObjectAccessor.h"
 #include "Map.h"
 #include "Player.h"

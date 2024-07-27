@@ -1965,7 +1965,7 @@ void Guardian::UpdateDamagePhysical(WeaponAttackType attType)
         {
             int32 spellDmg = m_owner->GetInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_POS + AsUnderlyingType(SPELL_SCHOOL_NATURE)) - m_owner->GetInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_NEG + AsUnderlyingType(SPELL_SCHOOL_NATURE));
             if (spellDmg > 0)
-                bonusDamage = spellDmg * 0.09f;
+                bonusDamage = spellDmg * 0.5f;
         }
         //greater fire elemental
         else if (GetEntry() == ENTRY_FIRE_ELEMENTAL)

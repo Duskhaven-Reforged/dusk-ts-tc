@@ -3164,7 +3164,7 @@ void SpellInfo::ApplyAllSpellImmunitiesTo(Unit* target, SpellEffectInfo const& s
             target->RemoveAppliedAuras([dispelImmunity](AuraApplication const* aurApp) -> bool
             {
                 SpellInfo const* spellInfo = aurApp->GetBase()->GetSpellInfo();
-                if (spellInfo->Dispel == dispelImmunity)
+                if ((1 << spellInfo->Dispel) & dispelImmunity)
                     return true;
 
                 return false;
@@ -3216,7 +3216,7 @@ bool SpellInfo::CanSpellProvideImmunityAgainstAura(SpellInfo const* auraSpellInf
                 return true;
 
         if (uint32 dispelImmunity = immuneInfo->DispelImmune)
-            if (auraSpellInfo->Dispel == dispelImmunity)
+            if ((1 << auraSpellInfo->Dispel) & dispelImmunity)
                 return true;
 
         bool immuneToAllEffects = true;
@@ -3300,7 +3300,7 @@ bool SpellInfo::SpellCancelsAuraEffect(AuraEffect const* aurEff) const
                     continue;
                 break;
             case SPELL_AURA_DISPEL_IMMUNITY:
-                if (miscValue != aurEff->GetSpellInfo()->Dispel)
+                if (miscValue & (1 << aurEff->GetSpellInfo()->Dispel))
                     continue;
                 break;
             case SPELL_AURA_MECHANIC_IMMUNITY:
