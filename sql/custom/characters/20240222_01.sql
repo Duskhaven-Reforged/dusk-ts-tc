@@ -34,8 +34,7 @@ CREATE TABLE `character_points` (
   `max` int unsigned NOT NULL,
   PRIMARY KEY (`guid`,`type`,`spec`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-
+        
 -- acore_characters.character_specs definition
 DROP TABLE IF EXISTS `character_specs`;
 CREATE TABLE `character_specs` (
