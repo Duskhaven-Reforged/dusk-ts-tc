@@ -891,11 +891,6 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     PrepareStatement(CHAR_DEL_JSON_DATA, "DELETE FROM `json_data` WHERE `entity_type` = ? AND  `guid` = ?", CONNECTION_ASYNC);
     // @tswow-end
 
-    // @dh-begin
-    PrepareStatement(CHAR_SEL_CHAR_BOSS_LOOT_LOCKOUT, "select * from encounter_loot_lockout where `char` = ?", CONNECTION_ASYNC);
-    PrepareStatement(CHAR_SEL_CHARACTER_ACTIONS_SPEC_LOADOUT, "SELECT button, action, type FROM forge_character_action WHERE guid = ? AND spec = ? and loadout = ? ORDER BY button", CONNECTION_ASYNC);
-
-    // @dh-end
 }
 
 CharacterDatabaseConnection::CharacterDatabaseConnection(MySQLConnectionInfo& connInfo) : MySQLConnection(connInfo)
