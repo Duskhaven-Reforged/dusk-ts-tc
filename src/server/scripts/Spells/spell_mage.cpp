@@ -237,7 +237,7 @@ class spell_mage_incanters_absorbtion_base_AuraScript : public AuraScript
         }
 };
 
-// -5143 - Arcane Missiles
+// 1310011, 1310044 - Arcane Missiles
 class spell_mage_arcane_missiles : public AuraScript
 {
     PrepareAuraScript(spell_mage_arcane_missiles);
@@ -271,15 +271,6 @@ class spell_mage_arcane_missiles : public AuraScript
     {
         AfterEffectRemove += AuraEffectRemoveFn(spell_mage_arcane_missiles::OnRemoveDummy, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
         AfterEffectRemove += AuraEffectRemoveFn(spell_mage_arcane_missiles::OnRemove, EFFECT_1, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
-    }
-
-private:
-    bool _canProcT10 = false;
-
-public:
-    void AllowT10Proc()
-    {
-        _canProcT10 = true;
     }
 };
 
@@ -988,7 +979,7 @@ class spell_mage_ice_block : public SpellScript
     }
 };
 
-// -11119 - Ignite
+// 1310005 - Ignite
 class spell_mage_ignite : public AuraScript
 {
     PrepareAuraScript(spell_mage_ignite);
@@ -1035,7 +1026,7 @@ class spell_mage_ignite : public AuraScript
     }
 };
 
-// -44457 - Living Bomb
+// 1310010 - Living Bomb
 class spell_mage_living_bomb : public AuraScript
 {
     PrepareAuraScript(spell_mage_living_bomb);
@@ -1761,7 +1752,7 @@ class spell_mage_arcanosphere : public AuraScript
     }
 };
 
-// 1280011 - Blink
+// 1280011, 1280075 - Blink
 class spell_mage_blink : public SpellScript
 {
     PrepareSpellScript(spell_mage_blink);
