@@ -8585,8 +8585,10 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
         uint32 mechanicMask = spellProto->GetAllEffectsMechanicMask();
 
         // Shred, Maul - "Effects which increase Bleed damage also increase Shred damage"
-        if (spellProto->SpellFamilyName == SPELLFAMILY_DRUID && spellProto->SpellFamilyFlags[0] & 0x00008800)
-            mechanicMask |= (1 << MECHANIC_BLEED);
+        // if (spellProto->SpellFamilyName == SPELLFAMILY_DRUID && spellProto->SpellFamilyFlags[0] & 0x00008800)
+        //     mechanicMask |= (1 << MECHANIC_BLEED);
+        if (attacker->IsPlayer())
+            FIRE_ID(spellProto->events.id, Spell, OnCustomMechanicMaskDamage, TSUnit(attacker), TSSpellInfo(spellProto), TSMutableNumber<uint32>(&mechanicMask));
 
         if (mechanicMask)
         {

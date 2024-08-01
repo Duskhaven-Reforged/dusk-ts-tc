@@ -1247,48 +1247,48 @@ class spell_mage_missile_barrage : public AuraScript
 };
 
 // 44401 - Missile Barrage
-class spell_mage_missile_barrage_proc : public AuraScript
-{
-    PrepareAuraScript(spell_mage_missile_barrage_proc);
+// class spell_mage_missile_barrage_proc : public AuraScript
+// {
+//     PrepareAuraScript(spell_mage_missile_barrage_proc);
 
-    bool Validate(SpellInfo const* /*spellInfo*/) override
-    {
-        return ValidateSpellInfo({ SPELL_MAGE_T10_2P_BONUS, SPELL_MAGE_T8_4P_BONUS });
-    }
+//     bool Validate(SpellInfo const* /*spellInfo*/) override
+//     {
+//         return ValidateSpellInfo({ SPELL_MAGE_T10_2P_BONUS, SPELL_MAGE_T8_4P_BONUS });
+//     }
 
-    bool CheckProc(ProcEventInfo& eventInfo)
-    {
-        Unit* caster = eventInfo.GetActor();
-        // Prevent double proc for Arcane missiles
-        if (caster == eventInfo.GetProcTarget())
-            return false;
+//     bool CheckProc(ProcEventInfo& eventInfo)
+//     {
+//         Unit* caster = eventInfo.GetActor();
+//         // Prevent double proc for Arcane missiles
+//         if (caster == eventInfo.GetProcTarget())
+//             return false;
 
-        // Proc chance is unknown, we'll just use dummy aura amount
-        if (AuraEffect const* aurEff = caster->GetAuraEffect(SPELL_MAGE_T8_4P_BONUS, EFFECT_0))
-            if (roll_chance_i(aurEff->GetAmount()))
-                return false;
+//         // Proc chance is unknown, we'll just use dummy aura amount
+//         if (AuraEffect const* aurEff = caster->GetAuraEffect(SPELL_MAGE_T8_4P_BONUS, EFFECT_0))
+//             if (roll_chance_i(aurEff->GetAmount()))
+//                 return false;
 
-        return true;
-    }
+//         return true;
+//     }
 
-    void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-    {
-        Unit* caster = GetTarget();
-        if (caster->HasAura(SPELL_MAGE_T10_2P_BONUS))
-            if (Aura* aura = caster->GetAuraOfRankedSpell(SPELL_MAGE_ARCANE_MISSILES_R1))
-                if (spell_mage_arcane_missiles* missiles = aura->GetScript<spell_mage_arcane_missiles>(ScriptName))
-                    missiles->AllowT10Proc();
-    }
+//     void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+//     {
+//         Unit* caster = GetTarget();
+//         if (caster->HasAura(SPELL_MAGE_T10_2P_BONUS))
+//             if (Aura* aura = caster->GetAuraOfRankedSpell(SPELL_MAGE_ARCANE_MISSILES_R1))
+//                 if (spell_mage_arcane_missiles* missiles = aura->GetScript<spell_mage_arcane_missiles>(ScriptName))
+//                     missiles->AllowT10Proc();
+//     }
 
-    void Register() override
-    {
-        DoCheckProc += AuraCheckProcFn(spell_mage_missile_barrage_proc::CheckProc);
-        AfterEffectRemove += AuraEffectRemoveFn(spell_mage_missile_barrage_proc::OnRemove, EFFECT_0, SPELL_AURA_ADD_FLAT_MODIFIER, AURA_EFFECT_HANDLE_REAL);
-    }
+//     void Register() override
+//     {
+//         DoCheckProc += AuraCheckProcFn(spell_mage_missile_barrage_proc::CheckProc);
+//         AfterEffectRemove += AuraEffectRemoveFn(spell_mage_missile_barrage_proc::OnRemove, EFFECT_0, SPELL_AURA_ADD_FLAT_MODIFIER, AURA_EFFECT_HANDLE_REAL);
+//     }
 
-public:
-    static char constexpr const ScriptName[] = "spell_mage_arcane_missiles";
-};
+// public:
+//     static char constexpr const ScriptName[] = "spell_mage_arcane_missiles";
+// };
 
 enum SilvermoonPolymorph
 {
@@ -3290,7 +3290,7 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_master_of_elements);
     RegisterSpellScript(spell_mage_mirror_image);
     RegisterSpellScript(spell_mage_missile_barrage);
-    RegisterSpellScript(spell_mage_missile_barrage_proc);
+    // RegisterSpellScript(spell_mage_missile_barrage_proc);
     new spell_mage_polymorph_cast_visual();
     RegisterSpellScript(spell_mage_summon_water_elemental);
     // Duskhaven
