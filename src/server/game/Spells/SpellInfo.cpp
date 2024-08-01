@@ -2198,7 +2198,7 @@ void SpellInfo::_LoadAuraState()
         // Conflagrate aura state on Immolate and Shadowflame
         if (SpellFamilyName == SPELLFAMILY_WARLOCK &&
             // Immolate
-            ((SpellFamilyFlags[0] & 4) ||
+            ((SpellFamilyFlags[0] & 0x100) ||
                 // Shadowflame
             (SpellFamilyFlags[2] & 2)))
             return AURA_STATE_CONFLAGRATE;

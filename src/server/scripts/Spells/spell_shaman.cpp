@@ -684,7 +684,7 @@ class spell_sha_flametongue_weapon : public AuraScript
 
     void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
     {
-        PreventDefaultAction();
+        /*PreventDefaultAction();
 
         Player* player = eventInfo.GetActor()->ToPlayer();
         Unit* target = eventInfo.GetProcTarget();
@@ -720,7 +720,7 @@ class spell_sha_flametongue_weapon : public AuraScript
         args
             .SetCastItem(item)
             .AddSpellBP0(fireDamage + spellPowerBonus);
-        player->CastSpell(target, SPELL_SHAMAN_FLAMETONGUE_ATTACK, args);
+        player->CastSpell(target, SPELL_SHAMAN_FLAMETONGUE_ATTACK, args);*/
     }
 
     void Register() override

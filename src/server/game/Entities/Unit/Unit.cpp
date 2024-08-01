@@ -6889,6 +6889,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
                 }
             }
             break;
+        //case SPELLFAMILY_WARLOCK:
     }
 
     // Done fixed damage bonus auras
@@ -6945,7 +6946,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
         DoneTotal += int32(DoneAdvertisedBenefit * coeff * factorMod);
     }
 
-    if (spellProto->Id == 1310048)      // Flame Convergence calc
+    /*if (spellProto->Id == 1310048)      // Flame Convergence calc
     {
         if (victim->HasAura(1310031))
         {
@@ -6953,7 +6954,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
             int32 dmgBonusPctMult = sSpellMgr->GetSpellInfo(1310047)->GetEffect(EFFECT_0).CalcValue();
             DoneTotal += round(CalculatePct(DoneTotal, dmgBonusPctMult * auraStacks));
         }
-    }
+    }*/
 
     float tmpDamage = float(int32(pdamage) + DoneTotal) * DoneTotalMod;
 

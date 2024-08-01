@@ -1601,16 +1601,21 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
 ########                         ########
 #######################################*/
 
-#define ENTRY_IMP               416
-#define ENTRY_VOIDWALKER        1860
-#define ENTRY_SUCCUBUS          1863
-#define ENTRY_FELHUNTER         417
-#define ENTRY_FELGUARD          17252
-#define ENTRY_WATER_ELEMENTAL   510
-#define ENTRY_TREANT            1964
-#define ENTRY_FIRE_ELEMENTAL    15438
-#define ENTRY_GHOUL             26125
-#define ENTRY_BLOODWORM         28017
+#define ENTRY_IMP                   44030
+#define ENTRY_IMP_GRIMOIRE          44031
+#define ENTRY_VOIDWALKER            44036
+#define ENTRY_VOIDWALKER_GRIMOIRE   44037
+#define ENTRY_SUCCUBUS              44035
+#define ENTRY_SUCCUBUS_GRIMOIRE     44034
+#define ENTRY_FELHUNTER             44038
+#define ENTRY_FELHUNTER_GRIMOIRE    44039
+#define ENTRY_FELGUARD              44032
+#define ENTRY_FELGUARD_GRIMOIRE     44033
+#define ENTRY_WATER_ELEMENTAL       510
+#define ENTRY_TREANT                1964
+#define ENTRY_FIRE_ELEMENTAL        15438
+#define ENTRY_GHOUL                 26125
+#define ENTRY_BLOODWORM             28017
 
 bool Guardian::UpdateStats(Stats stat)
 {
@@ -1786,13 +1791,18 @@ void Guardian::UpdateMaxHealth()
     float multiplicator;
     switch (GetEntry())
     {
-        case ENTRY_IMP:         multiplicator = 8.4f;   break;
-        case ENTRY_VOIDWALKER:  multiplicator = 11.0f;  break;
-        case ENTRY_SUCCUBUS:    multiplicator = 9.1f;   break;
-        case ENTRY_FELHUNTER:   multiplicator = 9.5f;   break;
-        case ENTRY_FELGUARD:    multiplicator = 11.0f;  break;
-        case ENTRY_BLOODWORM:   multiplicator = 1.0f;   break;
-        default:                multiplicator = 10.0f;  break;
+        case ENTRY_IMP:
+        case ENTRY_IMP_GRIMOIRE:        multiplicator = 8.4f;   break;
+        case ENTRY_VOIDWALKER:
+        case ENTRY_VOIDWALKER_GRIMOIRE: multiplicator = 11.0f;  break;
+        case ENTRY_SUCCUBUS:
+        case ENTRY_SUCCUBUS_GRIMOIRE:   multiplicator = 9.1f;   break;
+        case ENTRY_FELHUNTER:
+        case ENTRY_FELHUNTER_GRIMOIRE:  multiplicator = 9.5f;   break;
+        case ENTRY_FELGUARD:
+        case ENTRY_FELGUARD_GRIMOIRE:   multiplicator = 11.0f;  break;
+        case ENTRY_BLOODWORM:           multiplicator = 1.0f;   break;
+        default:                        multiplicator = 10.0f;  break;
     }
 
     float value = GetFlatModifierValue(unitMod, BASE_VALUE) + GetCreateHealth();
@@ -1822,12 +1832,17 @@ void Guardian::UpdateMaxPower(Powers power)
 
     switch (GetEntry())
     {
-        case ENTRY_IMP:         multiplicator = 4.95f;  break;
+        case ENTRY_IMP:
+        case ENTRY_IMP_GRIMOIRE:        multiplicator = 4.95f;  break;
         case ENTRY_VOIDWALKER:
+        case ENTRY_VOIDWALKER_GRIMOIRE:
         case ENTRY_SUCCUBUS:
+        case ENTRY_SUCCUBUS_GRIMOIRE:
         case ENTRY_FELHUNTER:
-        case ENTRY_FELGUARD:    multiplicator = 11.5f;  break;
-        default:                multiplicator = 15.0f;  break;
+        case ENTRY_FELHUNTER_GRIMOIRE:
+        case ENTRY_FELGUARD:
+        case ENTRY_FELGUARD_GRIMOIRE:   multiplicator = 11.5f;  break;
+        default:                        multiplicator = 15.0f;  break;
     }
 
     float value  = GetFlatModifierValue(unitMod, BASE_VALUE) + GetCreatePowerValue(power);
