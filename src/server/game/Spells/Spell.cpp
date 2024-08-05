@@ -784,6 +784,7 @@ void Spell::SelectSpellTargets()
                         switch (targetInfo.GetSelectionCategory())
                         {
                             case TARGET_SELECT_CATEGORY_NEARBY:
+                            case TARGET_SELECT_CATEGORY_NEARBY_WO_AURA:
                             case TARGET_SELECT_CATEGORY_CONE:
                             case TARGET_SELECT_CATEGORY_AREA:
                                 return true;
@@ -946,6 +947,12 @@ void Spell::SelectEffectImplicitTargets(SpellEffectInfo const& spellEffectInfo, 
         case TARGET_SELECT_CATEGORY_NEARBY:
             SelectImplicitNearbyTargets(spellEffectInfo, targetType, effectMask);
             break;
+        case TARGET_SELECT_CATEGORY_NEARBY_WO_AURA:
+            if (spellEffectInfo.MiscValueB)
+                SelectImplicitNearbyTargets(spellEffectInfo, targetType, effectMask, spellEffectInfo.MiscValueB);
+            else
+                ABORT_MSG("Spell::SelectImplicitNearbyTargets: TARGET_SELECT_CATEGORY_NEARBY_WO_AURA requires an aura ID specified in MiscB");               
+            break;
         case TARGET_SELECT_CATEGORY_CONE:
             SelectImplicitConeTargets(spellEffectInfo, targetType, effectMask);
             break;
@@ -1070,7 +1077,7 @@ void Spell::SelectImplicitChannelTargets(SpellEffectInfo const& spellEffectInfo,
     }
 }
 
-void Spell::SelectImplicitNearbyTargets(SpellEffectInfo const& spellEffectInfo, SpellImplicitTargetInfo const& targetType, uint32 effMask)
+void Spell::SelectImplicitNearbyTargets(SpellEffectInfo const& spellEffectInfo, SpellImplicitTargetInfo const& targetType, uint32 effMask, uint32 WithoutAura /* = 0 */)
 {
     if (targetType.GetReferenceType() != TARGET_REFERENCE_TYPE_CASTER)
     {
@@ -1144,7 +1151,7 @@ void Spell::SelectImplicitNearbyTargets(SpellEffectInfo const& spellEffectInfo, 
         }
     }
 
-    WorldObject* target = SearchNearbyTarget(range, targetType.GetObjectType(), targetType.GetCheckType(), condList);
+    WorldObject* target = SearchNearbyTarget(range, targetType.GetObjectType(), targetType.GetCheckType(), condList, WithoutAura);
     if (!target)
     {
         TC_LOG_DEBUG("spells", "Spell::SelectImplicitNearbyTargets: cannot find nearby target for spell ID {}, effect {}", m_spellInfo->Id, uint32(spellEffectInfo.EffectIndex));
@@ -1898,15 +1905,22 @@ void Spell::SearchTargets(SEARCHER& searcher, uint32 containerMask, WorldObject*
     }
 }
 
-WorldObject* Spell::SearchNearbyTarget(float range, SpellTargetObjectTypes objectType, SpellTargetCheckTypes selectionType, ConditionContainer* condList)
+WorldObject* Spell::SearchNearbyTarget(float range, SpellTargetObjectTypes objectType, SpellTargetCheckTypes selectionType, ConditionContainer* condList, uint32 WithoutAura)
 {
     WorldObject* target = nullptr;
     uint32 containerTypeMask = GetSearcherTypeMask(objectType, condList);
     if (!containerTypeMask)
         return nullptr;
-    Trinity::WorldObjectSpellNearbyTargetCheck check(range, m_caster, m_spellInfo, selectionType, condList);
-    Trinity::WorldObjectLastSearcher<Trinity::WorldObjectSpellNearbyTargetCheck> searcher(m_caster, target, check, containerTypeMask);
-    SearchTargets<Trinity::WorldObjectLastSearcher<Trinity::WorldObjectSpellNearbyTargetCheck> > (searcher, containerTypeMask, m_caster, m_caster, range);
+    if (WithoutAura) {
+        Trinity::WorldObjectSpellNearbyTargetWithoutAuraCheck check(range, m_caster, m_spellInfo, selectionType, condList, WithoutAura);
+        Trinity::WorldObjectLastSearcher<Trinity::WorldObjectSpellNearbyTargetWithoutAuraCheck> searcher(m_caster, target, check, containerTypeMask);
+        SearchTargets<Trinity::WorldObjectLastSearcher<Trinity::WorldObjectSpellNearbyTargetWithoutAuraCheck> >(searcher, containerTypeMask, m_caster, m_caster, range);
+    }
+    else {
+        Trinity::WorldObjectSpellNearbyTargetCheck check(range, m_caster, m_spellInfo, selectionType, condList);
+        Trinity::WorldObjectLastSearcher<Trinity::WorldObjectSpellNearbyTargetCheck> searcher(m_caster, target, check, containerTypeMask);
+        SearchTargets<Trinity::WorldObjectLastSearcher<Trinity::WorldObjectSpellNearbyTargetCheck> >(searcher, containerTypeMask, m_caster, m_caster, range);
+    }
     return target;
 }
 
@@ -5343,7 +5357,6 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
             Unit::AuraEffectList const& ignore = unitCaster->GetAuraEffectsByType(SPELL_AURA_MOD_IGNORE_SHAPESHIFT);
             for (AuraEffect const* aurEff : ignore)
             {
-                TC_LOG_INFO("server.worldserver", "SPELL {}", m_spellInfo->Id);
                 if (!aurEff->IsAffectedOnSpell(m_spellInfo))
                     continue;
 
@@ -6268,23 +6281,15 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
                 return SPELL_FAILED_ITEM_ALREADY_ENCHANTED;
     }
 
-    // check if caster has at least 1 combo point on target for spells that require combo points
-    if (m_needComboPoints)
-    {
-        if (Unit* unitCaster = m_caster->ToUnit())
-        {
-            if (m_spellInfo->NeedsExplicitUnitTarget())
-            {
-                if (!unitCaster->GetComboPoints())
-                    return SPELL_FAILED_NO_COMBO_POINTS;
-            }
-            else
-            {
-                if (!unitCaster->GetComboPoints())
-                    return SPELL_FAILED_NO_COMBO_POINTS;
-            }
-        }
-    }
+    // // check if caster has at least 1 combo point on target for spells that require combo points
+    // if (m_needComboPoints)
+    // {
+    //     if (Unit* unitCaster = m_caster->ToUnit())
+    //     {
+    //         if (!unitCaster->GetComboPoints() && !unitCaster->IsPlayer())
+    //             return SPELL_FAILED_NO_COMBO_POINTS;
+    //     }
+    // }
 
     // @dh-begin
     // TODO: add FIRE for custom checks like
@@ -8637,6 +8642,21 @@ bool WorldObjectSpellNearbyTargetCheck::operator()(WorldObject* target)
         _range = dist;
         return true;
     }
+    return false;
+}
+
+WorldObjectSpellNearbyTargetWithoutAuraCheck::WorldObjectSpellNearbyTargetWithoutAuraCheck(float range, WorldObject* caster, SpellInfo const* spellInfo,
+    SpellTargetCheckTypes selectionType, ConditionContainer const* condList, uint32 WithoutAura)
+    : WorldObjectSpellTargetCheck(caster, caster, spellInfo, selectionType, condList), _range(range), _position(caster), _AuraCheck(WithoutAura) { }
+
+bool WorldObjectSpellNearbyTargetWithoutAuraCheck::operator()(WorldObject* target)
+{
+    float dist = target->GetDistance(*_position);
+    if (dist < _range && WorldObjectSpellTargetCheck::operator ()(target) && target->IsUnit())
+        if (!target->ToUnit()->HasAura(_AuraCheck)) {
+            _range = dist;
+            return true;
+        }
     return false;
 }
 

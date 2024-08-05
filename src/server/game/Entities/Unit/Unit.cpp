@@ -371,9 +371,9 @@ Unit::Unit(bool isWorldObject) :
         m_createStats[i] = 0.0f;
 
     m_attacking = nullptr;
-    m_modMeleeHitChance = 0.0f;
-    m_modRangedHitChance = 0.0f;
-    m_modSpellHitChance = 0.0f;
+    m_modMeleeHitChance = 8.0f;
+    m_modRangedHitChance = 8.0f;
+    m_modSpellHitChance = 17.0f;
     m_baseSpellCritChance = 5;
 
     m_lastManaUse = 0;
@@ -8428,12 +8428,15 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
             DoneTotalMod *= maxModDamagePercentSchool;
         }
     } else {
-            // Aleist3r: moved this from StatSystem.cpp, probably a better idea to do it in this function
+        // Aleist3r: moved this from StatSystem.cpp, probably a better idea to do it in this function
         AuraEffectList const& mModAutoAttack = GetAuraEffectsByType(SPELL_AURA_MOD_AUTOATTACK_DAMAGE_PCT);
         for (AuraEffectList::const_iterator i = mModAutoAttack.begin(); i != mModAutoAttack.end(); ++i)
         {
             AddPct(DoneTotalMod, (*i)->GetAmount());
         }
+
+        if (IsPlayer())
+            FIRE(Player, OnCustomScriptedAutoattackMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage));
     }
 
     DoneTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS, creatureTypeMask);
@@ -9789,10 +9792,11 @@ bool Unit::CanProcMultistrike(SpellInfo const* spellInfo) const
 
 bool Unit::IsSpellMultistrike() const
 {
-    if (GetSpellModOwner() == nullptr)
-        return false;
+    // if (GetSpellModOwner() == nullptr)
+    //     return false;
 
-    return roll_chance_f(GetSpellModOwner()->GetFloatValue(PLAYER_FIELD_COMBAT_RATING_1 + static_cast<uint16>(CR_MULTISTRIKE)));
+    // return roll_chance_f(GetSpellModOwner()->GetFloatValue(PLAYER_FIELD_COMBAT_RATING_1 + static_cast<uint16>(CR_MULTISTRIKE)));
+    return false;
 }
 
 void Unit::ProcMultistrike(SpellInfo const* procSpellInfo, Unit* target, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, SpellInfo const* procAura, DamageInfo* damageInfo, HealInfo* healInfo)
@@ -10235,6 +10239,8 @@ void Unit::SetPower(Powers power, uint32 val, bool withPowerUpdate /*= true*/, b
     {
         if (player->GetGroup())
             player->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_CUR_POWER);
+
+        FIRE(Player, OnPowerChanged, TSPlayer(player), TSNumber<uint8>(power), TSNumber<uint32>(val), TSNumber<uint32>(maxPower));
     }
     else if (Pet* pet = ToCreature()->ToPet())
     {
@@ -11306,15 +11312,16 @@ void Unit::SendComboPoints()
     if (m_cleanupDone)
         return;
 
+    // DISABLE DEFAULT PLAYER SEND - HATER
     PackedGuid const packGUID = m_comboTarget ? m_comboTarget->GetPackGUID() : PackedGuid();
-    if (Player* playerMe = ToPlayer())
-    {
-        WorldPacket data;
-        data.Initialize(SMSG_UPDATE_COMBO_POINTS, packGUID.size() + 1);
-        data << packGUID;
-        data << uint8(m_comboPoints);
-        playerMe->SendDirectMessage(&data);
-    }
+    // if (Player* playerMe = ToPlayer())
+    // {
+    //     WorldPacket data;
+    //     data.Initialize(SMSG_UPDATE_COMBO_POINTS, packGUID.size() + 1);
+    //     data << packGUID;
+    //     data << uint8(m_comboPoints);
+    //     playerMe->SendDirectMessage(&data);
+    // }
     Player* movingMe = GetCharmerOrSelfPlayer();
     ObjectGuid ownerGuid = GetCharmerOrOwnerGUID();
     Player* owner = nullptr;
@@ -11336,8 +11343,12 @@ void Unit::SendComboPoints()
 
 void Unit::ClearComboPointHolders()
 {
-    while (!m_ComboPointHolders.empty())
-        (*m_ComboPointHolders.begin())->ClearComboPoints(); // this also removes it from m_comboPointHolders
+    if (this->IsPlayer()) {
+        FIRE(Player, ClearComboPoints, TSPlayer(this->ToPlayer()));
+    } else {
+        while (!m_ComboPointHolders.empty())
+            (*m_ComboPointHolders.begin())->ClearComboPoints(); // this also removes it from m_comboPointHolders
+    }
 }
 
 void Unit::ClearAllReactives()
@@ -11415,6 +11426,37 @@ Unit* Unit::SelectNearbyTarget(Unit* exclude, float dist) const
     for (std::list<Unit*>::iterator tIter = targets.begin(); tIter != targets.end();)
     {
         if (!IsWithinLOSInMap(*tIter) || (*tIter)->IsTotem() || (*tIter)->IsSpiritService() || (*tIter)->IsCritter())
+            targets.erase(tIter++);
+        else
+            ++tIter;
+    }
+
+    // no appropriate targets
+    if (targets.empty())
+        return nullptr;
+
+    // select random
+    return Trinity::Containers::SelectRandomContainerElement(targets);
+}
+
+Unit* Unit::SelectNearbyTargetWithoutAura(Unit* exclude, float dist, uint32 WithoutAura) const
+{
+    std::list<Unit*> targets;
+    Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(this, this, dist);
+    Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(this, targets, u_check);
+    Cell::VisitAllObjects(this, searcher, dist);
+
+    // remove current target
+    if (GetVictim())
+        targets.remove(GetVictim());
+
+    if (exclude)
+        targets.remove(exclude);
+
+    // remove not LoS targets
+    for (std::list<Unit*>::iterator tIter = targets.begin(); tIter != targets.end();)
+    {
+        if (!IsWithinLOSInMap(*tIter) || (*tIter)->IsTotem() || (*tIter)->IsSpiritService() || (*tIter)->IsCritter() || (*tIter)->HasAura(WithoutAura))
             targets.erase(tIter++);
         else
             ++tIter;

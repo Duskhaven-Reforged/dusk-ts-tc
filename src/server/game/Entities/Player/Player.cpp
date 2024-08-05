@@ -2019,14 +2019,11 @@ void Player::RegenerateAll()
 {
     m_regenTimerCount += m_regenTimer;
     m_foodEmoteTimerCount += m_regenTimer;
-    m_ComboPointDegenTimer += m_regenTimer;
     m_focusRegen += m_regenTimer;
 
     Regenerate(POWER_ENERGY);
     Regenerate(POWER_FOCUS);
     Regenerate(POWER_MANA);
-    Regenerate(POWER_RAGE);
-    Regenerate(POWER_RUNIC_POWER);
 
     // Runes act as cooldowns, and they don't need to send any data
     //@tswow-begin
@@ -2039,10 +2036,6 @@ void Player::RegenerateAll()
 
     }
 
-    if (m_ComboPointDegenTimer >= 10000) // hater: updated combopoints
-        if (!IsInCombat())
-            AddComboPoints(-1);
-
     if (m_regenTimerCount >= 2000)
     {
         // Not in combat or they have regeneration
@@ -2053,6 +2046,7 @@ void Player::RegenerateAll()
             RegenerateHealth();
         }
 
+        // hater: curious
         Regenerate(POWER_RAGE);
         //@tswow-begin
         if (HasRunes())
@@ -2102,79 +2096,7 @@ void Player::Regenerate(Powers power)
         return;
 
     uint32 curValue = GetPower(power);
-
-    /// @todo possible use of miscvalueb instead of amount
-    if (HasAuraTypeWithValue(SPELL_AURA_PREVENT_REGENERATE_POWER, power))
-        return;
-
-    float addvalue = 0.0f;
-
-    switch (power)
-    {
-        case POWER_MANA:
-        {
-            bool recentCast = IsUnderLastManaUseEffect();
-            float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
-
-            if (GetLevel() < 15)
-                ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA) * (2.066f - (GetLevel() * 0.066f));
-
-            if (recentCast) // Trinity Updates Mana in intervals of 2s, which is correct
-                addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) *  ManaIncreaseRate * 0.001f * m_regenTimer;
-            else
-                addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) * ManaIncreaseRate * 0.001f * m_regenTimer;
-        }   break;
-        case POWER_RAGE:                                    // Regenerate rage
-        {
-            if (!IsInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
-            {
-                float RageDecreaseRate = sWorld->getRate(RATE_POWER_RAGE_LOSS);
-                addvalue += -20 * RageDecreaseRate;               // 2 rage by tick (= 2 seconds => 1 rage/sec)
-            }
-        }   break;
-        case POWER_ENERGY:                                  // Regenerate energy (rogue)
-            addvalue += 0.01f * m_regenTimer * sWorld->getRate(RATE_POWER_ENERGY);
-            break;
-        case POWER_RUNIC_POWER:
-        {
-            if (!IsInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
-            {
-                float RunicPowerDecreaseRate = sWorld->getRate(RATE_POWER_RUNICPOWER_LOSS);
-                addvalue += -30 * RunicPowerDecreaseRate;         // 3 RunicPower by tick
-            }
-        }   break;
-        case POWER_FOCUS: 
-            {
-                float haste = (1 - m_modAttackSpeedPct[RANGED_ATTACK]);
-                addvalue += (0.0052f * m_regenTimer * sWorld->getRate(RATE_POWER_FOCUS));
-
-                if (haste > 0)
-                {
-                    if (haste > 74)
-                        haste = 74;
-
-                    addvalue += addvalue * haste;
-                }
-            }  break;
-        case POWER_RUNE:
-        case POWER_HAPPINESS:
-            break;
-        case POWER_HEALTH:
-            return;
-        default:
-            break;
-    }
-
-    // Mana regen calculated in Player::UpdateManaRegen()
-    if (power != POWER_MANA)
-    {
-        addvalue *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, power);
-
-        // Butchery requires combat for this effect
-        if (power != POWER_RUNIC_POWER || IsInCombat())
-            addvalue += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, power) * ((power != POWER_ENERGY) ? m_regenTimerCount : m_regenTimer) / (5 * IN_MILLISECONDS);
-    }
-   // float addvalue  = GetPowerRegen(power) * 0.001f * m_regenTimer;//@tester-removed, started at 2118
+    float addvalue = GetPowerRegen(power) * 0.001f * m_regenTimer;
 
     if (addvalue < 0.0f)
     {
@@ -5459,6 +5381,15 @@ float Player::GetMeleeCritFromAgility() const
         return 0.0f;
 
     float crit = critBase->Data + GetStat(STAT_AGILITY)*critRatio->Data;
+
+    FIRE(Player,OnCalcAgilityCritBonus
+        ,TSPlayer(const_cast<Player*>(this))
+        ,TSMutableNumber<float>(&crit)
+        ,GetStat(STAT_AGILITY)
+        ,critBase->Data
+        ,critRatio->Data
+    );
+
     return crit*100.0f;
 }
 
@@ -5646,6 +5577,21 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
             ApplyCastTimePercentMod(oldVal, false);
             ApplyCastTimePercentMod(newVal, true);
             break;
+        case CR_SPEED:
+            FIRE(Player, OnUpdateSpeedRating, TSPlayer(this), TSNumber<float>(newVal));
+            break;
+        case CR_LIFESTEAL:
+            FIRE(Player, OnUpdateLeechRating, TSPlayer(this), TSNumber<float>(newVal));
+            break;
+        case CR_AVOIDANCE:
+            FIRE(Player, OnUpdateAvoidanceRating, TSPlayer(this), TSNumber<float>(newVal));
+            break;
+        case CR_MASTERY:
+            FIRE(Player, OnUpdateMasteryRating, TSPlayer(this), TSNumber<float>(newVal));
+            break;
+        case CR_THORNS:
+            FIRE(Player, OnUpdateThornsRating, TSPlayer(this), TSNumber<float>(newVal));
+            break;
         default:
             break;
     }
@@ -5723,22 +5669,6 @@ void Player::UpdateRating(CombatRating cr)
             break;
         case CR_BLOCK:
             UpdateBlockPercentage();
-            break;
-        case CR_SPEED:
-        case CR_LIFESTEAL:
-        case CR_AVOIDANCE:
-        case CR_MASTERY:
-        case CR_MULTISTRIKE:
-            // @dh-begin
-            //if (affectStats)
-            //{
-            //    UpdateSpeed(MOVE_RUN);
-            //    UpdateLifesteal(amount);
-            //    UpdateAvoidance(amount);
-            //    UpdateMastery(amount);
-            //    UpdateMultistrike(amount);
-            //}
-            // @dh-end
             break;
         case CR_CRIT_MELEE:
             if (affectStats)
@@ -21783,7 +21713,6 @@ void Player::ApplyModToSpell(SpellModifier* mod, Spell* spell)
 {
     if (!spell)
         return;
-
     // don't do anything with no charges
     if (mod->ownerAura->IsUsingCharges() && !mod->ownerAura->GetCharges())
         return;
@@ -25858,6 +25787,8 @@ void Player::HandleFall(MovementInfo const& movementInfo)
                 // Gust of Wind
                 if (HasAura(43621))
                     damage = GetMaxHealth()/2;
+
+                FIRE(Player, OnCalcFallDamage, TSPlayer(this), TSMutableNumber<uint32>(&damage));
 
                 uint32 original_health = GetHealth();
                 uint32 final_damage = EnvironmentalDamage(DAMAGE_FALL, damage);

@@ -284,8 +284,8 @@ void Spell::EffectResurrectNew()
     if (player->IsResurrectRequested())       // already have one active request
         return;
 
-    uint32 health = damage;
-    uint32 mana = effectInfo->MiscValue;
+    uint32 health = CalculatePct(damage, player->GetMaxHealth());
+    uint32 mana = CalculatePct(damage, player->GetMaxPower(POWER_MANA));;
     ExecuteLogEffectResurrect(effectInfo->EffectIndex, player);
     player->SetResurrectRequestData(m_caster, health, mana, 0);
     SendResurrectRequest(player);
@@ -1854,7 +1854,6 @@ void Spell::EffectEnergizePct()
         return;
 
     uint32 maxPower = unitTarget->GetMaxPower(power);
-    TC_LOG_INFO("server.worldserver", "Max Power {} : {}", power, maxPower);
     if (!maxPower)
         return;
 
@@ -3542,6 +3541,8 @@ void Spell::EffectInterruptCast()
                 unitTarget->InterruptSpell(CurrentSpellTypes(i), false, false, SPELL_FAILED_INTERRUPTED_COMBAT, SPELL_FAILED_DONT_REPORT);
                 if (m_caster->IsPlayer())
                     FIRE(Player, OnSuccessfulInterrupt, TSPlayer(const_cast<Player*>(m_caster->ToPlayer())), TSUnit(const_cast<Unit*>(unitTarget)), TSSpell(const_cast<Spell*>(spell)));
+
+                FIRE_ID(spell->GetSpellInfo()->events.id, Spell, OnSuccessfulInterrupt, TSUnit(GetUnitCasterForEffectHandlers()), TSUnit(const_cast<Unit*>(unitTarget)), TSSpell(const_cast<Spell*>(spell)));
             }
         }
     }
@@ -3782,7 +3783,10 @@ void Spell::EffectAddComboPoints()
 
     if (damage <= 0)
         return;
-
+    if (Player* caster = m_caster->ToPlayer()) {
+        FIRE(Player, GainComboPoint, TSPlayer(caster), TSNumber<int8>(damage));
+    }
+    
     AddComboPointGain(unitTarget, damage);
 }
 

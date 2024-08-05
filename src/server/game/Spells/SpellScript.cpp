@@ -272,6 +272,7 @@ bool SpellScript::TargetHook::CheckEffect(SpellInfo const* spellEntry, uint8 eff
         case TARGET_SELECT_CATEGORY_CHANNEL: // SINGLE
             return !area;
         case TARGET_SELECT_CATEGORY_NEARBY: // BOTH
+        case TARGET_SELECT_CATEGORY_NEARBY_WO_AURA:
             return true;
         case TARGET_SELECT_CATEGORY_CONE: // AREA
         case TARGET_SELECT_CATEGORY_AREA: // AREA

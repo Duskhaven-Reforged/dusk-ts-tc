@@ -342,8 +342,8 @@ enum CombatRating
     CR_WEAPON_SKILL_MAINHAND    = 20,
     CR_WEAPON_SKILL_OFFHAND     = 21,
     CR_WEAPON_SKILL_RANGED      = 22,
-    CR_MASTERY                  = 23,
-    CR_MULTISTRIKE              = 24
+    CR_MASTERY                  = 23,   // old exp
+    CR_THORNS                   = 24    // old arp
 };
 
 #define MAX_COMBAT_RATING         25
@@ -885,6 +885,7 @@ class TC_GAME_API Unit : public WorldObject
         void CombatStopWithPets(bool includingCast = false);
         void StopAttackFaction(uint32 faction_id);
         Unit* SelectNearbyTarget(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE) const;
+        Unit* SelectNearbyTargetWithoutAura(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE, uint32 WithoutAura = 0) const;
         std::list<Unit*> SelectNearbyTargets(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1) const;
         std::list<Unit*> SelectNearbyTargets(std::list<Unit*> exclude = {}, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1) const;
         void SendMeleeAttackStop(Unit* victim = nullptr);

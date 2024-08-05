@@ -2320,6 +2320,7 @@ float WorldObject::ApplyEffectModifiers(SpellInfo const* spellInfo, uint8 effInd
 
 int32 WorldObject::CalcSpellDuration(SpellInfo const* spellInfo) const
 {
+    int32 duration;
     uint8 comboPoints = 0;
     if (Unit const* unit = ToUnit())
         comboPoints = unit->GetComboPoints();
@@ -2327,11 +2328,14 @@ int32 WorldObject::CalcSpellDuration(SpellInfo const* spellInfo) const
     int32 minduration = spellInfo->GetDuration();
     int32 maxduration = spellInfo->GetMaxDuration();
 
-    int32 duration;
     if (comboPoints && minduration != -1 && minduration != maxduration)
         duration = minduration + int32((maxduration - minduration) * comboPoints / 5);
     else
         duration = minduration;
+    
+    if (this->IsPlayer()) {
+        FIRE_ID(spellInfo->events.id, Spell, OnCalcSpellDuration, TSSpellInfo(spellInfo), TSPlayer(const_cast<Player*>(ToPlayer())), TSMutableNumber<int32>(&duration));
+    }
 
     return duration;
 }

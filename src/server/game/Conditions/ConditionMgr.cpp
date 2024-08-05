@@ -1727,6 +1727,7 @@ bool ConditionMgr::isSourceTypeValid(Condition* cond) const
                 switch (spellEffectInfo.TargetA.GetSelectionCategory())
                 {
                     case TARGET_SELECT_CATEGORY_NEARBY:
+                    case TARGET_SELECT_CATEGORY_NEARBY_WO_AURA:
                     case TARGET_SELECT_CATEGORY_CONE:
                     case TARGET_SELECT_CATEGORY_AREA:
                     case TARGET_SELECT_CATEGORY_TRAJ:
@@ -1738,6 +1739,7 @@ bool ConditionMgr::isSourceTypeValid(Condition* cond) const
                 switch (spellEffectInfo.TargetB.GetSelectionCategory())
                 {
                     case TARGET_SELECT_CATEGORY_NEARBY:
+                    case TARGET_SELECT_CATEGORY_NEARBY_WO_AURA:
                     case TARGET_SELECT_CATEGORY_CONE:
                     case TARGET_SELECT_CATEGORY_AREA:
                     case TARGET_SELECT_CATEGORY_TRAJ:
