@@ -11408,6 +11408,44 @@ void Unit::UpdateReactives(uint32 p_time)
     }
 }
 
+std::list<Unit*> Unit::SelectNearbyAllies(std::list<Unit*> exclude, float dist, uint32 amount) const
+{
+    std::list<Unit*> targets;
+    std::list<Unit*> tempTargets;
+    Trinity::AnyFriendlyUnitInObjectRangeCheck u_check(this, this, dist);
+    Trinity::UnitListSearcher<Trinity::AnyFriendlyUnitInObjectRangeCheck> searcher(this, tempTargets, u_check);
+    Cell::VisitAllObjects(this, searcher, dist);
+
+    // remove current target
+    if (GetVictim())
+        tempTargets.remove(GetVictim());
+
+    if (!exclude.empty())
+        for (auto unit : exclude)
+            tempTargets.remove(unit);
+
+    // remove not LoS targets
+    for (std::list<Unit*>::iterator tIter = tempTargets.begin(); tIter != tempTargets.end();)
+    {
+        if (!IsWithinLOSInMap(*tIter) || (*tIter)->IsTotem() || (*tIter)->IsSpiritService() || (*tIter)->IsCritter())
+            tempTargets.erase(tIter++);
+        else
+            ++tIter;
+    }
+
+    // add unique target to list
+    for (uint32 i = 0; i < amount; ++i)
+    {
+        Unit* tempUnit = Trinity::Containers::SelectRandomContainerElement(tempTargets);
+        tempTargets.remove(tempUnit);
+
+        if (std::find(targets.begin(), targets.end(), tempUnit) == targets.end())
+            targets.push_back(tempUnit);
+    }
+
+    return targets;
+}
+
 Unit* Unit::SelectNearbyTarget(Unit* exclude, float dist) const
 {
     std::list<Unit*> targets;

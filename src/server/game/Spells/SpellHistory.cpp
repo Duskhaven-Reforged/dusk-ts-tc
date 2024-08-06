@@ -472,11 +472,11 @@ void SpellHistory::ResetAllCooldowns()
 
 bool SpellHistory::HasCooldown(SpellInfo const* spellInfo, uint32 itemId /*= 0*/, bool ignoreCategoryCooldown /*= false*/) const
 {
-    if (_spellCooldowns.count(spellInfo->Id) != 0)
-        return true;
-
     if (ignoreCategoryCooldown)
         return false;
+
+    if (_spellCooldowns.count(spellInfo->Id) != 0)
+        return true;
 
     uint32 category = 0;
     GetCooldownDurations(spellInfo, itemId, nullptr, &category, nullptr);

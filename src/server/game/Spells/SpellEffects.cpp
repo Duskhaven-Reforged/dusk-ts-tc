@@ -1435,10 +1435,6 @@ void Spell::EffectHeal()
             tickcount = 6;
 
         addhealth += tickheal * tickcount;
-
-        // Glyph of Swiftmend
-        if (!unitCaster->HasAura(54824))
-            unitTarget->RemoveAura(targetAura->GetId(), targetAura->GetCasterGUID());
     }
     // Death Pact - return pct of max health to caster
     else if (m_spellInfo->SpellFamilyName == SPELLFAMILY_DEATHKNIGHT && m_spellInfo->SpellFamilyFlags[0] & 0x00080000)

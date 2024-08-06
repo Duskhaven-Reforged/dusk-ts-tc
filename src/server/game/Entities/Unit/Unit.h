@@ -884,6 +884,7 @@ class TC_GAME_API Unit : public WorldObject
         void CombatStop(bool includingCast = false, bool mutualPvP = true);
         void CombatStopWithPets(bool includingCast = false);
         void StopAttackFaction(uint32 faction_id);
+        std::list<Unit*> SelectNearbyAllies(std::list<Unit*> exclude = {}, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1) const;
         Unit* SelectNearbyTarget(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE) const;
         Unit* SelectNearbyTargetWithoutAura(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE, uint32 WithoutAura = 0) const;
         std::list<Unit*> SelectNearbyTargets(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1) const;
