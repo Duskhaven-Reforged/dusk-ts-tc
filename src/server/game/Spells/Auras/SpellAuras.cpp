@@ -1026,8 +1026,9 @@ bool Aura::ModStackAmount(int32 num, AuraRemoveMode removeMode /*= AURA_REMOVE_B
     if ((num > 0) && (stackAmount > int32(maxStackAmount)))
     {
         // not stackable aura - set stack amount to 1
-        if (!maxStackAmount)
+        if (!maxStackAmount) {
             stackAmount = 1;
+        }
         else
             stackAmount = maxStackAmount;
     }
@@ -1038,7 +1039,7 @@ bool Aura::ModStackAmount(int32 num, AuraRemoveMode removeMode /*= AURA_REMOVE_B
         return true;
     }
 
-    bool refresh = stackAmount >= GetStackAmount() && maxStackAmount && !m_spellInfo->HasAttribute(SPELL_ATTR1_DONT_REFRESH_DURATION_ON_RECAST);
+    bool refresh = stackAmount >= GetStackAmount() && !m_spellInfo->HasAttribute(SPELL_ATTR1_DONT_REFRESH_DURATION_ON_RECAST);
 
     // Update stack amount
     SetStackAmount(stackAmount);

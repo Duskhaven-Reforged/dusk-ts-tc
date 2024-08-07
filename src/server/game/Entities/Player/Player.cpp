@@ -2024,7 +2024,11 @@ void Player::RegenerateAll()
     Regenerate(POWER_ENERGY);
     Regenerate(POWER_FOCUS);
     Regenerate(POWER_MANA);
+
     Regenerate(POWER_RAGE);
+    //@tswow-begin
+    if (HasRunes())
+        Regenerate(POWER_RUNIC_POWER);
 
     // Runes act as cooldowns, and they don't need to send any data
     //@tswow-begin
@@ -2046,10 +2050,6 @@ void Player::RegenerateAll()
         {
             RegenerateHealth();
         }
-
-        //@tswow-begin
-        if (HasRunes())
-            Regenerate(POWER_RUNIC_POWER);
 
         m_regenTimerCount -= 2000;
     }

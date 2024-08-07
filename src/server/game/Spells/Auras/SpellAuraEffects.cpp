@@ -550,12 +550,14 @@ int32 AuraEffect::CalculateAmount(Unit* caster)
         {
             case SPELL_AURA_PERIODIC_DAMAGE:
             case SPELL_AURA_PERIODIC_LEECH:
-                if (GetBase()->GetType() == UNIT_AURA_TYPE)
+                if (GetBase()->GetType() == UNIT_AURA_TYPE) {
                     amount = caster->SpellDamageBonusDone(GetBase()->GetUnitOwner(), GetSpellInfo(), amount, DOT, GetSpellEffectInfo(), GetBase()->GetDonePct());
+                }
                 break;
             case SPELL_AURA_PERIODIC_HEAL:
-                if (GetBase()->GetType() == UNIT_AURA_TYPE)
+                if (GetBase()->GetType() == UNIT_AURA_TYPE) {
                     amount = caster->SpellHealingBonusDone(GetBase()->GetUnitOwner(), GetSpellInfo(), amount, DOT, GetSpellEffectInfo(), GetBase()->GetDonePct());
+                }
                 break;
             default:
                 break;
@@ -568,7 +570,7 @@ int32 AuraEffect::CalculateAmount(Unit* caster)
         amount = std::accumulate(std::begin(periodicAuras), std::end(periodicAuras), amount, [this](int32 val, AuraEffect const* aurEff)
         {
             if (aurEff->GetCasterGUID() == GetCasterGUID() && aurEff->GetId() == GetId() && aurEff->GetEffIndex() == GetEffIndex() && aurEff->GetTotalTicks() > 0)
-                val += aurEff->GetAmount() * static_cast<int32>(aurEff->GetRemainingTicks()) / static_cast<int32>(aurEff->GetTotalTicks());
+                val += aurEff->GetAmount() * static_cast<float>(aurEff->GetRemainingTicks()) / static_cast<float>(aurEff->GetTotalTicks());
             return val;
         });
     }
@@ -5334,6 +5336,7 @@ void AuraEffect::HandlePeriodicDamageAurasTick(Unit* target, Unit* caster) const
         this->m_spellInfo->events.id
         , Spell,OnPeriodicDamage
         , TSAuraEffect(const_cast<AuraEffect*>(this))
+        , TSUnit(target)
         , TSMutableNumber<uint32>(&damage)
     );
     // @tswow-end
@@ -5463,6 +5466,7 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
         this->m_spellInfo->events.id
         , Spell,OnPeriodicDamage
         , TSAuraEffect(const_cast<AuraEffect*>(this))
+        , TSUnit(target)
         , TSMutableNumber<uint32>(&damage)
     );
     // @tswow-end
@@ -5605,6 +5609,7 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
           this->m_spellInfo->events.id
         , Spell,OnPeriodicDamage
         , TSAuraEffect(const_cast<AuraEffect*>(this))
+        , TSUnit(target)
         , TSMutableNumber<uint32>(&damage)
     );
     // @tswow-end
@@ -5911,7 +5916,13 @@ void AuraEffect::HandleProcTriggerSpellAuraProc(AuraApplication* aurApp, ProcEve
     if (SpellInfo const* triggeredSpellInfo = sSpellMgr->GetSpellInfo(triggerSpellId))
     {
         TC_LOG_DEBUG("spells.aura.effect", "AuraEffect::HandleProcTriggerSpellAuraProc: Triggering spell {} from aura {} proc", triggeredSpellInfo->Id, GetId());
-        triggerCaster->CastSpell(triggerTarget, triggeredSpellInfo->Id, this);
+
+        CastSpellExtraArgs args(this);
+        if (GetMiscValue() == 8)
+            args.AddSpellMod(SpellValueMod(SPELLVALUE_AURA_STACK), GetMiscValueB());
+
+
+        TC_LOG_INFO("server.worldserver", "Trigger spell {}", triggerCaster->CastSpell(triggerTarget, triggeredSpellInfo->Id, args));
     }
     else
         TC_LOG_ERROR("spells.aura.effect.nospell","AuraEffect::HandleProcTriggerSpellAuraProc: Spell {} has non-existent spell {} in EffectTriggered[{}] and is therefore not triggered.", GetId(), triggerSpellId, GetEffIndex());
@@ -5935,6 +5946,7 @@ void AuraEffect::HandleProcTriggerSpellWithValueAuraProc(AuraApplication* aurApp
         args.AddSpellMod(SPELLVALUE_BASE_POINT0, GetAmount());
         if (GetMiscValueB() > 0)
                 args.AddSpellMod(SpellValueMod(SPELLVALUE_DURATION), GetMiscValueB());
+
         triggerCaster->CastSpell(triggerTarget, triggerSpellId, args);
         TC_LOG_DEBUG("spells.aura.effect", "AuraEffect::HandleProcTriggerSpellWithValueAuraProc: Triggering spell {} with value {} from aura {} proc", triggeredSpellInfo->Id, GetAmount(), GetId());
     }
