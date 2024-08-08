@@ -1741,14 +1741,10 @@ void Spell::EffectPersistentAA()
         return;
     }
 
-    int32 BPL = 0;
-    if (effectInfo->RealPointsPerLevel > 0)
-        BPL = effectInfo->RealPointsPerLevel * unitCaster->GetLevel();
-
     AuraCreateInfo createInfo(m_spellInfo, MAX_EFFECT_MASK, dynObj);
     createInfo
         .SetCaster(unitCaster)
-        .SetBaseAmount(m_spellValue->EffectBasePoints + BPL);
+        .SetBaseAmount(m_spellValue->EffectBasePoints);
 
     if (Aura* aura = Aura::TryCreate(createInfo))
     {
