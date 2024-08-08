@@ -14564,8 +14564,9 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId /*= 0*/, bool 
                     // @tswow-end
                     if (!trainer || !trainer->IsTrainerValidForPlayer(this))
                     {
-                        TC_LOG_ERROR("sql.sql", "GOSSIP_OPTION_TRAINER:: Player {} {} requested wrong gossip menu: {} at Creature: {} (Entry: {})",
-                            GetName(), GetGUID().ToString(), menu->GetGossipMenu().GetMenuId(), creature->GetName(), creature->GetEntry());
+                        // suppressing error, we don't really care
+                        // TC_LOG_ERROR("sql.sql", "GOSSIP_OPTION_TRAINER:: Player {} {} requested wrong gossip menu: {} at Creature: {} (Entry: {})",
+                        //     GetName(), GetGUID().ToString(), menu->GetGossipMenu().GetMenuId(), creature->GetName(), creature->GetEntry());
                         canTalk = false;
                     }
                     [[fallthrough]];
