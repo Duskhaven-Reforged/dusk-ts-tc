@@ -6547,7 +6547,7 @@ void Unit::SetCharm(Unit* charm, bool apply)
 
     // Hook for OnHeal Event
     sScriptMgr->OnHeal(healer, victim, (uint32&)gain);
-    FIRE_ID(healInfo.GetSpellInfo()->events.id, Spell, OnHeal, TSHealInfo(&healInfo));
+    FIRE_ID(healInfo.GetSpellInfo()->events.id, Spell, OnHeal, TSHealInfo(&healInfo), TSMutableNumber<int32>(&gain));
 
     Unit* unit = healer;
     if (healer && healer->GetTypeId() == TYPEID_UNIT && healer->IsTotem())

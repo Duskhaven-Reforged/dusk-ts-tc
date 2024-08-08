@@ -1062,6 +1062,7 @@ void Spell::EffectJumpDest()
 
     float speedXY, speedZ;
     CalculateJumpSpeeds(*effectInfo, unitCaster->GetExactDist2d(destTarget), speedXY, speedZ);
+    FIRE_ID(GetSpellInfo()->events.id, Spell, OnJumpStart, TSSpellInfo(GetSpellInfo()), TSUnit(unitCaster), TSMutableNumber<float>(&speedXY), TSMutableNumber<float>(&speedZ), TSNumber<float>(unitCaster->GetExactDist(unitTarget->GetPosition())), TSNumber<float>(destTarget->GetPositionX()), TSNumber<float>(destTarget->GetPositionY()), TSNumber<float>(destTarget->GetPositionZ()));
     unitCaster->GetMotionMaster()->MoveJump(*destTarget, speedXY, speedZ, EVENT_JUMP, !m_targets.GetObjectTargetGUID().IsEmpty());
 }
 
