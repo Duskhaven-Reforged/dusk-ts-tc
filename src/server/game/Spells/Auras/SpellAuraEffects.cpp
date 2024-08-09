@@ -5920,6 +5920,8 @@ void AuraEffect::HandleProcTriggerSpellAuraProc(AuraApplication* aurApp, ProcEve
         CastSpellExtraArgs args(this);
         if (GetMiscValue() == 8)
             args.AddSpellMod(SpellValueMod(SPELLVALUE_AURA_STACK), GetMiscValueB());
+
+        triggerCaster->CastSpell(triggerTarget, triggerSpellId, args);
     }
     else
         TC_LOG_ERROR("spells.aura.effect.nospell","AuraEffect::HandleProcTriggerSpellAuraProc: Spell {} has non-existent spell {} in EffectTriggered[{}] and is therefore not triggered.", GetId(), triggerSpellId, GetEffIndex());
