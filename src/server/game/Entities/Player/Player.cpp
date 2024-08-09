@@ -19298,6 +19298,9 @@ InstancePlayerBind* Player::GetBoundInstance(uint32 mapid, Difficulty difficulty
     if (!mapDiff)
         return nullptr;
 
+    if (difficulty > MAX_DIFFICULTY || difficulty < 0)
+        return nullptr;
+
     BoundInstancesMap::iterator itr = m_boundInstances[difficulty].find(mapid);
     if (itr != m_boundInstances[difficulty].end())
         if (itr->second.extendState || withExpired)
