@@ -3336,8 +3336,10 @@ void Spell::cancel(SpellCastResult result /*= SPELL_FAILED_INTERRUPTED*/, Option
         case SPELL_STATE_CASTING:
             for (TargetInfo const& targetInfo : m_UniqueTargetInfo)
                 if (targetInfo.MissCondition == SPELL_MISS_NONE)
-                    if (Unit* unit = m_caster->GetGUID() == targetInfo.TargetGUID ? m_caster->ToUnit() : ObjectAccessor::GetUnit(*m_caster, targetInfo.TargetGUID))
+                    if (Unit* unit = m_caster->GetGUID() == targetInfo.TargetGUID ? m_caster->ToUnit() : ObjectAccessor::GetUnit(*m_caster, targetInfo.TargetGUID)) {
+                        FIRE_ID(GetSpellInfo()->events.id, Spell, OnCastCancelled, TSUnit(unit), TSSpell(this), TSNumber<int32>(m_timer), TSNumber<int32>(m_channeledDuration > 0 ? m_channeledDuration : GetSpellInfo()->GetDuration()));
                         unit->RemoveOwnedAura(m_spellInfo->Id, m_originalCasterGUID, 0, AURA_REMOVE_BY_CANCEL);
+                    }
 
             SendChannelUpdate(0);
             SendInterrupted(result, resultOther);
@@ -3347,7 +3349,7 @@ void Spell::cancel(SpellCastResult result /*= SPELL_FAILED_INTERRUPTED*/, Option
         default:
             break;
     }
-
+  
     SetReferencedFromCurrent(false);
     if (m_selfContainer && *m_selfContainer == this)
         *m_selfContainer = nullptr;
@@ -3359,8 +3361,6 @@ void Spell::cancel(SpellCastResult result /*= SPELL_FAILED_INTERRUPTED*/, Option
         if (m_spellInfo->IsChanneled()) // if not channeled then the object for the current cast wasn't summoned yet
             m_originalCaster->RemoveGameObject(m_spellInfo->Id, true);
     }
-    if (auto caster = m_caster->ToUnit())
-        FIRE(Unit, OnCastCancelled, TSUnit(static_cast<Unit*>(m_caster)), GetSpellInfo());
 
     //set state back so finish will be processed
     m_spellState = oldState;
