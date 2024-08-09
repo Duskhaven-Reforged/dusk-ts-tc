@@ -674,6 +674,8 @@ void Unit::UpdateInterruptMask()
     if (Spell* spell = m_currentSpells[CURRENT_CHANNELED_SPELL])
         if (spell->getState() == SPELL_STATE_CASTING)
             m_interruptMask |= spell->m_spellInfo->ChannelInterruptFlags;
+
+    TS_LOG_INFO("server.Worldserver", "Interrupt mask = {}", m_interruptMask);
 }
 
 bool Unit::HasAuraTypeWithFamilyFlags(AuraType auraType, uint32 familyName, flag96 familyFlags) const
@@ -4326,39 +4328,39 @@ void Unit::RemoveNotOwnSingleTargetAuras(uint32 newPhase)
 
 void Unit::RemoveAurasWithInterruptFlags(uint32 flag, uint32 except, Unit* caster, DamageEffectType damagetype)
 {
-    if (caster) {
-        if (!(m_interruptMask & flag))
-            return;
+    if (!(m_interruptMask & flag))
+        return;
 
-        // interrupt auras
-        for (AuraApplicationList::iterator iter = m_interruptableAuras.begin(); iter != m_interruptableAuras.end();)
+    // interrupt auras
+    for (AuraApplicationList::iterator iter = m_interruptableAuras.begin(); iter != m_interruptableAuras.end();)
+    {
+        Aura* aura = (*iter)->GetBase();
+        ++iter;
+
+        bool CanBeBrokenBySpell = true;
+        auto ExceptInfo = sSpellMgr->GetSpellInfo(except);
+        if (caster && ExceptInfo)
+            if (caster->IsPlayer())
+                FIRE_ID(aura->GetSpellInfo()->events.id, Spell, CanAuraBeBrokenBySpell, TSUnit(caster->ToPlayer()), TSUnit(this), TSAura(aura), TSSpellInfo(ExceptInfo), TSNumber<uint8>(damagetype), TSMutable<bool, bool>(&CanBeBrokenBySpell));
+        
+        TC_LOG_INFO("server.worldserver", "Can break aura: {}", CanBeBrokenBySpell);
+        if ((aura->GetSpellInfo()->AuraInterruptFlags & flag) && (!except || aura->GetId() != except) && CanBeBrokenBySpell)
         {
-            Aura* aura = (*iter)->GetBase();
-            ++iter;
-
-            bool CanBeBrokenBySpell = true;
-            auto ExceptInfo = sSpellMgr->GetSpellInfo(except);
-            if (caster->IsPlayer() && ExceptInfo)
-                FIRE_ID(aura->GetSpellInfo()->events.id, Spell, CanAuraBeBrokenBySpell, TSUnit(caster), TSUnit(this), TSAura(aura), TSSpellInfo(ExceptInfo), TSNumber<uint8>(damagetype), TSMutable<bool, bool>(&CanBeBrokenBySpell));
-            
-            if ((aura->GetSpellInfo()->AuraInterruptFlags & flag) && (!except || aura->GetId() != except) && CanBeBrokenBySpell)
-            {
-                uint32 removedAuras = m_removedAurasCount;
-                RemoveAura(aura);
-                if (m_removedAurasCount > removedAuras + 1)
-                    iter = m_interruptableAuras.begin();
-            }
+            uint32 removedAuras = m_removedAurasCount;
+            RemoveAura(aura);
+            if (m_removedAurasCount > removedAuras + 1)
+                iter = m_interruptableAuras.begin();
         }
-
-        // interrupt channeled spell
-        if (Spell* spell = m_currentSpells[CURRENT_CHANNELED_SPELL])
-            if (spell->getState() == SPELL_STATE_CASTING
-                && (spell->m_spellInfo->ChannelInterruptFlags & flag)
-                && spell->m_spellInfo->Id != except)
-                InterruptNonMeleeSpells(false);
-
-        UpdateInterruptMask();
     }
+
+    // interrupt channeled spell
+    if (Spell* spell = m_currentSpells[CURRENT_CHANNELED_SPELL])
+        if (spell->getState() == SPELL_STATE_CASTING
+            && (spell->m_spellInfo->ChannelInterruptFlags & flag)
+            && spell->m_spellInfo->Id != except)
+            InterruptNonMeleeSpells(false);
+
+    UpdateInterruptMask();
 }
 
 void Unit::RemoveAurasWithFamily(SpellFamilyNames family, uint32 familyFlag1, uint32 familyFlag2, uint32 familyFlag3, ObjectGuid casterGUID)
