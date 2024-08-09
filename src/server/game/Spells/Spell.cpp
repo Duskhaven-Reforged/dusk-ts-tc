@@ -3323,6 +3323,7 @@ void Spell::cancel(SpellCastResult result /*= SPELL_FAILED_INTERRUPTED*/, Option
     m_spellState = SPELL_STATE_FINISHED;
 
     m_autoRepeat = false;
+    Unit* unitTarget = nullptr;
     switch (oldState)
     {
         case SPELL_STATE_PREPARING:
@@ -3337,7 +3338,7 @@ void Spell::cancel(SpellCastResult result /*= SPELL_FAILED_INTERRUPTED*/, Option
             for (TargetInfo const& targetInfo : m_UniqueTargetInfo)
                 if (targetInfo.MissCondition == SPELL_MISS_NONE)
                     if (Unit* unit = m_caster->GetGUID() == targetInfo.TargetGUID ? m_caster->ToUnit() : ObjectAccessor::GetUnit(*m_caster, targetInfo.TargetGUID)) {
-                        FIRE_ID(GetSpellInfo()->events.id, Spell, OnCastCancelled, TSUnit(unit), TSSpell(this), TSNumber<int32>(m_timer), TSNumber<int32>(m_channeledDuration > 0 ? m_channeledDuration : GetSpellInfo()->GetDuration()));
+                        unitTarget = unit;
                         unit->RemoveOwnedAura(m_spellInfo->Id, m_originalCasterGUID, 0, AURA_REMOVE_BY_CANCEL);
                     }
 
@@ -3349,7 +3350,10 @@ void Spell::cancel(SpellCastResult result /*= SPELL_FAILED_INTERRUPTED*/, Option
         default:
             break;
     }
-  
+
+    if (m_caster->IsUnit())
+        FIRE_ID(GetSpellInfo()->events.id, Spell, OnCastCancelled, TSUnit(static_cast<Unit*>(m_caster->ToUnit())), TSUnit(unitTarget), TSSpell(this), TSNumber<int32>(m_timer), TSNumber<int32>(m_channeledDuration > 0 ? m_channeledDuration : GetSpellInfo()->GetDuration()));
+
     SetReferencedFromCurrent(false);
     if (m_selfContainer && *m_selfContainer == this)
         *m_selfContainer = nullptr;
