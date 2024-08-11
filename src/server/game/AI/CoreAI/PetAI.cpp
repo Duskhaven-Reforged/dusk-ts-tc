@@ -115,6 +115,9 @@ void PetAI::UpdateAI(uint32 diff)
     {
         TargetSpellList targetSpellStore;
 
+        if (me->IsPet() && me->ToPet()->IsPetGhoul() && me->GetPower(POWER_ENERGY) < 75)
+            return;
+
         for (uint8 i = 0; i < me->GetPetAutoSpellSize(); ++i)
         {
             uint32 spellID = me->GetPetAutoSpellOnPos(i);
@@ -146,7 +149,7 @@ void PetAI::UpdateAI(uint32 diff)
 
                 // Some spells can target enemy or friendly (DK Ghoul's Leap)
                 // Check for enemy first (pet then owner)
-                Unit* target = me->getAttackerForHelper();
+                Unit* target = me->GetVictim();
                 if (!target && owner)
                     target = owner->getAttackerForHelper();
 
@@ -159,12 +162,12 @@ void PetAI::UpdateAI(uint32 diff)
                     }
                 }
 
-                if (spellInfo->HasEffect(SPELL_EFFECT_JUMP_DEST))
-                {
-                    if (!spellUsed)
-                        delete spell;
-                    continue; // Pets must only jump to target
-                }
+                // if (spellInfo->HasEffect(SPELL_EFFECT_JUMP_DEST))
+                // {
+                //     if (!spellUsed)
+                //         delete spell;
+                //     continue; // Pets must only jump to target
+                // }
 
                 // No enemy, check friendly
                 if (!spellUsed)
