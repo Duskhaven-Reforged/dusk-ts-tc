@@ -571,8 +571,8 @@ int32 AuraEffect::CalculateAmount(Unit* caster)
         {
             if (aurEff->GetCasterGUID() == GetCasterGUID() && aurEff->GetId() == GetId() && aurEff->GetEffIndex() == GetEffIndex() && aurEff->GetTotalTicks() > 0) {
                 val += aurEff->GetAmount() * static_cast<float>(aurEff->GetRemainingTicks()) / static_cast<float>(aurEff->GetTotalTicks());
-                if (aurEff->GetStackAmount() > 1)
-                    val /= aurEff->GetStackAmount();                    
+                if (aurEff->GetBase()->GetStackAmount() > 1)
+                    val /= aurEff->GetBase()->GetStackAmount();
             }
             
             return val;
