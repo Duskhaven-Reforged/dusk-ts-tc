@@ -674,8 +674,6 @@ void Unit::UpdateInterruptMask()
     if (Spell* spell = m_currentSpells[CURRENT_CHANNELED_SPELL])
         if (spell->getState() == SPELL_STATE_CASTING)
             m_interruptMask |= spell->m_spellInfo->ChannelInterruptFlags;
-
-    TS_LOG_INFO("server.Worldserver", "Interrupt mask = {}", m_interruptMask);
 }
 
 bool Unit::HasAuraTypeWithFamilyFlags(AuraType auraType, uint32 familyName, flag96 familyFlags) const
@@ -7693,10 +7691,11 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
                 return true;
             return false;
         });
-    }
 
-    if (caster->IsPlayer())
-        FIRE(Player, OnCustomScriptedCritMod, TSPlayer(const_cast<Player*>(caster->ToPlayer())), TSUnit(const_cast<Unit*>(this)), TSSpellInfo(spellInfo), TSMutableNumber<float>(&crit_chance));
+        if (caster->IsPlayer())
+            FIRE(Player, OnCustomScriptedCritMod, TSPlayer(const_cast<Player*>(caster->ToPlayer())), TSUnit(const_cast<Unit*>(this)), TSSpellInfo(spellInfo), TSMutableNumber<float>(&crit_chance));
+
+    }
 
     return std::max(crit_chance, 0.0f);
 }
@@ -9284,7 +9283,7 @@ void Unit::setDeathState(DeathState s)
     if (s != ALIVE && s != JUST_RESPAWNED)
     {
         CombatStop();
-        ClearComboPointHolders();                           // any combo points pointed to unit lost at it death
+        // ClearComboPointHolders();                           // any combo points pointed to unit lost at it death
 
         if (IsNonMeleeSpellCast(false))
             InterruptNonMeleeSpells(false);
@@ -10478,7 +10477,7 @@ void Unit::CleanupBeforeRemoveFromMap(bool finalCleanup)
     m_Events.KillAllEvents(false);                      // non-delatable (currently cast spells) will not deleted now but it will deleted at call in Map::RemoveAllObjectsInRemoveList
     CombatStop();
     ClearComboPoints();
-    ClearComboPointHolders();
+    // ClearComboPointHolders();
 }
 
 void Unit::CleanupsBeforeDelete(bool finalCleanup)
@@ -11280,11 +11279,11 @@ void Unit::AddComboPoints(Unit* target, int8 count)
 
     if (target && target != m_comboTarget)
     {
-        if (m_comboTarget)
-            m_comboTarget->RemoveComboPointHolder(this);
+        // if (m_comboTarget)
+        //     m_comboTarget->RemoveComboPointHolder(this);
         m_comboTarget = target;
         m_comboPoints = count;
-        target->AddComboPointHolder(this);
+        //target->AddComboPointHolder(this);
 
         m_ComboPointDegenTimer = 0;
 
@@ -11307,7 +11306,7 @@ void Unit::ClearComboPoints()
 
     m_comboPoints = 0;
     SendComboPoints();
-    m_comboTarget->RemoveComboPointHolder(this);
+    // m_comboTarget->RemoveComboPointHolder(this);
     m_comboTarget = nullptr;
 }
 

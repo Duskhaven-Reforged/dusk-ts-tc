@@ -24,6 +24,10 @@
 #include "SpellMgr.h"
 #include "SpellInfo.h"
 #include "TotemPackets.h"
+// @tswow-begin
+#include "TSUnit.h"
+#include "TSCreature.h"
+// @tswow-end
 
 Totem::Totem(SummonPropertiesEntry const* properties, Unit* owner) : Minion(properties, owner, false)
 {
@@ -100,6 +104,10 @@ void Totem::InitSummon()
     // Some totems can have both instant effect and passive spell
     if (GetSpell(1))
         CastSpell(this, GetSpell(1), true);
+
+    // @tswow-begin
+    FIRE_ID(this->GetCreatureTemplate()->events.id,Creature,OnTotemSummoned, TSUnit(GetOwner()), TSCreature(this));
+    // @tswow-end
 }
 
 void Totem::UnSummon(uint32 msTime)
@@ -153,6 +161,10 @@ void Totem::UnSummon(uint32 msTime)
         setDeathState(DEAD);
 
     AddObjectToRemoveList();
+
+    // @tswow-begin
+    FIRE_ID(this->GetCreatureTemplate()->events.id,Creature,OnTotemDespawn, TSCreature(this), TSUnit(GetOwner()));
+    // @tswow-end
 }
 
 bool Totem::IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo const& spellEffectInfo, WorldObject const* caster,

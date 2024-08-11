@@ -569,8 +569,12 @@ int32 AuraEffect::CalculateAmount(Unit* caster)
         Unit::AuraEffectList const& periodicAuras = GetBase()->GetUnitOwner()->GetAuraEffectsByType(GetAuraType());
         amount = std::accumulate(std::begin(periodicAuras), std::end(periodicAuras), amount, [this](int32 val, AuraEffect const* aurEff)
         {
-            if (aurEff->GetCasterGUID() == GetCasterGUID() && aurEff->GetId() == GetId() && aurEff->GetEffIndex() == GetEffIndex() && aurEff->GetTotalTicks() > 0)
+            if (aurEff->GetCasterGUID() == GetCasterGUID() && aurEff->GetId() == GetId() && aurEff->GetEffIndex() == GetEffIndex() && aurEff->GetTotalTicks() > 0) {
                 val += aurEff->GetAmount() * static_cast<float>(aurEff->GetRemainingTicks()) / static_cast<float>(aurEff->GetTotalTicks());
+                if (aurEff->GetStackAmount() > 1)
+                    val /= aurEff->GetStackAmount();                    
+            }
+            
             return val;
         });
     }

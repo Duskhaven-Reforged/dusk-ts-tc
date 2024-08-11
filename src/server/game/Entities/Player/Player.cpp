@@ -1960,7 +1960,7 @@ void Player::RemoveFromWorld()
         StopCastingBindSight();
         UnsummonPetTemporaryIfAny();
         ClearComboPoints();
-        ClearComboPointHolders();
+        // ClearComboPointHolders();
         ObjectGuid lootGuid = GetLootGUID();
         if (!lootGuid.IsEmpty())
             m_session->DoLootRelease(lootGuid);
