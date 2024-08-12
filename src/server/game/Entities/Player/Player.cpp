@@ -5612,8 +5612,6 @@ void Player::UpdateRating(CombatRating cr)
             amount += int32(CalculatePct(GetStat(Stats(aurEff->GetMiscValueB())), aurEff->GetAmount()));
 
     // @dh-begin:
-    // hater: prob add the ts equiv here
-    TC_LOG_INFO("server.worldserver", "Rating from strength: {}", amount);
     // Apply bonus from SPELL_AURA_MOD_RATING_PCT
     AuraEffectList const& modRatingPct = GetAuraEffectsByType(SPELL_AURA_MOD_RATING_PCT);
     for (AuraEffectList::const_iterator i = modRatingPct.begin(); i != modRatingPct.end(); ++i)
@@ -5650,7 +5648,6 @@ void Player::UpdateRating(CombatRating cr)
         if ((*i)->GetMiscValue() & (1 << cr))
             amount += int32(CalculatePct(GetMaxHealth(), (*i)->GetAmount()));
     // @dh-end
-    TC_LOG_INFO("server.worldserver", "Rating: {}", amount);
 
     if (amount < 0)
         amount = 0;
