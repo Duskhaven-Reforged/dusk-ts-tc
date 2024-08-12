@@ -5021,6 +5021,20 @@ SpellCastResult Spell::CheckRuneCost(uint32 runeCostID) const
             modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_COST, runeCost[i], const_cast<Spell*>(this));
     }
 
+    int32 Runic = src->RunicPower;
+    if (Player* modOwner = m_caster->GetSpellModOwner()) {
+        if (Runic < 0) {
+            modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_COST, Runic, const_cast<Spell*>(this));
+            if (Runic > 0)
+                Runic = 0;
+        } else {
+            modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_COST, Runic, const_cast<Spell*>(this));
+            if (Runic < src->RunicPower)
+                Runic = src->RunicPower;
+        }
+    }
+
+
     runeCost[RUNE_DEATH] = MAX_RUNES;                       // calculated later
 
     for (uint32 i = 0; i < MAX_RUNES; ++i)
@@ -5037,7 +5051,7 @@ SpellCastResult Spell::CheckRuneCost(uint32 runeCostID) const
     if (runeCost[RUNE_DEATH] > MAX_RUNES)
         return SPELL_FAILED_NO_POWER;                       // not sure if result code is correct
 
-    int32 Gain = src->RunicPower;
+    int32 Gain = Runic;
     if (Gain < 0 && std::abs(Gain) > player->GetPower(POWER_RUNIC_POWER))
         return SPELL_FAILED_NO_POWER;
 
@@ -5065,6 +5079,16 @@ void Spell::TakeRunePower(bool didHit)
         runeCost[i] = runeCostData->RuneCost[i];
         if (Player* modOwner = m_caster->GetSpellModOwner())
             modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_COST, runeCost[i], this);
+    }
+
+
+    int32 Runic = runeCostData->RunicPower;
+    if (Runic < 0) {
+        if (Player* modOwner = m_caster->GetSpellModOwner()) {
+            modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_COST, Runic, const_cast<Spell*>(this));
+            if (Runic > 0)
+                Runic = 0;
+        }
     }
 
     // Let's say we use a skill that requires a Frost rune. This is the order:
@@ -5134,7 +5158,7 @@ void Spell::TakeRunePower(bool didHit)
     if (didHit) {
         FIRE(Player,OnRunesSpent, TSPlayer(m_caster->ToPlayer()), runeCost[RUNE_BLOOD] + runeCost[RUNE_UNHOLY] + runeCost[RUNE_FROST]);
 
-        if (int32 rp = int32(runeCostData->RunicPower * sWorld->getRate(RATE_POWER_RUNICPOWER_INCOME)))
+        if (int32 rp = int32(Runic * sWorld->getRate(RATE_POWER_RUNICPOWER_INCOME)))
             player->ModifyPower(POWER_RUNIC_POWER, int32(rp));
     }
 }

@@ -34,12 +34,12 @@
 // @tswow-begin move dodge_cap to top of file and remove const
 float dodge_cap[MAX_CLASSES] =
 {
-    88.129021f,     // Warrior
-    88.129021f,     // Paladin
+    65.631440f,     // Warrior
+    65.631440f,     // Paladin
     145.560408f,    // Hunter
     145.560408f,    // Rogue
     150.375940f,    // Priest
-    88.129021f,     // DK
+    65.631440f,     // DK
     145.560408f,    // Shaman
     150.375940f,    // Mage
     150.375940f,    // Warlock
@@ -99,12 +99,12 @@ float m_diminishing_k[MAX_CLASSES] =
 // @tswow-begin move parry_cap to top of file and remove const
 float parry_cap[MAX_CLASSES] =
 {
-    47.003525f,     // Warrior
-    47.003525f,     // Paladin
+    65.631440f,     // Warrior
+    65.631440f,     // Paladin
     145.560408f,    // Hunter
     145.560408f,    // Rogue
     0.0f,           // Priest
-    47.003525f,     // DK
+    65.631440f,     // DK
     145.560408f,    // Shaman
     0.0f,           // Mage
     0.0f,           // Warlock
@@ -203,10 +203,6 @@ void Unit::UpdateDamagePhysical(WeaponAttackType attType)
 ########                         ########
 #######################################*/
 
-// @dh-begin
-
-// @dh-end
-
 bool Player::UpdateStats(Stats stat)
 {
     if (stat > STAT_SPIRIT)
@@ -228,6 +224,7 @@ bool Player::UpdateStats(Stats stat)
     {
         case STAT_STRENGTH:
             UpdateShieldBlockValue();
+            UpdateRating(CR_PARRY);
             break;
         case STAT_AGILITY:
             UpdateArmor();
@@ -597,32 +594,6 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
 
     if (ranged)
     {
-        // @tswow-begin
-        switch (rangedAPFormulas[GetClass()])
-        // @tswow-end
-        {
-            case CLASS_HUNTER:
-                val2 = level * 2.0f + GetStat(STAT_AGILITY) - 10.0f;
-                break;
-            case CLASS_ROGUE:
-                val2 = level + GetStat(STAT_AGILITY) - 10.0f;
-                break;
-            case CLASS_WARRIOR:
-                val2 = level + GetStat(STAT_AGILITY) - 10.0f;
-                break;
-            case CLASS_DRUID:
-                switch (GetShapeshiftForm())
-                {
-                    case FORM_CAT:
-                    case FORM_BEAR:
-                    case FORM_DIREBEAR:
-                        val2 = 0.0f; break;
-                    default:
-                        val2 = GetStat(STAT_AGILITY) - 10.0f; break;
-                }
-                break;
-            default: val2 = GetStat(STAT_AGILITY) - 10.0f; break;
-        }
         FIRE(Player,OnUpdateRangedAttackPower
             , TSPlayer(this)
             , TSMutableNumber<float>(&val2)
@@ -630,81 +601,6 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
     }
     else
     {
-        // @tswow-begin
-        switch (meleeAPFormulas[GetClass()])
-        // @tswow-end
-        {
-            case CLASS_WARRIOR:
-                val2 = level * 3.0f + GetStat(STAT_STRENGTH) * 2.0f - 20.0f;
-                break;
-            case CLASS_PALADIN:
-                val2 = level * 3.0f + GetStat(STAT_STRENGTH) * 2.0f - 20.0f;
-                break;
-            case CLASS_DEATH_KNIGHT:
-                val2 = level * 3.0f + GetStat(STAT_STRENGTH) * 2.0f - 20.0f;
-                break;
-            case CLASS_ROGUE:
-                val2 = level * 2.0f + GetStat(STAT_STRENGTH) + GetStat(STAT_AGILITY) - 20.0f;
-                break;
-            case CLASS_HUNTER:
-                val2 = level * 2.0f + GetStat(STAT_STRENGTH) + GetStat(STAT_AGILITY) - 20.0f;
-                break;
-            case CLASS_SHAMAN:
-                val2 = level * 2.0f + GetStat(STAT_STRENGTH) + GetStat(STAT_AGILITY) - 20.0f;
-                break;
-            case CLASS_DRUID:
-            {
-                // Check if Predatory Strikes is skilled
-                float levelBonus = 0.0f;
-                float weaponBonus = 0.0f;
-                if (IsInFeralForm())
-                {
-                    if (AuraEffect const* levelMod = GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_DRUID, 1563, EFFECT_0))
-                        levelBonus = CalculatePct(1.0f, levelMod->GetAmount());
-
-                    // = 0 if removing the weapon, do not calculate bonus (uses template)
-                    if (m_baseFeralAP)
-                    {
-                        if (Item const* weapon = m_items[EQUIPMENT_SLOT_MAINHAND])
-                        {
-                            if (AuraEffect const* weaponMod = GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_DRUID, 1563, EFFECT_1))
-                            {
-                                ItemTemplate const* itemTemplate = weapon->GetTemplate();
-                                int32 bonusAP = itemTemplate->GetTotalAPBonus() + m_baseFeralAP;
-                                weaponBonus = CalculatePct(static_cast<float>(bonusAP), weaponMod->GetAmount());
-                            }
-                        }
-                    }
-                }
-
-                switch (GetShapeshiftForm())
-                {
-                    case FORM_CAT:
-                        val2 = GetLevel() * levelBonus + GetStat(STAT_STRENGTH) * 2.0f + GetStat(STAT_AGILITY) - 20.0f + weaponBonus + m_baseFeralAP;
-                        break;
-                    case FORM_BEAR:
-                    case FORM_DIREBEAR:
-                        val2 = GetLevel() * levelBonus + GetStat(STAT_STRENGTH) * 2.0f - 20.0f + weaponBonus + m_baseFeralAP;
-                        break;
-                    case FORM_MOONKIN:
-                        val2 = GetStat(STAT_STRENGTH) * 2.0f - 20.0f + m_baseFeralAP;
-                        break;
-                    default:
-                        val2 = GetStat(STAT_STRENGTH) * 2.0f - 20.0f;
-                        break;
-                }
-                break;
-            }
-            case CLASS_MAGE:
-                val2 = GetStat(STAT_STRENGTH) - 10.0f;
-                break;
-            case CLASS_PRIEST:
-                val2 = GetStat(STAT_STRENGTH) - 10.0f;
-                break;
-            case CLASS_WARLOCK:
-                val2 = GetStat(STAT_STRENGTH) - 10.0f;
-                break;
-        }
         FIRE(Player,OnUpdateAttackPower
             , TSPlayer(this)
             , TSMutableNumber<float>(&val2)
@@ -887,8 +783,6 @@ void Player::UpdateBlockPercentage()
     {
         // Base value
         value = 5.0f;
-        // Modify value from defense skill
-        value += (int32(GetDefenseSkillValue()) - int32(GetMaxSkillValueForLevel())) * 0.04f;
         // Increase from SPELL_AURA_MOD_BLOCK_PERCENT aura
         value += GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT);
         // Increase from rating
@@ -1000,6 +894,7 @@ float CalculateDiminishingReturns(float const (&capArray)[MAX_CLASSES], uint8 pl
 
 float Player::GetMissPercentageFromDefense() const
 {
+    // hater: deprecated
     float diminishing = 0.0f, nondiminishing = 0.0f;
     // Modify value from defense skill (only bonus from defense rating diminishes)
     nondiminishing += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
@@ -1022,9 +917,6 @@ void Player::UpdateParryPercentage()
         float nondiminishing  = 5.0f;
         // Parry from rating
         float diminishing = GetRatingBonusValue(CR_PARRY);
-        // Modify value from defense skill (only bonus from defense rating diminishes)
-        nondiminishing += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
-        diminishing += (GetRatingBonusValue(CR_DEFENSE_SKILL) * 0.04f);
         // Parry from SPELL_AURA_MOD_PARRY_PERCENT aura
         nondiminishing += GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
 
@@ -1053,9 +945,6 @@ void Player::UpdateDodgePercentage()
 {
     float diminishing = 0.0f, nondiminishing = 0.0f;
     GetDodgeFromAgility(diminishing, nondiminishing);
-    // Modify value from defense skill (only bonus from defense rating diminishes)
-    nondiminishing += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
-    diminishing += (GetRatingBonusValue(CR_DEFENSE_SKILL) * 0.04f);
     // Dodge from SPELL_AURA_MOD_DODGE_PERCENT aura
     nondiminishing += GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
     // Dodge from rating

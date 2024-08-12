@@ -200,6 +200,10 @@ Player::Player(WorldSession* session): Unit(true)
 
     m_session = session;
 
+    m_modMeleeHitChance = 7.5f;
+    m_modRangedHitChance = 7.5f;
+    m_modSpellHitChance = 15.0f;
+
     m_ingametime = 0;
     m_sharedQuestId = 0;
 
@@ -5394,22 +5398,22 @@ float Player::GetMeleeCritFromAgility() const
 // Table for base dodge values
 float dodge_base[MAX_CLASSES] =
 {
-     0.036640f, // Warrior
-     0.034943f, // Paladin
-    -0.040873f, // Hunter
-     0.020957f, // Rogue
-     0.034178f, // Priest
-     0.036640f, // DK
-     0.021080f, // Shaman
-     0.036587f, // Mage
-     0.024211f, // Warlock
-     0.0f,      // ??
-     0.056097f,  // Druid
+     0.0f, // Warrior
+     0.0f, // Paladin
+     0.0f, // Hunter
+     0.0f, // Rogue
+     0.0f, // Priest
+     0.0f, // DK
+     0.0f, // Shaman
+     0.0f, // Mage
+     0.0f, // Warlock
+     0.0f, // ??
+     0.056097f, // Druid
 
      // default values for custom classes
-    .035f,.035f,.035f,.035f,.035f,.035f,.035f,
-    .035f,.035f,.035f,.035f,.035f,.035f,.035f,
-    .035f,.035f,.035f,.035f,.035f,.035f,.035f,
+    .0f,.0f,.0f,.0f,.0f,.0f,.0f,
+    .0f,.0f,.0f,.0f,.0f,.0f,.0f,
+    .0f,.0f,.0f,.0f,.0f,.0f,.0f,
 };
 // Crit/agility to dodge/agility coefficient multipliers; 3.2.0 increased required agility by 15%
 float crit_to_dodge[MAX_CLASSES] =
@@ -5495,12 +5499,13 @@ float Player::GetRatingBonusValue(CombatRating cr) const
 
 float Player::GetExpertiseDodgeOrParryReduction(WeaponAttackType attType) const
 {
+    float baseExpertise = 7.5f;
     switch (attType)
     {
         case BASE_ATTACK:
-            return GetUInt32Value(PLAYER_EXPERTISE) / 4.0f;
+            return baseExpertise + GetUInt32Value(PLAYER_EXPERTISE) / 4.0f;
         case OFF_ATTACK:
-            return GetUInt32Value(PLAYER_OFFHAND_EXPERTISE) / 4.0f;
+            return baseExpertise + GetUInt32Value(PLAYER_OFFHAND_EXPERTISE) / 4.0f;
         default:
             break;
     }
@@ -5608,7 +5613,7 @@ void Player::UpdateRating(CombatRating cr)
 
     // @dh-begin:
     // hater: prob add the ts equiv here
-
+    TC_LOG_INFO("server.worldserver", "Rating from strength: {}", amount);
     // Apply bonus from SPELL_AURA_MOD_RATING_PCT
     AuraEffectList const& modRatingPct = GetAuraEffectsByType(SPELL_AURA_MOD_RATING_PCT);
     for (AuraEffectList::const_iterator i = modRatingPct.begin(); i != modRatingPct.end(); ++i)
@@ -5634,7 +5639,7 @@ void Player::UpdateRating(CombatRating cr)
         if ((*i)->GetMiscValue() & (1 << cr))
             amount += int32(CalculatePct(GetRatingBonusValue(cr), (*i)->GetAmount()));
 
-    amount = GetTotalAuraModifier(SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT, [cr](AuraEffect const* aurEff) -> bool
+    amount += GetTotalAuraModifier(SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT, [cr](AuraEffect const* aurEff) -> bool
         {
             if (aurEff->GetMiscValue() == 1 && aurEff->GetMiscValueB() & (1 << cr))
                 return true;
@@ -5645,6 +5650,7 @@ void Player::UpdateRating(CombatRating cr)
         if ((*i)->GetMiscValue() & (1 << cr))
             amount += int32(CalculatePct(GetMaxHealth(), (*i)->GetAmount()));
     // @dh-end
+    TC_LOG_INFO("server.worldserver", "Rating: {}", amount);
 
     if (amount < 0)
         amount = 0;
@@ -5656,7 +5662,6 @@ void Player::UpdateRating(CombatRating cr)
     {
         case CR_WEAPON_SKILL:                               // Implemented in Unit::RollMeleeOutcomeAgainst
         case CR_DEFENSE_SKILL:
-            UpdateDefenseBonusesMod();
             break;
         case CR_DODGE:
             UpdateDodgePercentage();

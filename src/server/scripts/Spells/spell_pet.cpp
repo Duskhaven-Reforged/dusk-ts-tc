@@ -144,47 +144,17 @@ class spell_gen_pet_calculate : public SpellScriptLoader
 
             void CalculateAmountMeleeHit(AuraEffect const* /* aurEff */, int32& amount, bool& /*canBeRecalculated*/)
             {
-                if (Player* owner = GetCaster()->GetOwner()->ToPlayer())
-                {
-                    // For others recalculate it from:
-                    float HitMelee = 0.0f;
-                    // Increase hit from SPELL_AURA_MOD_HIT_CHANCE
-                    HitMelee += owner->GetTotalAuraModifier(SPELL_AURA_MOD_HIT_CHANCE);
-                    // Increase hit melee from meele hit ratings
-                    //HitMelee += owner->GetRatingBonusValue(CR_HIT_MELEE);
 
-                    amount += int32(HitMelee);
-                }
             }
 
             void CalculateAmountSpellHit(AuraEffect const* /* aurEff */, int32& amount, bool& /*canBeRecalculated*/)
             {
-                if (Player* owner = GetCaster()->GetOwner()->ToPlayer())
-                {
-                    // For others recalculate it from:
-                    float HitSpell = 0.0f;
-                    // Increase hit from SPELL_AURA_MOD_SPELL_HIT_CHANCE
-                    HitSpell += owner->GetTotalAuraModifier(SPELL_AURA_MOD_SPELL_HIT_CHANCE);
-                    // Increase hit spell from spell hit ratings
-                    //HitSpell += owner->GetRatingBonusValue(CR_HIT_SPELL);
 
-                    amount += int32(HitSpell);
-                }
             }
 
             void CalculateAmountExpertise(AuraEffect const* /* aurEff */, int32& amount, bool& /*canBeRecalculated*/)
             {
-                if (Player* owner = GetCaster()->GetOwner()->ToPlayer())
-                {
-                    // For others recalculate it from:
-                    float Expertise = 0.0f;
-                    // Increase hit from SPELL_AURA_MOD_EXPERTISE
-                    Expertise += owner->GetTotalAuraModifier(SPELL_AURA_MOD_EXPERTISE);
-                    // Increase Expertise from Expertise ratings
-                    //Expertise += owner->GetRatingBonusValue(CR_EXPERTISE);
 
-                    amount += int32(Expertise);
-                }
             }
 
             void Register() override
