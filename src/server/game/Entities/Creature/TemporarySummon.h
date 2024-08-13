@@ -116,6 +116,8 @@ class TC_GAME_API Guardian : public Minion
         float GetBonusStatFromOwner(Stats stat) const { return m_statFromOwner[stat]; }
         void SetBonusDamage(int32 damage);
         std::string GetDebugInfo() const override;
+
+        void UpdateSpellDamageAndHealingBonus();
     protected:
         int32   m_bonusSpellDamage;
         float   m_statFromOwner[MAX_STATS];

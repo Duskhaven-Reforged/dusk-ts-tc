@@ -404,6 +404,10 @@ Guardian::Guardian(SummonPropertiesEntry const* properties, Unit* owner, bool is
         m_unitTypeMask |= UNIT_MASK_CONTROLABLE_GUARDIAN;
         InitCharmInfo();
     }
+
+    m_modMeleeHitChance = 7.5f;
+    m_modRangedHitChance = 7.5f;
+    m_modSpellHitChance = 15.0f;
 }
 
 void Guardian::InitStats(uint32 duration)
