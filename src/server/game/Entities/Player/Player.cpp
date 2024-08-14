@@ -12399,13 +12399,14 @@ Item* Player::EquipItem(uint16 pos, Item* pItem, bool update)
 
     Item* pItem2 = GetItemByPos(bag, slot);
 
+    ItemTemplate const* pProto = pItem->GetTemplate();
+
     if (!pItem2)
     {
         VisualizeItem(slot, pItem);
 
         if (IsAlive())
         {
-            ItemTemplate const* pProto = pItem->GetTemplate();
 
             // item set bonuses applied only at equip and removed at unequip, and still active for broken items
             if (pProto && pProto->ItemSet)
@@ -12501,6 +12502,11 @@ Item* Player::EquipItem(uint16 pos, Item* pItem, bool update)
 
     if (slot == EQUIPMENT_SLOT_MAINHAND || slot == EQUIPMENT_SLOT_OFFHAND)
         CheckTitanGripPenalty();
+
+
+    if (slot == EQUIPMENT_SLOT_OFFHAND && pProto)
+        if (pProto->Class == ITEM_CLASS_WEAPON)
+            FIRE(Player, OnEquipOffhandWeapon, TSPlayer(this), TSItem(pItem))
 
     // only for full equip instead adding to stack
     UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_EQUIP_ITEM, pItem->GetEntry());
@@ -12611,12 +12617,13 @@ void Player::RemoveItem(uint8 bag, uint8 slot, bool update)
         RemoveItemDurations(pItem);
         RemoveTradeableItem(pItem);
 
+        ItemTemplate const* pProto = ASSERT_NOTNULL(pItem->GetTemplate());
+
         if (bag == INVENTORY_SLOT_BAG_0)
         {
             if (slot < INVENTORY_SLOT_BAG_END)
             {
                 // item set bonuses applied only at equip and removed at unequip, and still active for broken items
-                ItemTemplate const* pProto = ASSERT_NOTNULL(pItem->GetTemplate());
                 if (pProto->ItemSet)
                     RemoveItemsSetItem(this, pProto);
 
@@ -12656,6 +12663,10 @@ void Player::RemoveItem(uint8 bag, uint8 slot, bool update)
                     }
                 }
             }
+
+            if (slot == EQUIPMENT_SLOT_OFFHAND && pProto)
+                if (pProto->Class == ITEM_CLASS_WEAPON)
+                    FIRE(Player, OnUnequipOffhandWeapon, TSPlayer(this), TSItem(pItem))
 
             m_items[slot] = nullptr;
             SetGuidValue(PLAYER_FIELD_INV_SLOT_HEAD + (slot * 2), ObjectGuid::Empty);
@@ -21136,6 +21147,10 @@ void Player::RemovePet(Pet* pet, PetSaveMode mode, bool returnreagent)
     // else (current pet) doesnt need to do anything
 
     SetMinion(pet, false);
+
+    // @tswow-begin
+    FIRE_ID(pet->GetCreatureTemplate()->events.id,Creature,OnPetDespawn, TSCreature(pet), TSPlayer(this));
+    // @tswow-end
 
     pet->AddObjectToRemoveList();
     pet->m_removed = true;
