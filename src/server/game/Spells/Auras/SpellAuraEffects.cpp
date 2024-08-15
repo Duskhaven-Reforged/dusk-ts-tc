@@ -6093,7 +6093,6 @@ void AuraEffect::HandleProcTriggerSpellWithPctOfTriggerer(AuraApplication* aurAp
             auto trigger = GetSpellInfo()->GetEffect(GetEffIndex()).TriggerSpell;
             CastSpellExtraArgs args;
             args.AddSpellMod(SPELLVALUE_BASE_POINT0, pct);
-            args.SetOriginalCaster(triggerCaster->GetGUID());
             triggerCaster->CastSpell(target, trigger, args);
         }
 }
@@ -6129,7 +6128,6 @@ void AuraEffect::HandleProcTriggerSpellCopyOfTrigger(AuraApplication* aurApp, Pr
     {
         CastSpellExtraArgs args;
         args.AddSpellMod(SPELLVALUE_BASE_POINT0, amount);
-        args.SetOriginalCaster(triggerCaster->GetGUID());
         triggerCaster->CastSpell(target, triggering->Id, args);
     }
 }

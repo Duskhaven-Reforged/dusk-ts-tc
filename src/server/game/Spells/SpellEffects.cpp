@@ -1854,8 +1854,11 @@ void Spell::EffectEnergizePct()
     if (!maxPower)
         return;
 
-    uint32 const gain = CalculatePct(maxPower, damage);
-    unitCaster->EnergizeBySpell(unitTarget, m_spellInfo, gain, power);
+    uint32 gain = CalculatePct(maxPower, damage);
+    if (effectInfo->MiscValueB) // take power
+        unitCaster->ModifyPower(power, gain*-1, true);
+    else
+        unitCaster->EnergizeBySpell(unitTarget, m_spellInfo, gain, power);
 }
 
 void Spell::SendLoot(ObjectGuid guid, LootType loottype)

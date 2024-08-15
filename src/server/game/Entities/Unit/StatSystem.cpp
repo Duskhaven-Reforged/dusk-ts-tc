@@ -1759,7 +1759,7 @@ void Guardian::UpdateAttackPowerAndDamage(bool ranged)
     float attPowerMultiplier = 0.f; //GetPctModifierValue(unitMod, TOTAL_PCT) - 1.0f;
     float bonusDamage = 0.f;
 
-    if (owner && owner->GetTypeId() == TYPEID_PLAYER) {
+    if (m_owner && m_owner->GetTypeId() == TYPEID_PLAYER) {
         FIRE_ID(
             GetCreatureTemplate()->events.id
             , Creature,OnPetUpdateAttackPowerDamage
