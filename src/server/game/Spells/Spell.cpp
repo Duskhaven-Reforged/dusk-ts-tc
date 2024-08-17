@@ -3965,6 +3965,10 @@ void Spell::update(uint32 difftime)
                 {
                     FIRE_ID(caster->GetCreatureTemplate()->events.id,Creature,OnSpellCastFinished,TSCreature(caster),TSSpellInfo(m_spellInfo),SPELL_FINISHED_CHANNELING_COMPLETE);
                 }
+
+                if (Unit* caster = m_originalCaster->ToUnit()) {
+                    FIRE_ID(m_spellInfo->events.id, Spell, OnSpellCastFinished, TSSpell(this), TSUnit(caster), SPELL_FINISHED_CHANNELING_COMPLETE);
+                }
                 // @tswow-end
 
                 // We call the hook here instead of in Spell::finish because we only want to call it for completed channeling. Everything else is handled by interrupts

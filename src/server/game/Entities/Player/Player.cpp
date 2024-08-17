@@ -6446,6 +6446,8 @@ ActionButton* Player::addActionButton(uint8 button, uint32 action, uint8 type)
     // set data and update to CHANGED if not NEW
     ab.SetActionAndType(action, ActionButtonType(type));
 
+    FIRE(Player, OnActionButtonSet, TSPlayer(this), TSNumber<uint8>(button), TSNumber<uint32>(action), TSNumber<uint8>(type));
+
     TC_LOG_DEBUG("entities.player", "Player::AddActionButton: Player '{}' ({}) added action '{}' (type {}) to button '{}'",
         GetName(), GetGUID().ToString(), action, type, button);
     return &ab;
@@ -6456,6 +6458,8 @@ void Player::removeActionButton(uint8 button)
     ActionButtonList::iterator buttonItr = m_actionButtons.find(button);
     if (buttonItr == m_actionButtons.end() || buttonItr->second.uState == ACTIONBUTTON_DELETED)
         return;
+
+    FIRE(Player, OnActionButtonDelete, TSPlayer(this), TSNumber<uint8>(button), TSNumber<uint32>(buttonItr->second.GetAction()), TSNumber<uint8>(buttonItr->second.GetType()));
 
     if (buttonItr->second.uState == ACTIONBUTTON_NEW)
         m_actionButtons.erase(buttonItr);                   // new and not saved

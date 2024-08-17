@@ -7671,6 +7671,10 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
         if (victim)
             crit_mod += caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_CRIT_PERCENT_VERSUS, victim->GetCreatureTypeMask());
 
+        if (caster->IsPlayer())
+            FIRE(Player, OnCustomScriptedCritDamageMod, TSPlayer(const_cast<Player*>(caster->ToPlayer())), TSUnit(victim), TSSpellInfo(const_cast<SpellInfo*>(spellProto)), TSMutableNumber<float>(&crit_mod));
+
+
         if (crit_bonus != 0)
             AddPct(crit_bonus, crit_mod);
 
