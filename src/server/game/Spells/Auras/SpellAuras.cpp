@@ -1848,7 +1848,7 @@ bool Aura::CanStackWith(Aura const* existingAura) const
     // Dynobj auras do not stack when they come from the same spell cast by the same caster
     if (GetType() == DYNOBJ_AURA_TYPE || existingAura->GetType() == DYNOBJ_AURA_TYPE)
     {
-        if (sameCaster && m_spellInfo->Id == existingSpellInfo->Id)
+        if (sameCaster && m_spellInfo->Id == existingSpellInfo->Id && GetStackAmount() == GetSpellInfo()->StackAmount)
             return false;
         return true;
     }

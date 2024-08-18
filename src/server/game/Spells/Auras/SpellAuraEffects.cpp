@@ -5817,8 +5817,13 @@ void AuraEffect::HandlePeriodicEnergizeAuraTick(Unit* target, Unit* caster) cons
     if (GetBase()->IsPermanent() && target->GetPower(powerType) == target->GetMaxPower(powerType))
         return;
 
+
     // ignore negative values (can be result apply spellmods to aura damage
     int32 amount = std::max(GetAmount(), 0);
+
+    if (GetMiscValueB() > 0) { // hater: pct based
+        amount = CalculatePct(target->GetMaxPower(powerType), amount);
+    }
 
     SpellPeriodicAuraLogInfo pInfo(this, amount, 0, 0, 0, 0.0f, false);
     target->SendPeriodicAuraLog(&pInfo);
