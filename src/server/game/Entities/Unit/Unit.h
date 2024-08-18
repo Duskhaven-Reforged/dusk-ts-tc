@@ -1179,10 +1179,6 @@ class TC_GAME_API Unit : public WorldObject
         void ToggleCombatAuras(bool startingCombat);
         void ToggleOnPowerPctAuras();
 
-        bool CanProcMultistrike(SpellInfo const* spellInfo) const;
-        bool IsSpellMultistrike() const;
-        void ProcMultistrike(SpellInfo const* procSpellInfo, Unit* target, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, SpellInfo const* procAura, DamageInfo* damageInfo, HealInfo* healInfo);
-
         bool IsInCombat() const { return HasUnitFlag(UNIT_FLAG_IN_COMBAT); }
         bool IsInCombatWith(Unit const* who) const { return who && m_combatManager.IsInCombatWith(who); }
         void SetInCombatWith(Unit* enemy, bool addSecondUnitSuppressed = false) { if (enemy) m_combatManager.SetInCombatWith(enemy, addSecondUnitSuppressed); }

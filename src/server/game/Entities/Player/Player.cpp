@@ -15602,10 +15602,17 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
     // Give player extra money if GetRewOrReqMoney > 0 and get ReqMoney if negative
     if (int32 moneyRew = quest->GetRewOrReqMoney(this))
     {
-        ModifyMoney(moneyRew);
-
         if (moneyRew > 0)
+        {
+            uint32 goldMod = CalculatePct(moneyRew, GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_MONEY_GAIN, 1)) + CalculatePct(moneyRew, GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_MONEY_GAIN, 2));
+
+            if (goldMod)
+                moneyRew += goldMod;
+
             UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_MONEY_FROM_QUEST_REWARD, uint32(moneyRew));
+        }
+
+        ModifyMoney(moneyRew);   
     }
 
     // honor reward
