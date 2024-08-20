@@ -6056,6 +6056,7 @@ void AuraEffect::HandleRaidProcFromChargeWithValueAuraProc(AuraApplication* aurA
     CastSpellExtraArgs args(this);
     args.OriginalCaster = GetCasterGUID();
     args.AddSpellMod(SPELLVALUE_BASE_POINT0, GetAmount());
+    args.SetTriggerFlags(TRIGGERED_FULL_MASK);
 
     // next target selection
     if (jumps > 0)
@@ -6094,10 +6095,14 @@ void AuraEffect::HandleProcTriggerSpellWithPctOfTriggerer(AuraApplication* aurAp
 
         if (int32 dealt = eventInfo.GetDamageInfo()->GetDamage()) {
             auto target = eventInfo.GetDamageInfo()->GetVictim();
-            auto pct = CalculatePct(dealt, GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue());
-            auto trigger = GetSpellInfo()->GetEffect(GetEffIndex()).TriggerSpell;
+            auto pct = CalculatePct(dealt, GetAmount());
+            auto trigger = GetTriggerSpell();
             CastSpellExtraArgs args;
             args.AddSpellMod(SPELLVALUE_BASE_POINT0, pct);
+            args.SetTriggerFlags(TRIGGERED_FULL_MASK);
+
+            TC_LOG_INFO("server.worldserver", "Triggering {} at {}", trigger, pct);
+
             triggerCaster->CastSpell(target, trigger, args);
         }
 }
@@ -6121,18 +6126,18 @@ void AuraEffect::HandleProcTriggerSpellCopyOfTrigger(AuraApplication* aurApp, Pr
         amount = healInfo->GetHeal() + healInfo->GetAbsorb();
     }
 
-    if (auto pct = triggering->GetEffect(GetEffIndex()).MiscValue) {
+    if (auto pct = GetAmount())
         amount = CalculatePct(amount, pct);
-    }
 
     if (auto proc = eventInfo.GetProcSpell())
-        if (proc->IsTriggered() && triggering->GetEffect(GetEffIndex()).MiscValueB < 1)
+        if (proc->IsTriggered() && GetMiscValueB() < 1)
             return;
 
     if (triggering)
     {
         CastSpellExtraArgs args;
         args.AddSpellMod(SPELLVALUE_BASE_POINT0, amount);
+        args.SetTriggerFlags(TRIGGERED_FULL_MASK);
         triggerCaster->CastSpell(target, triggering->Id, args);
     }
 }
