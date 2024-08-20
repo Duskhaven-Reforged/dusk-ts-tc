@@ -9731,30 +9731,6 @@ void Unit::ToggleOnPowerPctAuras()
     }
 }
 
-bool Unit::CanProcMultistrike(SpellInfo const* spellInfo) const
-{
-    // Aleist3r: placeholder entry for now, will need case by case check probably
-    if (spellInfo && spellInfo->Id == 1)
-        return false;
-
-    return true;
-}
-
-bool Unit::IsSpellMultistrike() const
-{
-    // if (GetSpellModOwner() == nullptr)
-    //     return false;
-
-    // return roll_chance_f(GetSpellModOwner()->GetFloatValue(PLAYER_FIELD_COMBAT_RATING_1 + static_cast<uint16>(CR_MULTISTRIKE)));
-    return false;
-}
-
-void Unit::ProcMultistrike(SpellInfo const* procSpellInfo, Unit* target, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, SpellInfo const* procAura, DamageInfo* damageInfo, HealInfo* healInfo)
-{
-    if (!IsSpellMultistrike() && !CanProcMultistrike(procSpellInfo))
-        return;
-}
-
 /*#######################################
 ########                         ########
 ########       STAT SYSTEM       ########
