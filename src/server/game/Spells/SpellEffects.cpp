@@ -5778,29 +5778,11 @@ void Spell::EffectModifyCurrentSpellCooldown()
     if (m_caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    auto family = GetSpellInfo()->SpellFamilyName;
-    flag96 spellMask = effectInfo->SpellClassMask;
-    int32 amount = effectInfo->CalcValue();
-    int32 ignoreSpellMask = effectInfo->MiscValue;
-    int32 ignoreSpellFamily = effectInfo->MiscValueB;
+    uint32 SpellId = effectInfo->TriggerSpell;
     Player* player = m_caster->ToPlayer();
 
     auto mod = effectInfo->CalcValue();
-    player->GetSpellHistory()->ModifyCooldowns([spellMask, family](SpellHistory::CooldownStorageType::iterator itr) -> bool {
-        SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(itr->first);
-        return family == spellInfo->SpellFamilyName && spellMask & spellInfo->SpellFamilyFlags;
-        }, mod);
-
-    //for (SpellCooldowns::const_iterator itr = spellCDs.begin(); itr != spellCDs.end(); ++itr)
-    //{
-    //    SpellInfo const* cdSpell = sSpellMgr->GetSpellInfo(itr->first);
-    //    if (cdSpell && cdSpell->SpellFamilyName == spellInfo->SpellFamilyName && (cdSpell->SpellFamilyFlags & spellMask) && !ignoreSpellMask && !ignoreSpellFamily)
-    //        player->ModifySpellCooldown(cdSpell->Id, amount);
-    //    else if (cdSpell && cdSpell->SpellFamilyName == spellInfo->SpellFamilyName && ignoreSpellMask && !ignoreSpellFamily)
-    //        player->ModifySpellCooldown(cdSpell->Id, amount);
-    //    else if (cdSpell && ignoreSpellFamily)
-    //        player->ModifySpellCooldown(cdSpell->Id, amount);
-    //}
+    player->GetSpellHistory()->ModifyCooldown(SpellId, mod);
 }
 
 void Spell::EffectRemoveCurrentSpellCooldown()
@@ -5811,19 +5793,10 @@ void Spell::EffectRemoveCurrentSpellCooldown()
     if (m_caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    auto family = GetSpellInfo()->SpellFamilyName;
-    flag96 spellMask = effectInfo->SpellClassMask;
-    int32 amount = effectInfo->CalcValue();
-    int32 ignoreSpellMask = effectInfo->MiscValue;
-    int32 ignoreSpellFamily = effectInfo->MiscValueB;
+    uint32 SpellId = effectInfo->TriggerSpell;
     Player* player = m_caster->ToPlayer();
-    // rewrite with spellhistory    player->GetSpellHistory()->ModifyCooldown();
 
-    player->GetSpellHistory()->ResetCooldowns([family, spellMask](SpellHistory::CooldownStorageType::iterator itr) -> bool {
-        SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(itr->first);
-        return family == spellInfo->SpellFamilyName && spellMask & spellInfo->SpellFamilyFlags;
-        }, true);
-    
+    player->GetSpellHistory()->ResetCooldown(SpellId, true);
 }
 
 void Spell::EffectRestoreSpellCharge()
