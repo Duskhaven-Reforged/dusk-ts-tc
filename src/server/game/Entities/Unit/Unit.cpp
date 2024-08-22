@@ -10218,7 +10218,7 @@ uint32 Unit::GetCreatePowerValue(Powers power) const
         case POWER_RAGE:
             return 1000;
         case POWER_FOCUS:
-            return (GetTypeId() != TYPEID_UNIT || !ToCreature()->IsPet() || ToPet()->getPetType() != HUNTER_PET) ? 0 : 100;
+            return 100;
         case POWER_ENERGY:
             return 100;
         case POWER_HAPPINESS:
