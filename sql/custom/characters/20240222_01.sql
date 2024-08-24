@@ -32,7 +32,7 @@ CREATE TABLE `characterpoints` (
   `sum` int unsigned NOT NULL,
   `unlocked` int unsigned NOT NULL,
   `max` int unsigned NOT NULL,
-  PRIMARY KEY (`guid`,`type`,`spec`)
+  PRIMARY KEY (`guid`,`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `characterspellcharges`;
