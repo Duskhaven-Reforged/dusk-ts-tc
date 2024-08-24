@@ -4470,8 +4470,13 @@ void Spell::EffectCharge()
             Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(m_caster));
             unitCaster->GetMotionMaster()->MoveCharge(pos.m_positionX, pos.m_positionY, pos.m_positionZ, speed);
         }
-        else
+        else {
+            if (G3D::fuzzyGt(m_spellInfo->Speed, 0.0f)) {
+                G3D::Vector3 pos = m_preGeneratedPath->GetActualEndPosition();
+                speed = Position(pos.x, pos.y, pos.z).GetExactDist(m_caster) / speed;
+            }
             unitCaster->GetMotionMaster()->MoveCharge(*m_preGeneratedPath, speed);
+        }
     }
 
     if (effectHandleMode == SPELL_EFFECT_HANDLE_HIT_TARGET)
@@ -4479,6 +4484,11 @@ void Spell::EffectCharge()
         // not all charge effects used in negative spells
         if (!m_spellInfo->IsPositive() && m_caster->GetTypeId() == TYPEID_PLAYER)
             unitCaster->Attack(unitTarget, true);
+
+        if (m_spellValue->EffectTriggerSpell[effectInfo->EffectIndex]) {
+            CastSpellExtraArgs args(m_originalCasterGUID);
+            m_caster->CastSpell(unitTarget, m_spellValue->EffectTriggerSpell[effectInfo->EffectIndex], args);
+        }
     }
 }
 

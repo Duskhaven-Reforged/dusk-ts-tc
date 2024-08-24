@@ -488,8 +488,10 @@ void SpellCastTargets::Update(WorldObject* caster)
 
 SpellValue::SpellValue(SpellInfo const* proto)
 {
-    for (SpellEffectInfo const& spellEffectInfo : proto->GetEffects())
+    for (SpellEffectInfo const& spellEffectInfo : proto->GetEffects()) {
         EffectBasePoints[spellEffectInfo.EffectIndex] = spellEffectInfo.BasePoints;
+        EffectTriggerSpell[spellEffectInfo.EffectIndex] = spellEffectInfo.TriggerSpell;
+    }
     MaxAffectedTargets = proto->MaxAffectedTargets;
     RadiusMod = 1.0f;
     AuraStackAmount = 1;

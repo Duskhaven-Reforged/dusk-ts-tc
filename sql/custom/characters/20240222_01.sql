@@ -27,11 +27,21 @@ CREATE TABLE `character_node_choices` (
 -- acore_characters.character_points definition
 DROP TABLE IF EXISTS `characterpoints`;
 CREATE TABLE `characterpoints` (
-  `guid` int unsigned NOT NULL,
+  `guid` bigint unsigned NOT NULL,
   `type` int unsigned NOT NULL,
   `sum` int unsigned NOT NULL,
   `unlocked` int unsigned NOT NULL,
   `max` int unsigned NOT NULL,
+  PRIMARY KEY (`guid`,`type`,`spec`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+DROP TABLE IF EXISTS `characterspellcharges`;
+CREATE TABLE `characterspellcharges` (
+  `guid` bigint unsigned NOT NULL,
+  `spell` bigint unsigned NOT NULL,
+  `current` int unsigned NOT NULL,
+  `max` int unsigned NOT NULL,
+  `cd` bigint unsigned NOT NULL,
   PRIMARY KEY (`guid`,`type`,`spec`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         

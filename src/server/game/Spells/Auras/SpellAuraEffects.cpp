@@ -329,8 +329,8 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //262 SPELL_AURA_ABILITY_IGNORE_AURASTATE implemented in Spell::CheckCast
     &AuraEffect::HandleAuraAllowOnlyAbility,                      //263 SPELL_AURA_ALLOW_ONLY_ABILITY player can use only abilities set in SpellClassMask
     &AuraEffect::HandleNoImmediateEffect,                         //264 Aleist3r: changed to SPELL_AURA_IMMUNE_TO_DISARM
-    &AuraEffect::HandleUnused,                                    //265 unused (3.2.0)
-    &AuraEffect::HandleUnused,                                    //266 unused (3.2.0)
+    &AuraEffect::HandleNoImmediateEffect,                         //265 unused (3.2.0)
+    &AuraEffect::HandleNoImmediateEffect,                         //266 unused (3.2.0)
     &AuraEffect::HandleNoImmediateEffect,                         //267 SPELL_AURA_MOD_IMMUNE_AURA_APPLY_SCHOOL         implemented in Unit::IsImmunedToSpellEffect
     &AuraEffect::HandleAuraModAttackPowerOfStatPercent,           //268 SPELL_AURA_MOD_ATTACK_POWER_OF_STAT_PERCENT
     &AuraEffect::HandleNoImmediateEffect,                         //269 SPELL_AURA_MOD_IGNORE_TARGET_RESIST implemented in Unit::CalcAbsorbResist and CalcArmorReducedDamage
