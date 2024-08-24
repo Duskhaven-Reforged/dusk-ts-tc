@@ -32,7 +32,7 @@ CREATE TABLE `characterpoints` (
   `sum` int unsigned NOT NULL,
   `unlocked` int unsigned NOT NULL,
   `max` int unsigned NOT NULL,
-  PRIMARY KEY (`guid`,`type`,`spec`)
+  PRIMARY KEY (`guid`,`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `characterspellcharges`;
@@ -99,11 +99,3 @@ CREATE TABLE `character_talents_spent` (
 INSERT INTO character_action (guid, spec, loadout, button, `action`, `type`) VALUES(0, 0, 1, 0, 0, 0);
 
 INSERT INTO character_node_choices (guid, spec, tabId, node, choice) VALUES(0, 0, 0, 0, 0);
-
-INSERT INTO character_points (guid, `type`, spec, sum, max) VALUES(0, 0, 0, 0, 0);
-INSERT INTO character_points (guid, `type`, spec, sum, max) VALUES(4294967295, 8, 4294967295, 0, 21);
-INSERT INTO character_points (guid, `type`, spec, sum, max) VALUES(4294967295, 7, 4294967295, 0, 25);
-INSERT INTO character_points (guid, `type`, spec, sum, max) VALUES(4294967295, 6, 4294967295, 0, 0);
-INSERT INTO character_points (guid, `type`, spec, sum, max) VALUES(4294967295, 4, 4294967295, 17, 17);
-INSERT INTO character_points (guid, `type`, spec, sum, max) VALUES(4294967295, 3, 4294967295, 0, 20);
-INSERT INTO character_points (guid, `type`, spec, sum, max) VALUES(4294967295, 0, 4294967295, 0, 71);
