@@ -38,11 +38,11 @@ CREATE TABLE `characterpoints` (
 DROP TABLE IF EXISTS `characterspellcharges`;
 CREATE TABLE `characterspellcharges` (
   `guid` bigint unsigned NOT NULL,
-  `spell` bigint unsigned NOT NULL,
+  `spell` int unsigned NOT NULL,
   `current` int unsigned NOT NULL,
   `max` int unsigned NOT NULL,
-  `cd` bigint unsigned NOT NULL,
-  PRIMARY KEY (`guid`,`type`,`spec`)
+  `cd` int unsigned NOT NULL,
+  PRIMARY KEY (`guid`,`spell`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         
 -- acore_characters.character_specs definition
