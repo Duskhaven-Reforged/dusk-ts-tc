@@ -97,5 +97,3 @@ CREATE TABLE `character_talents_spent` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO character_action (guid, spec, loadout, button, `action`, `type`) VALUES(0, 0, 1, 0, 0, 0);
-
-INSERT INTO character_node_choices (guid, spec, tabId, node, choice) VALUES(0, 0, 0, 0, 0);
