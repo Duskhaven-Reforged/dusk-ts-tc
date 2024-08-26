@@ -5473,6 +5473,12 @@ float Player::GetSpellCritFromIntellect() const
         return 0.0f;
 
     float crit = critBase->Data + GetStat(STAT_INTELLECT) * critRatio->Data;
+
+    FIRE(Player,OnCalcIntellectCritBonus
+        ,TSPlayer(this)
+        ,TSMutableNumber<float>(&crit)
+    );
+
     return crit * 100.0f;
 }
 
