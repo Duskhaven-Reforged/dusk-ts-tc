@@ -6639,7 +6639,7 @@ void Player::CheckAreaExploreAndOutdoor()
                     uint32 minScaledXP = uint32(sObjectMgr->GetBaseXP(areaEntry->ExplorationLevel)*sWorld->getRate(RATE_XP_EXPLORE)) * sWorld->getIntConfig(CONFIG_MIN_DISCOVERED_SCALED_XP_RATIO) / 100;
                     XP = std::max(minScaledXP, XP);
                 }
-
+                AddPct(XP, GetTotalAuraModifierByMiscValue(SPELL_AURA_DUMMY, 543));
                 GiveXP(XP, nullptr);
                 SendExplorationExperience(areaId, XP);
             }
