@@ -4097,6 +4097,9 @@ void Spell::EffectInebriate()
     if (drunkMod == 0)
         return;
 
+    if (player->HasAuraTypeWithMiscvalue(SPELL_AURA_DUMMY, 659))
+        return;
+
     // drunkMod may contain values that are guaranteed to cause uint8 overflow/underflow (examples: 29690, 46874)
     // In addition, we would not want currentDrunk to become more than 100.
     // So before adding the values, let's check that everything is fine.

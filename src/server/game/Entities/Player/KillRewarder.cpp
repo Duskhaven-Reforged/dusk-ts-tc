@@ -153,7 +153,8 @@ inline void KillRewarder::_RewardXP(Player* player, float rate)
     if (xp)
     {
         // 4.2.2. Apply auras modifying rewarded XP (SPELL_AURA_MOD_XP_PCT).
-        xp *= player->GetTotalAuraMultiplier(SPELL_AURA_MOD_XP_PCT);
+        Unit* victim(_victim);
+        xp *= player->GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_XP_PCT, 0) + player->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_XP_PCT, victim->GetCreatureTypeMask());
 
         // 4.2.3. Give XP to player.
         player->GiveXP(xp, _victim, _groupRate);

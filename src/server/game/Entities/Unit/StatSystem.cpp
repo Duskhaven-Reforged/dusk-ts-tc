@@ -1151,7 +1151,17 @@ void Player::UpdatePowerRegen(Powers power)
             power_regen *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, POWER_MANA);
 
             // Mana regen from SPELL_AURA_MOD_POWER_REGEN aura
-            float power_regen_mp5 = (GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, POWER_MANA) + m_baseManaRegen) / 5.0f;
+            float mult = 1.f;
+            AuraEffectList const& ModRegenAuras = GetAuraEffectsByType(SPELL_AURA_MOD_POWER_REGEN);
+
+            for (auto itr = ModRegenAuras.begin(); itr != ModRegenAuras.end(); ++itr)
+                if ((*itr)->GetSpellInfo()->AuraInterruptFlags & AURA_INTERRUPT_FLAG_NOT_SEATED)
+                {
+                    mult = GetTotalAuraMultiplierByMiscValue(SPELL_AURA_DUMMY, 1744);
+                    break;
+                }
+
+            float power_regen_mp5 = (GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, POWER_MANA) * mult + m_baseManaRegen) / 5.0f;
 
             // Get bonus from SPELL_AURA_MOD_MANA_REGEN_FROM_STAT aura
             AuraEffectList const& regenAura = GetAuraEffectsByType(SPELL_AURA_MOD_MANA_REGEN_FROM_STAT);
