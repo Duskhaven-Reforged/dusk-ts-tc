@@ -2176,9 +2176,20 @@ void Player::RegenerateHealth()
         addValue = OCTRegenHPPerSpirit() * HealthIncreaseRate;
         if (!IsInCombat())
         {
+            float mult = 1.f;
+
+            AuraEffectList const& ModRegenAuras = GetAuraEffectsByType(SPELL_AURA_MOD_REGEN);
+
+            for (auto itr = ModRegenAuras.begin(); itr != ModRegenAuras.end(); ++itr)
+                if ((*itr)->GetSpellInfo()->AuraInterruptFlags & AURA_INTERRUPT_FLAG_NOT_SEATED)
+                {
+                    mult = GetTotalAuraMultiplierByMiscValue(SPELL_AURA_DUMMY, 1744);
+                    break;
+                }
+
             addValue *= GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALTH_REGEN_PERCENT);
 
-            addValue += GetTotalAuraModifier(SPELL_AURA_MOD_REGEN) * 0.4f;
+            addValue += GetTotalAuraModifier(SPELL_AURA_MOD_REGEN) * 0.4f * mult;
         }
         else if (HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT))
             ApplyPct(addValue, GetTotalAuraModifier(SPELL_AURA_MOD_REGEN_DURING_COMBAT));
@@ -6687,7 +6698,7 @@ int32 Player::CalculateReputationGain(ReputationSource source, uint32 creatureOr
     float repMod = noQuestBonus ? 0.0f : float(GetTotalAuraModifier(SPELL_AURA_MOD_REPUTATION_GAIN));
 
     // faction specific auras only seem to apply to kills
-    if (source == REPUTATION_SOURCE_KILL)
+    //if (source == REPUTATION_SOURCE_KILL)
         repMod += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_FACTION_REPUTATION_GAIN, faction);
 
     percent += rep > 0 ? repMod : -repMod;
