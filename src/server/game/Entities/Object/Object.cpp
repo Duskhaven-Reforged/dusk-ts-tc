@@ -2376,7 +2376,7 @@ int32 WorldObject::ModSpellDuration(SpellInfo const* spellInfo, WorldObject cons
             AddPct(duration, durationMod);
 
         // there are only negative mods currently
-        durationMod_always = unitTarget->GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_AURA_DURATION_BY_DISPEL, spellInfo->Dispel);
+        durationMod_always = unitTarget->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_AURA_DURATION_BY_DISPEL, (1 << spellInfo->Dispel));
         durationMod_not_stack = unitTarget->GetMaxNegativeAuraModifierByMiscValue(SPELL_AURA_MOD_AURA_DURATION_BY_DISPEL_NOT_STACK, spellInfo->Dispel);
 
         durationMod = std::min(durationMod_always, durationMod_not_stack);
