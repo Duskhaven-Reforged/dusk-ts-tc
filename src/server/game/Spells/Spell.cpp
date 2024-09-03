@@ -2600,8 +2600,9 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
                 for (auto schools : mOwnerSchoolMods)
                     if (schools->GetCasterGUID() == caster->GetGUID()) {
                         for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
-                            if (spell->m_spellInfo->GetEffect(SpellEffIndex(i)).SpellClassMask & schools->GetSpellInfo()->SpellFamilyFlags)
-                                calcSchool = SpellSchoolMask(schools->GetMiscValue() | calcSchool);
+                            if (spell->m_spellInfo->SpellFamilyName == schools->GetSpellInfo()->SpellFamilyName)
+                                if (spell->m_spellInfo->GetEffect(SpellEffIndex(i)).SpellClassMask & schools->GetSpellInfo()->SpellFamilyFlags)
+                                    calcSchool = SpellSchoolMask(schools->GetMiscValue() | calcSchool);
                     }
             }
 
