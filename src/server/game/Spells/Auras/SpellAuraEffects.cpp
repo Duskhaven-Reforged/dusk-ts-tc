@@ -366,7 +366,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //299 SPELL_AURA_PROC_TRIGGER_COPY_OF_TRIGGER
     &AuraEffect::HandleNoImmediateEffect,                         //300 SPELL_AURA_SHARE_DAMAGE_PCT implemented in Unit::DealDamage
     &AuraEffect::HandleNoImmediateEffect,                         //301 SPELL_AURA_SCHOOL_HEAL_ABSORB implemented in Unit::CalcHealAbsorb
-    &AuraEffect::HandleUnused,                                    //302 0 spells in 3.3.5
+    &AuraEffect::HandleNoImmediateEffect,                                    //302 0 spells in 3.3.5
     &AuraEffect::HandleNoImmediateEffect,                         //303 SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE implemented in Unit::SpellDamageBonus, Unit::MeleeDamageBonus
     &AuraEffect::HandleAuraModFakeInebriation,                    //304 SPELL_AURA_MOD_FAKE_INEBRIATE
     &AuraEffect::HandleAuraModIncreaseSpeed,                      //305 SPELL_AURA_MOD_MINIMUM_SPEED
@@ -417,8 +417,9 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //350 SPELL_AURA_MOD_TAXI_FLIGHT_SPEED
     &AuraEffect::HandleAuraModForgeStat,                          //351 SPELL_AURA_MOD_FORGE_STAT
     &AuraEffect::HandleNoImmediateEffect,                         //352 SPELL_AURA_MOD_RESTED_XP_MAX_AMOUNT implemented in Player::SetRestBonus, Spell::EffectGiveRestedExperience
-    &AuraEffect::HandleNoImmediateEffect,                         //355 SPELL_AURA_MOD_RESTED_XP_RECOVERY_RATE implemented in Player::Update
-    &AuraEffect::HandleNoImmediateEffect,                         //356 SPELL_AURA_ADD_COMBAT_RATING_PCT_TO_SPELL_EFFECT implemented in AuraEffect::CalculateSpellMod()
+    &AuraEffect::HandleNoImmediateEffect,                         //353 SPELL_AURA_MOD_RESTED_XP_RECOVERY_RATE implemented in Player::Update
+    &AuraEffect::HandleNoImmediateEffect,                         //354 SPELL_AURA_MOD_CHANGE_DAMAGE_SCHOOL_OF_SPELL
+    &AuraEffect::HandleNoImmediateEffect,                         //355 SPELL_AURA_ADD_COMBAT_RATING_PCT_TO_SPELL_EFFECT implemented in AuraEffect::CalculateSpellMod()
     &AuraEffect::HandleNoImmediateEffect,                         //356 SPELL_AURA_ADD_COMBAT_RATING_TO_SPELL_EFFECT implemented in AuraEffect::CalculateSpellMod()
 };
 

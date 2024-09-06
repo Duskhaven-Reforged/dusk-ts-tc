@@ -549,6 +549,13 @@ m_caster((info->HasAttribute(SPELL_ATTR6_CAST_BY_CHARMER) && caster->GetCharmerO
             if ((playerCaster->GetClassMask() & CLASSMASK_WAND_USERS) != 0)
                 if (Item* pItem = playerCaster->GetWeaponForAttack(RANGED_ATTACK))
                     m_spellSchoolMask = SpellSchoolMask(1 << pItem->GetTemplate()->Damage[0].DamageType);
+        else {
+            auto mOwnerSchoolMods = playerCaster->GetAuraEffectsByType(SPELL_AURA_MOD_CHANGE_DAMAGE_SCHOOL_OF_SPELL);
+            for (auto schools : mOwnerSchoolMods)  {
+                if (schools->IsAffectedOnSpell(info))
+                    m_spellSchoolMask = SpellSchoolMask(schools->GetMiscValue() | m_spellSchoolMask);
+            }
+        }
     }
 
     if (originalCasterGUID)
@@ -2595,16 +2602,6 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
         {
             hasDamage = true;
             SpellSchoolMask calcSchool = spell->m_spellSchoolMask;
-            if (auto owner = spell->GetCaster()->ToUnit()) {
-                auto mOwnerSchoolMods = owner->GetAuraEffectsByType(SPELL_AURA_MOD_CHANGE_DAMAGE_SCHOOL_OF_SPELL);
-                for (auto schools : mOwnerSchoolMods)
-                    if (schools->GetCasterGUID() == caster->GetGUID()) {
-                        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
-                            if (spell->m_spellInfo->SpellFamilyName == schools->GetSpellInfo()->SpellFamilyName)
-                                if (spell->m_spellInfo->GetEffect(SpellEffIndex(i)).SpellClassMask & schools->GetSpellInfo()->SpellFamilyFlags)
-                                    calcSchool = SpellSchoolMask(schools->GetMiscValue() | calcSchool);
-                    }
-            }
 
             // Fill base damage struct (unitTarget - is real spell target)
             SpellNonMeleeDamage damageInfo(caster, spell->unitTarget, spell->m_spellInfo->Id, calcSchool);
