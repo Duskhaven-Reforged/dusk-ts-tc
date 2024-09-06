@@ -1529,65 +1529,77 @@ bool Guardian::UpdateStats(Stats stat)
     //ApplyStatBuffMod(stat, m_statFromOwner[stat], false);
     float ownersBonus = 0.0f;
 
-    Unit* owner = GetOwner();
-    // Handle Death Knight Glyphs and Talents
-    float mod = 0.75f;
-    if ((IsPetGhoul() || IsRisenAlly()) && (stat == STAT_STAMINA || stat == STAT_STRENGTH))
-    {
-        if (stat == STAT_STAMINA)
-            mod = 0.3f; // Default Owner's Stamina scale
-        else
-            mod = 0.7f; // Default Owner's Strength scale
+    //Unit* owner = GetOwner();
+    //// Handle Death Knight Glyphs and Talents
+    //float mod = 0.75f;
+    //if ((IsPetGhoul() || IsRisenAlly()) && (stat == STAT_STAMINA || stat == STAT_STRENGTH))
+    //{
+    //    if (stat == STAT_STAMINA)
+    //        mod = 0.3f; // Default Owner's Stamina scale
+    //    else
+    //        mod = 0.7f; // Default Owner's Strength scale
 
-        // Check just if owner has Ravenous Dead since it's effect is not an aura
-        AuraEffect const* aurEff = owner->GetAuraEffect(SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE, SPELLFAMILY_DEATHKNIGHT, 3010, 0);
-        if (aurEff)
-        {
-            SpellInfo const* spellInfo = aurEff->GetSpellInfo();                                                // Then get the SpellProto and add the dummy effect value
-            AddPct(mod, spellInfo->GetEffect(EFFECT_1).CalcValue());                                            // Ravenous Dead edits the original scale
-        }
-        // Glyph of the Ghoul
-        aurEff = owner->GetAuraEffect(58686, 0);
-        if (aurEff)
-            mod += CalculatePct(1.0f, aurEff->GetAmount());                                                    // Glyph of the Ghoul adds a flat value to the scale mod
-        ownersBonus = float(owner->GetStat(stat)) * mod;
-        value += ownersBonus;
-    }
-    else if (stat == STAT_STAMINA)
-    {
-        if (owner->GetClass() == CLASS_WARLOCK && IsPet())
-        {
-            ownersBonus = CalculatePct(owner->GetStat(STAT_STAMINA), 75);
-            value += ownersBonus;
-        }
-        else
-        {
-            mod = 0.45f;
-            if (IsPet())
-            {
-                PetSpellMap::const_iterator itr = (ToPet()->m_spells.find(62758)); // Wild Hunt rank 1
-                if (itr == ToPet()->m_spells.end())
-                    itr = ToPet()->m_spells.find(62762);                            // Wild Hunt rank 2
+    //    // Check just if owner has Ravenous Dead since it's effect is not an aura
+    //    AuraEffect const* aurEff = owner->GetAuraEffect(SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE, SPELLFAMILY_DEATHKNIGHT, 3010, 0);
+    //    if (aurEff)
+    //    {
+    //        SpellInfo const* spellInfo = aurEff->GetSpellInfo();                                                // Then get the SpellProto and add the dummy effect value
+    //        AddPct(mod, spellInfo->GetEffect(EFFECT_1).CalcValue());                                            // Ravenous Dead edits the original scale
+    //    }
+    //    // Glyph of the Ghoul
+    //    aurEff = owner->GetAuraEffect(58686, 0);
+    //    if (aurEff)
+    //        mod += CalculatePct(1.0f, aurEff->GetAmount());                                                    // Glyph of the Ghoul adds a flat value to the scale mod
+    //    ownersBonus = float(owner->GetStat(stat)) * mod;
+    //    value += ownersBonus;
+    //}
+    //else if (stat == STAT_STAMINA)
+    //{
+    //    if (owner->GetClass() == CLASS_WARLOCK && IsPet())
+    //    {
+    //        ownersBonus = CalculatePct(owner->GetStat(STAT_STAMINA), 75);
+    //        value += ownersBonus;
+    //    }
+    //    else
+    //    {
+    //        mod = 0.45f;
+    //        if (IsPet())
+    //        {
+    //            PetSpellMap::const_iterator itr = (ToPet()->m_spells.find(62758)); // Wild Hunt rank 1
+    //            if (itr == ToPet()->m_spells.end())
+    //                itr = ToPet()->m_spells.find(62762);                            // Wild Hunt rank 2
 
-                if (itr != ToPet()->m_spells.end())                                 // If pet has Wild Hunt
-                {
-                    SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(itr->first); // Then get the SpellProto and add the dummy effect value
-                    AddPct(mod, spellInfo->GetEffect(EFFECT_0).CalcValue());
-                }
-            }
-            ownersBonus = float(owner->GetStat(stat)) * mod;
-            value += ownersBonus;
-        }
-    }
+    //            if (itr != ToPet()->m_spells.end())                                 // If pet has Wild Hunt
+    //            {
+    //                SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(itr->first); // Then get the SpellProto and add the dummy effect value
+    //                AddPct(mod, spellInfo->GetEffect(EFFECT_0).CalcValue());
+    //            }
+    //        }
+    //        ownersBonus = float(owner->GetStat(stat)) * mod;
+    //        value += ownersBonus;
+    //    }
+    //}
                                                             //warlock's and mage's pets gain 30% of owner's intellect
-    else if (stat == STAT_INTELLECT)
-    {
-        if (owner->GetClass() == CLASS_WARLOCK || owner->GetClass() == CLASS_MAGE)
-        {
-            ownersBonus = CalculatePct(owner->GetStat(stat), 30);
-            value += ownersBonus;
-        }
-    }
+    //else if (stat == STAT_INTELLECT)
+    //{
+    //    if (owner->GetClass() == CLASS_WARLOCK || owner->GetClass() == CLASS_MAGE)
+    //    {
+    //        ownersBonus = CalculatePct(owner->GetStat(stat), 30);
+    //        value += ownersBonus;
+    //    }
+    //}
+
+    // @dh-begin
+    FIRE_ID(
+        GetCreatureTemplate()->events.id
+        , Creature, OnPetUpdateStat
+        , TSCreature(this)
+        , TSPlayer(m_owner->ToPlayer())
+        , TSMutableNumber<float>(&value)
+        , TSMutableNumber<float>(&ownersBonus)
+        , stat
+    );
+    // @dh-end
 
     SetStat(stat, int32(value));
     m_statFromOwner[stat] = ownersBonus;
