@@ -1525,7 +1525,7 @@ bool Guardian::UpdateStats(Stats stat)
         return false;
 
     // value = ((base_value * base_pct) + total_value) * total_pct
-    float value = 0.0f;  //GetTotalStatValue(stat);
+    float value = GetTotalStatValue(stat);
     //ApplyStatBuffMod(stat, m_statFromOwner[stat], false);
     float ownersBonus = 0.0f;
 
@@ -1592,7 +1592,7 @@ bool Guardian::UpdateStats(Stats stat)
     // @dh-begin
     FIRE_ID(
         GetCreatureTemplate()->events.id
-        , Creature, OnPetUpdateStat
+        , Creature,OnPetUpdateStat
         , TSCreature(this)
         , TSPlayer(m_owner->ToPlayer())
         , TSMutableNumber<float>(&value)
@@ -1638,7 +1638,7 @@ void Guardian::UpdateResistances(uint32 school)
 {
     if (school > SPELL_SCHOOL_NORMAL)
     {
-        float value  = 0; //GetTotalAuraModValue(UnitMods(UNIT_MOD_RESISTANCE_START + school));
+        float value = GetTotalAuraModValue(UnitMods(UNIT_MOD_RESISTANCE_START + school));
 
         // // hunter and warlock pets gain 40% of owner's resistance
         // if (IsPet())
