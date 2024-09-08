@@ -270,6 +270,7 @@ void TempSummon::UnSummon(uint32 msTime)
     //ASSERT(!IsPet());
     if (IsPet())
     {
+        FIRE_ID(GetCreatureTemplate()->events.id, Creature, OnPetDespawn, TSCreature(this), TSPlayer(GetOwner()->ToPlayer()));
         ToPet()->Remove(PET_SAVE_NOT_IN_SLOT);
         ASSERT(!IsInWorld());
         return;
@@ -432,6 +433,8 @@ void Guardian::InitSummon()
     {
         GetOwner()->ToPlayer()->CharmSpellInitialize();
     }
+
+    FIRE_ID(this->GetCreatureTemplate()-events.id, Creature, OnPetSummoned, TSUnit(GetOwner()), TSCreature(this));
 }
 
 std::string Guardian::GetDebugInfo() const
