@@ -434,7 +434,7 @@ void Guardian::InitSummon()
         GetOwner()->ToPlayer()->CharmSpellInitialize();
     }
 
-    FIRE_ID(this->GetCreatureTemplate()-events.id, Creature, OnPetSummoned, TSUnit(GetOwner()), TSCreature(this));
+    FIRE_ID(GetCreatureTemplate()->events.id, Creature, OnPetSummoned, TSUnit(GetOwner()), TSCreature(this));
 }
 
 std::string Guardian::GetDebugInfo() const
