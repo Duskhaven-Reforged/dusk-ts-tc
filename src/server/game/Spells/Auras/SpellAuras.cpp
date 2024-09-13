@@ -479,7 +479,7 @@ bool Aura::CanPeriodicTickCrit(Unit const* caster) const
 float Aura::CalcPeriodicCritChance(Unit const* caster) const
 {
     Player* modOwner = caster->GetSpellModOwner();
-    if (!modOwner)
+    if (!modOwner || !CanPeriodicTickCrit(modOwner))
         return 0.f;
 
     float critChance = modOwner->SpellCritChanceDone(GetSpellInfo(), GetSpellInfo()->GetSchoolMask(), GetSpellInfo()->GetAttackType(), true);

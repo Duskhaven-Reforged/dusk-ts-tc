@@ -1035,7 +1035,7 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
         , TSMutableNumber<int32>(&damage)
         , TSSpellDamageInfo(damageInfo)
         , attackType
-        , crit
+        , TSMutable<bool,bool>(&crit)
         , effectMask
     );
     // @tswow-end
