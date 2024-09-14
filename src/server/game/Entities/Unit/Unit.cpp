@@ -1035,7 +1035,7 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
         , TSMutableNumber<int32>(&damage)
         , TSSpellDamageInfo(damageInfo)
         , attackType
-        , crit
+        , TSMutable<bool,bool>(&crit)
         , effectMask
     );
     // @tswow-end
@@ -4867,6 +4867,18 @@ bool Unit::HasAuraWithMechanic(uint32 mechanicMask) const
             if (iter->second->HasEffect(spellEffectInfo.EffectIndex) && spellEffectInfo.IsEffect() && spellEffectInfo.Mechanic)
                 if (mechanicMask & (1 << spellEffectInfo.Mechanic))
                     return true;
+    }
+
+    return false;
+}
+
+bool Unit::HasDispellableAuraOfType(uint32 DispelMask) const
+{
+    for (AuraApplicationMap::const_iterator iter = m_appliedAuras.begin(); iter != m_appliedAuras.end(); ++iter)
+    {
+        SpellInfo const* spellInfo = iter->second->GetBase()->GetSpellInfo();
+        if (spellInfo->Dispel && (DispelMask & (1 << spellInfo->Dispel)))
+            return true;
     }
 
     return false;
