@@ -6225,6 +6225,15 @@ void AuraEffect::HandleModTriggerSpellOnStacks(AuraApplication const* aurApp, ui
 
 void AuraEffect::HandleAuraModForgeStat(AuraApplication const* aurApp, uint8 mode, bool apply) const
 {
+    if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
+        return;
+
+    Unit* target = aurApp->GetTarget();
+    auto Stat = GetMiscValue();
+    auto Type = GetMiscValueB();
+    auto Amount = GetAmount();
+    FIRE(Player, OnCustomStatAura, TSPlayer(target->ToPlayer()), apply, TSNumber<uint8>(Stat), TSNumber<uint8>(Type), TSNumber<float>(Amount));
+
     return;
 }
 
