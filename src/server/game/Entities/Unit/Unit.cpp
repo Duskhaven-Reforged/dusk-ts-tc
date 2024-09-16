@@ -6986,7 +6986,7 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
     AuraEffectList const& mDamageFromSpell = owner->GetAuraEffectsByType(SPELL_AURA_MOD_DAMAGE_TAKEN_FROM_SPELL);
     for (AuraEffectList::const_iterator i = mDamageFromSpell.begin(); i != mDamageFromSpell.end(); ++i)
     {
-        if (!(*i)->IsAffectedOnSpell(spellProto))
+        if (!(*i)->IsAffectedOnSpell(spellProto) || (*i)->GetCasterGUID() != GetGUID())
             continue;
 
         AddPct(DoneTotalMod, (*i)->GetAmount());
