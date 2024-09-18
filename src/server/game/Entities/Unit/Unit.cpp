@@ -3290,8 +3290,6 @@ bool Unit::IsMovementPreventedByCasting() const
         if (spell->getState() != SPELL_STATE_FINISHED && spell->IsChannelActive()) {
             bool IsAble = spell->GetSpellInfo()->IsMoveAllowedChannel();
             FIRE_ID(spell->GetSpellInfo()->events.id, Spell, CanMoveWhileChanneling, TSSpell(const_cast<Spell*>(spell)), TSUnit(const_cast<Unit*>(this)), TSMutable<bool, bool>(&IsAble));
-
-            TC_LOG_INFO("server.worldserver", "CAN MOVE 2: {}", IsAble);
             if (IsAble)
                 return false;
         }

@@ -545,19 +545,13 @@ m_caster((info->HasAttribute(SPELL_ATTR6_CAST_BY_CHARMER) && caster->GetCharmerO
     if (Player const* playerCaster = m_caster->ToPlayer())
     {
         // wand case
-        if (m_attackType == RANGED_ATTACK)
+        if (m_attackType == RANGED_ATTACK) {
             if ((playerCaster->GetClassMask() & CLASSMASK_WAND_USERS) != 0)
                 if (Item* pItem = playerCaster->GetWeaponForAttack(RANGED_ATTACK))
                     m_spellSchoolMask = SpellSchoolMask(1 << pItem->GetTemplate()->Damage[0].DamageType);
-        else {
-            auto mOwnerSchoolMods = playerCaster->GetAuraEffectsByType(SPELL_AURA_MOD_CHANGE_DAMAGE_SCHOOL_OF_SPELL);
-            for (auto schools : mOwnerSchoolMods)  {
-                if (schools->IsAffectedOnSpell(info))
-                    m_spellSchoolMask = SpellSchoolMask(schools->GetMiscValue() | m_spellSchoolMask);
-            }
         }
     }
-
+    
     if (originalCasterGUID)
         m_originalCasterGUID = originalCasterGUID;
     else
@@ -570,6 +564,14 @@ m_caster((info->HasAttribute(SPELL_ATTR6_CAST_BY_CHARMER) && caster->GetCharmerO
         m_originalCaster = ObjectAccessor::GetUnit(*m_caster, m_originalCasterGUID);
         if (m_originalCaster && !m_originalCaster->IsInWorld())
             m_originalCaster = nullptr;
+    }
+
+    if (m_originalCaster) {
+        auto mOwnerSchoolMods = m_originalCaster->GetAuraEffectsByType(SPELL_AURA_MOD_CHANGE_DAMAGE_SCHOOL_OF_SPELL);
+        for (auto schools : mOwnerSchoolMods)  {
+            if (schools->IsAffectedOnSpell(info))
+                m_spellSchoolMask = SpellSchoolMask(schools->GetMiscValue() | m_spellSchoolMask);
+        }
     }
 
     m_spellState = SPELL_STATE_NULL;
@@ -6603,7 +6605,6 @@ SpellCastResult Spell::CheckMovement() const
     else if (getState() == SPELL_STATE_CASTING) {
         bool IsAble = m_spellInfo->IsMoveAllowedChannel();
         FIRE_ID(m_spellInfo->events.id, Spell, CanMoveWhileChanneling, TSSpell(const_cast<Spell*>(this)), TSUnit(m_caster->ToUnit()), TSMutable<bool, bool>(&IsAble));
-        TC_LOG_INFO("server.worldserver", "CAN MOVE: {}", IsAble);
         if (!IsAble)
             return SPELL_FAILED_MOVING;
     }
