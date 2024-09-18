@@ -6600,9 +6600,13 @@ SpellCastResult Spell::CheckMovement() const
             if (m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT)
                 return SPELL_FAILED_MOVING;
     }
-    else if (getState() == SPELL_STATE_CASTING)
-        if (!m_spellInfo->IsMoveAllowedChannel())
+    else if (getState() == SPELL_STATE_CASTING) {
+        bool IsAble = m_spellInfo->IsMoveAllowedChannel();
+        FIRE_ID(m_spellInfo->events.id, Spell, CanMoveWhileChanneling, TSSpell(const_cast<Spell*>(this)), TSUnit(m_caster->ToUnit()), TSMutable<bool, bool>(&IsAble));
+        TC_LOG_INFO("server.worldserver", "CAN MOVE: {}", IsAble);
+        if (!IsAble)
             return SPELL_FAILED_MOVING;
+    }
 
     return SPELL_CAST_OK;
 }

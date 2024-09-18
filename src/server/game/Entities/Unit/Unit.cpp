@@ -3287,9 +3287,14 @@ bool Unit::IsMovementPreventedByCasting() const
 
     // channeled spells during channel stage (after the initial cast timer) allow movement with a specific spell attribute
     if (Spell* spell = m_currentSpells[CURRENT_CHANNELED_SPELL])
-        if (spell->getState() != SPELL_STATE_FINISHED && spell->IsChannelActive())
-            if (spell->GetSpellInfo()->IsMoveAllowedChannel())
+        if (spell->getState() != SPELL_STATE_FINISHED && spell->IsChannelActive()) {
+            bool IsAble = spell->GetSpellInfo()->IsMoveAllowedChannel();
+            FIRE_ID(spell->GetSpellInfo()->events.id, Spell, CanMoveWhileChanneling, TSSpell(const_cast<Spell*>(spell)), TSUnit(const_cast<Unit*>(this)), TSMutable<bool, bool>(&IsAble));
+
+            TC_LOG_INFO("server.worldserver", "CAN MOVE 2: {}", IsAble);
+            if (IsAble)
                 return false;
+        }
 
     // prohibit movement for all other spell casts
     return true;
@@ -9061,6 +9066,7 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
         case MOVE_SWIM:
         {
             main_speed_mod  = GetMaxPositiveAuraModifier(SPELL_AURA_MOD_INCREASE_SWIM_SPEED);
+            stack_bonus     = GetTotalAuraMultiplier(SPELL_AURA_MOD_MOUNTED_SPEED_ALWAYS);
             break;
         }
         case MOVE_FLIGHT:
