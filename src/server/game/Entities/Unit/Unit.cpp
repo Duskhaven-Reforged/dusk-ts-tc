@@ -8606,6 +8606,9 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
 
         if (IsPlayer())
             FIRE(Player, OnCustomScriptedDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(attacker)), TSSpellInfo(spellProto), TSNumber<uint8>(0), TSMutableNumber<float>(&TakenTotalMod), TSNumber<uint8>(2));
+    } else { // auto attack
+        if (IsPlayer())
+            FIRE(Player, OnCustomScriptedAutoattackDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(attacker)), TSMutableNumber<float>(&TakenTotalMod), TSMutableNumber<uint32>(&pdamage));
     }
 
     // .. taken pct: dummy auras
