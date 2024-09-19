@@ -551,7 +551,7 @@ m_caster((info->HasAttribute(SPELL_ATTR6_CAST_BY_CHARMER) && caster->GetCharmerO
                     m_spellSchoolMask = SpellSchoolMask(1 << pItem->GetTemplate()->Damage[0].DamageType);
         }
     }
-    
+
     if (originalCasterGUID)
         m_originalCasterGUID = originalCasterGUID;
     else
@@ -2590,6 +2590,7 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
             else
                 hitMask |= PROC_HIT_NORMAL;
 
+            FIRE_ID(spell->m_spellInfo->events.id, Spell, OnHeal, TSUnit(caster), TSUnit(spell->unitTarget), TSMutableNumber<uint32>(&addhealth));
             healInfo = std::make_unique<HealInfo>(caster, spell->unitTarget, addhealth, spell->m_spellInfo, spell->m_spellInfo->GetSchoolMask());
             caster->HealBySpell(*healInfo, IsCrit);
             spell->unitTarget->GetThreatManager().ForwardThreatForAssistingMe(caster, float(healInfo->GetEffectiveHeal()) * 0.5f, spell->m_spellInfo);

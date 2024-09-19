@@ -1467,6 +1467,7 @@ class TC_GAME_API Unit : public WorldObject
         AuraEffect* IsScriptOverriden(SpellInfo const* spell, int32 script) const;
         uint32 GetDiseasesByCaster(ObjectGuid casterGUID, bool remove = false);
         uint32 GetDoTsByCaster(ObjectGuid casterGUID) const;
+        uint32 GetBleedsByCaster(ObjectGuid casterGUID, bool remove = false);
 
         int32 GetTotalAuraModifier(AuraType auraType) const;
         float GetTotalAuraMultiplier(AuraType auraType) const;

@@ -4951,6 +4951,38 @@ uint32 Unit::GetDiseasesByCaster(ObjectGuid casterGUID, bool remove)
     return diseases;
 }
 
+uint32 Unit::GetBleedsByCaster(ObjectGuid casterGUID, bool remove)
+{
+    static const AuraType bleedAuraTypes[] =
+    {
+        SPELL_AURA_PERIODIC_DAMAGE,
+        SPELL_AURA_PERIODIC_DAMAGE_PERCENT,
+    };
+
+    uint32 bleeds = 0;
+    for (AuraType aType : bleedAuraTypes)
+    {
+        for (auto itr = m_modAuras[aType].begin(); itr != m_modAuras[aType].end();)
+        {
+            // Get auras with bleed mechanic by caster
+            if ((*itr)->GetSpellInfo()->Mechanic == MECHANIC_BLEED
+                && (*itr)->GetCasterGUID() == casterGUID)
+            {
+                ++bleeds;
+
+                if (remove)
+                {
+                    RemoveAura((*itr)->GetId(), (*itr)->GetCasterGUID());
+                    itr = m_modAuras[aType].begin();
+                    continue;
+                }
+            }
+            ++itr;
+        }
+    }
+    return bleeds;
+}
+
 uint32 Unit::GetDoTsByCaster(ObjectGuid casterGUID) const
 {
     static const AuraType diseaseAuraTypes[] =
@@ -6507,7 +6539,6 @@ void Unit::SetCharm(Unit* charm, bool apply)
 
     // Hook for OnHeal Event
     sScriptMgr->OnHeal(healer, victim, (uint32&)gain);
-    FIRE_ID(healInfo.GetSpellInfo()->events.id, Spell, OnHeal, TSHealInfo(&healInfo), TSMutableNumber<int32>(&gain));
 
     Unit* unit = healer;
     if (healer && healer->GetTypeId() == TYPEID_UNIT && healer->IsTotem())
