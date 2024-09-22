@@ -1787,7 +1787,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         WorldSession* GetSession() const { return m_session; }
         GameClient* GetGameClient() const;
 
-        void BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target) const override;
+        void BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target) const;
         void DestroyForPlayer(Player* target, bool onDeath = false) const override;
         void SendLogXPGain(uint32 GivenXP, Unit* victim, uint32 BonusXP, bool recruitAFriend = false, float group_rate=1.0f) const;
 

@@ -91,6 +91,10 @@ public:
         if (blockCount)
             data->append(&_mask[0], blockCount);
     }
+    uint8 GetBlockCount()
+    {
+        return ((_lastSetBit + 1) + CLIENT_UPDATE_MASK_BITS - 1) / CLIENT_UPDATE_MASK_BITS;
+    }
 
 private:
     static constexpr uint8 CalculateBlockCount(uint32 fieldCount)

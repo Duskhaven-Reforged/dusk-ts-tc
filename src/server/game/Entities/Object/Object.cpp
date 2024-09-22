@@ -176,7 +176,7 @@ void Object::BuildMovementUpdateBlock(UpdateData* data, uint32 flags) const
     data->AddUpdateBlock();
 }
 
-void Object::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target) const
+void Object::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target)
 {
     if (!target)
         return;
@@ -227,7 +227,8 @@ void Object::BuildValuesUpdateBlockForPlayer(UpdateData* data, Player const* tar
     buf << uint8(UPDATETYPE_VALUES);
     buf << GetPackGUID();
 
-    BuildValuesUpdate(UPDATETYPE_VALUES, &buf, target);
+    Object* nonConstObject = const_cast<Object*>(this);
+    nonConstObject->BuildValuesUpdate(UPDATETYPE_VALUES, &buf, target);
 
     data->AddUpdateBlock();
 }
@@ -467,7 +468,7 @@ void Object::BuildMovementUpdate(ByteBuffer* data, uint16 flags) const
         *data << int64(ToGameObject()->GetPackedLocalRotation());
 }
 
-void Object::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player const* target) const
+void Object::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player const* target)
 {
     if (!target)
         return;

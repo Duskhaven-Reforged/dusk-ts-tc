@@ -104,7 +104,7 @@ class TC_GAME_API Object
         TypeID GetTypeId() const { return m_objectTypeId; }
         bool isType(uint16 mask) const { return (mask & m_objectType) != 0; }
 
-        virtual void BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target) const;
+        virtual void BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target);
         void SendUpdateToPlayer(Player* player);
 
         void BuildValuesUpdateBlockForPlayer(UpdateData* data, Player const* target) const;
@@ -238,7 +238,7 @@ class TC_GAME_API Object
         uint32 GetUpdateFieldData(Player const* target, uint32*& flags) const;
 
         void BuildMovementUpdate(ByteBuffer* data, uint16 flags) const;
-        virtual void BuildValuesUpdate(uint8 updatetype, ByteBuffer* data, Player const* target) const;
+        virtual void BuildValuesUpdate(uint8 updatetype, ByteBuffer* data, Player const* target);
 
         uint16 m_objectType;
 

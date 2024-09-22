@@ -4043,8 +4043,9 @@ void Player::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target) c
             m_items[i]->BuildCreateUpdateBlockForPlayer(data, target);
         }
     }
-
-    Unit::BuildCreateUpdateBlockForPlayer(data, target);
+    
+    Player* nonConstPlayer = const_cast<Player*>(this);
+    nonConstPlayer->ToUnit()->BuildCreateUpdateBlockForPlayer(data, target);
 }
 
 void Player::DestroyForPlayer(Player* target, bool onDeath) const
