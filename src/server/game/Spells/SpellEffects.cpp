@@ -735,6 +735,7 @@ void Spell::EffectDummy()
 
     // normal DB scripted effect
     TC_LOG_DEBUG("spells", "Spell ScriptStart spellid {} in EffectDummy({})", m_spellInfo->Id, uint32(effectInfo->EffectIndex));
+    TC_LOG_INFO("spells", "Test check {} effect {} is script {}", m_spellInfo->Id, effectInfo->EffectIndex, uint32(m_spellInfo->Id | (effectInfo->EffectIndex << 24)));
     m_caster->GetMap()->ScriptsStart(sSpellScripts, uint32(m_spellInfo->Id | (effectInfo->EffectIndex << 24)), m_caster, unitTarget);
 }
 

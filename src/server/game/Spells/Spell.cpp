@@ -5446,6 +5446,9 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
 
             if (reqCombat && unitCaster->IsInCombat() && !m_spellInfo->CanBeUsedInCombat())
                 return SPELL_FAILED_AFFECTING_COMBAT;
+
+            if (m_spellInfo->HasAttribute(SPELL_ATTR1_CU_REQUIRES_COMBAT) && !unitCaster->IsInCombat())
+                return SPELL_FAILED_AFFECTING_COMBAT;
         }
 
         // cancel autorepeat spells if cast start when moving

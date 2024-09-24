@@ -414,7 +414,6 @@ class TC_GAME_API SpellInfo
         bool CheckFamilyFlagsApply(flag96 flags) const;
         bool CheckFamilyFlagsApply(flag96 flags, uint8 effect) const;
         bool HasAuraPositive(AuraType aura) const;
-        inline bool HasAttribute(SpellCustomAttributes2 customAttribute) const { return (AttributesExCu & customAttribute) != 0; }
         bool RequiresCombat() const; // hater
         bool CanScaleDamagingOrHealing() const;
         bool ComputeIsDamagingOrHealingEffect() const;
@@ -434,6 +433,7 @@ class TC_GAME_API SpellInfo
         inline bool HasAttribute(SpellAttr6 attribute) const { return !!(AttributesEx6 & attribute); }
         inline bool HasAttribute(SpellAttr7 attribute) const { return !!(AttributesEx7 & attribute); }
         inline bool HasAttribute(SpellCustomAttributes customAttribute) const { return !!(AttributesCu & customAttribute); }
+        inline bool HasAttribute(SpellCustomAttributes2 customAttribute) const { return !!(AttributesExCu & customAttribute); }
 
         bool IsExplicitDiscovery() const;
         bool IsLootCrafting() const;
