@@ -352,24 +352,6 @@ void Spell::EffectSchoolDMG()
         {
             case SPELLFAMILY_GENERIC:
             {
-                // Meteor like spells (divided damage to targets)
-                if (m_spellInfo->HasAttribute(SPELL_ATTR0_CU_SHARE_DAMAGE))
-                {
-                    uint32 count = 0;
-                    for (auto ihit = m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
-                    {
-                        if (ihit->MissCondition != SPELL_MISS_NONE)
-                            continue;
-
-                        if (ihit->EffectMask & (1 << effectInfo->EffectIndex))
-                            ++count;
-                    }
-
-                    // divide to all targets
-                    if (count)
-                        damage /= count;
-                }
-
                 break;
             }
             case SPELLFAMILY_WARRIOR:
@@ -709,6 +691,25 @@ void Spell::EffectSchoolDMG()
         {
             damage = unitCaster->SpellDamageBonusDone(unitTarget, m_spellInfo, (uint32)damage, SPELL_DIRECT_DAMAGE, *effectInfo, { });
             damage = unitTarget->SpellDamageBonusTaken(unitCaster, m_spellInfo, (uint32)damage, SPELL_DIRECT_DAMAGE);
+        }
+
+        // Aleist3r: moved this outside of familyname so this flag can affect all of spells
+        // Meteor like spells (divided damage to targets)
+        if (m_spellInfo->HasAttribute(SPELL_ATTR0_CU_SHARE_DAMAGE))
+        {
+            uint32 count = 0;
+            for (auto ihit = m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
+            {
+                if (ihit->MissCondition != SPELL_MISS_NONE)
+                    continue;
+
+                if (ihit->EffectMask & (1 << effectInfo->EffectIndex))
+                    ++count;
+            }
+
+            // divide to all targets
+            if (count)
+                damage /= count;
         }
 
         m_damage += damage;
@@ -1449,6 +1450,25 @@ void Spell::EffectHeal()
     // Remove Grievious bite if fully healed
     if (unitTarget->HasAura(48920) && (unitTarget->GetHealth() + addhealth >= unitTarget->GetMaxHealth()))
         unitTarget->RemoveAura(48920);
+
+    // Aleist3r: adding this here too
+    // Meteor like spells (divided damage to targets)
+    if (m_spellInfo->HasAttribute(SPELL_ATTR0_CU_SHARE_DAMAGE))
+    {
+        uint32 count = 0;
+        for (auto ihit = m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
+        {
+            if (ihit->MissCondition != SPELL_MISS_NONE)
+                continue;
+
+            if (ihit->EffectMask & (1 << effectInfo->EffectIndex))
+                ++count;
+        }
+
+        // divide to all targets
+        if (count)
+            addhealth /= count;
+    }
 
     m_healing += addhealth;
 }

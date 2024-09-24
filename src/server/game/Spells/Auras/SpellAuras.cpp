@@ -2138,6 +2138,9 @@ uint8 Aura::GetProcEffectMask(AuraApplication* aurApp, ProcEventInfo& eventInfo,
 float Aura::CalcProcChance(SpellProcEntry const& procEntry, ProcEventInfo& eventInfo) const
 {
     float chance = procEntry.Chance;
+    /** @dh-begin */
+    FIRE_ID(m_spellInfo->events.id, Spell, OnCalcProcChanceEarly, TSProcEventInfo(&eventInfo), TSMutableNumber<float>(&chance));
+    /** @dh-end */
     // calculate chances depending on unit with caster's data
     // so talents modifying chances and judgements will have properly calculated proc chance
     if (Unit* caster = GetCaster())
@@ -2157,6 +2160,9 @@ float Aura::CalcProcChance(SpellProcEntry const& procEntry, ProcEventInfo& event
     if ((procEntry.AttributesMask & PROC_ATTR_REDUCE_PROC_60) && eventInfo.GetActor()->GetLevel() > 60)
         chance = std::max(0.f, (1.f - ((eventInfo.GetActor()->GetLevel() - 60) * 1.f / 30.f)) * chance);
 
+    /** @dh-begin */
+    FIRE_ID(m_spellInfo->events.id, Spell, OnCalcProcChanceLate, TSProcEventInfo(&eventInfo), TSMutableNumber<float>(&chance));
+    /** @dh-end */
     return chance;
 }
 

@@ -904,6 +904,11 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
             victim->ToCreature()->LowerPlayerDamageReq(health < damage ?  health : damage);
     }
 
+    /* @dh-begin */
+        // Aleist3r: main reason for this to exist, we want to prevent unit's (player's) death by changing damage
+        FIRE(Unit, OnCustomDamageTaken, TSUnit(victim), TSUnit(attacker), TSMutableNumber<uint32>(&damage))
+    /* @dh-end */
+
     if (health <= damage)
     {
         if (victim->GetTypeId() == TYPEID_PLAYER && victim != attacker)
@@ -2517,7 +2522,12 @@ bool Unit::isSpellBlocked(Unit* victim, SpellInfo const* spellProto, WeaponAttac
         if (victim->IsNonMeleeSpellCast(false, false, true) || victim->HasUnitState(UNIT_STATE_CONTROLLED))
             return false;
 
-        float blockChance = victim->GetUnitBlockChance(attackType, victim);
+        int32 Pct = victim->GetTotalAuraModifier(SPELL_AURA_ADD_SPELL_BLOCK);
+
+        if (Pct == 0)
+            Pct = 100;
+
+        float blockChance = CalculatePct(victim->GetUnitBlockChance(attackType, victim), Pct);
         if (roll_chance_f(blockChance))
             return true;
     }
