@@ -12524,6 +12524,9 @@ Item* Player::EquipItem(uint16 pos, Item* pItem, bool update)
     if (slot == EQUIPMENT_SLOT_MAINHAND || slot == EQUIPMENT_SLOT_OFFHAND)
         CheckTitanGripPenalty();
 
+    if (slot == EQUIPMENT_SLOT_MAINHAND && pProto)
+        if (pProto->Class == ITEM_CLASS_WEAPON)
+            FIRE(Player, OnEquipMainhandWeapon, TSPlayer(this), TSItem(pItem))
 
     if (slot == EQUIPMENT_SLOT_OFFHAND && pProto)
         if (pProto->Class == ITEM_CLASS_WEAPON)
@@ -12684,6 +12687,10 @@ void Player::RemoveItem(uint8 bag, uint8 slot, bool update)
                     }
                 }
             }
+
+            if (slot == EQUIPMENT_SLOT_MAINHAND && pProto)
+                if (pProto->Class == ITEM_CLASS_WEAPON)
+                    FIRE(Player, OnUnequipMainhandWeapon, TSPlayer(this), TSItem(pItem))
 
             if (slot == EQUIPMENT_SLOT_OFFHAND && pProto)
                 if (pProto->Class == ITEM_CLASS_WEAPON)
