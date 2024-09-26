@@ -54,6 +54,7 @@ class ChaseMovementGenerator : public MovementGenerator, public AbstractFollower
         TimeTracker _rangeCheckTimer;
         bool _movingTowards = true;
         bool _mutualChase = true;
+        uint32 _chaseCreatureNumber;
 };
 
 #endif

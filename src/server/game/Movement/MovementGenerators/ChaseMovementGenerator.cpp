@@ -26,6 +26,7 @@
 #include "Unit.h"
 #include "Util.h"
 #include "TSCreature.h"
+#include <boost/algorithm/clamp.hpp>
 
 static bool HasLostTarget(Unit* owner, Unit* target)
 {
@@ -89,6 +90,10 @@ void ChaseMovementGenerator::Initialize(Unit* /*owner*/)
 
     _path = nullptr;
     _lastTargetPosition.reset();
+
+    if (Unit* const target = GetTarget())
+        if (Player* player = target->ToPlayer())
+        _chaseCreatureNumber = player->getAttackers().size();
 }
 
 void ChaseMovementGenerator::Reset(Unit* owner)
@@ -140,6 +145,52 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
                 cOwner->SetCannotReachTarget(false);
             owner->StopMoving();
             owner->SetInFront(target);
+            // Mob fanning.
+            // I did my best.
+            // It works by allowing mobs to target a change angle that's slightly different depending on how many hostile creatures are following the player
+            // They always target the front, never behind
+            // There's a step added for every creature if there's more than one of them, seems something like PI / 20
+            // Also, it seems to have effect when the creatures finalize their chase movement
+            if (Player* player = target->ToPlayer())
+            {
+                if (owner->GetTypeId() != TYPEID_UNIT)
+                    return true;
+
+                if (owner->IsPet()) // Doesn't apply to pets
+                    return true;
+
+                float angle = 0.0f;
+
+                // We need an orientation value that we can use to determine the orientation of fanning mobs.
+                // The default following angle will do nicely.
+                float orientation = _angle->RelativeAngle;
+                uint32 numOfAttackers = player->getAttackers().size();
+                // We divide the amount of attackers by 2 so we can split them evenly on left and right side
+                uint32 halfNumOfChasers = numOfAttackers / 2;
+
+                if (_chaseCreatureNumber == 1) // First creature always follows from front
+                    angle = Position::NormalizeOrientation(owner->GetOrientation() - M_PI);
+                else if (_chaseCreatureNumber <= halfNumOfChasers) // Right side
+                    angle = boost::algorithm::clamp(Position::NormalizeOrientation(orientation - _chaseCreatureNumber * (M_PI / 20.0f)), Position::NormalizeOrientation(orientation + M_PI / 2.0f), Position::NormalizeOrientation(orientation - M_PI / 2.0f));
+                else // Left side
+                    angle = boost::algorithm::clamp(Position::NormalizeOrientation(orientation + (_chaseCreatureNumber - halfNumOfChasers) * (M_PI / 20.0f)), Position::NormalizeOrientation(orientation + M_PI / 2.0f), Position::NormalizeOrientation(orientation - M_PI / 2.0f));
+
+                float x, y, z;
+                target->GetNearPoint(owner, x, y, z, minTarget - hitboxSum, angle);
+
+                if (owner->IsHovering())
+                    owner->UpdateAllowedPositionZ(x, y, z);
+
+                _path = std::make_unique<PathGenerator>(owner);
+                bool success = _path->CalculatePath(x, y, z);
+
+                Movement::MoveSplineInit init(owner);
+                init.MovebyPath(_path->GetPath());
+                init.SetWalk(false);
+                init.SetFacing(target);
+                init.Launch();
+            }
+
             DoMovementInform(owner, target);
             return true;
         }
