@@ -8159,6 +8159,8 @@ void Spell::CallScriptAfterCastHandlers()
 SpellCastResult Spell::CallScriptCheckCastHandlers()
 {
     SpellCastResult retVal = SPELL_CAST_OK;
+    SpellCustomErrors customError = SPELL_CUSTOM_ERROR_NONE;
+
     for (auto scritr = m_loadedScripts.begin(); scritr != m_loadedScripts.end(); ++scritr)
     {
         (*scritr)->_PrepareScriptCall(SPELL_SCRIPT_HOOK_CHECK_CAST);
@@ -8175,7 +8177,12 @@ SpellCastResult Spell::CallScriptCheckCastHandlers()
     FIRE_ID(m_spellInfo->events.id
         , Spell,OnCheckCast
         , TSSpell(this)
-        , TSMutableNumber<uint8>(reinterpret_cast<uint8_t*>(&retVal)));
+        , TSMutableNumber<uint8>(reinterpret_cast<uint8_t*>(&retVal))
+        , TSMutableNumber<uint32>(reinterpret_cast<uint32_t*>(&customError)));
+
+    if (customError != SPELL_CUSTOM_ERROR_NONE)
+        m_customError = customError;
+
     return retVal;
 }
 
