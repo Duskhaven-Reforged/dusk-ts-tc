@@ -803,6 +803,9 @@ void GameObject::Update(uint32 diff)
                         // Some traps do not have a spell but should be triggered
                         CastSpellExtraArgs args;
                         args.SetOriginalCaster(GetOwnerGUID());
+
+                        FIRE_ID(goInfo->events.id, GameObject, OnTrapTriggered, TSGameObject(this), TSUnit(GetOwner()), TSUnit(target));
+
                         if (goInfo->trap.spellId)
                             CastSpell(target, goInfo->trap.spellId, args);
 

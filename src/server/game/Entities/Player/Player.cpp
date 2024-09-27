@@ -2226,7 +2226,7 @@ void Player::ResetAllPowers()
             SetPower(POWER_RUNIC_POWER, 0);
             break;
         case POWER_FOCUS:
-            SetPower(POWER_FOCUS, 0);
+            SetFullPower(POWER_FOCUS);
             break;
         default:
             break;
@@ -10088,7 +10088,7 @@ Item* Player::GetItemByPos(uint8 bag, uint8 slot) const
 
 // hater: add check for weapon
 bool Player::IsUnarmed() const {
-    if (auto item = GetItemByPos(NULL_BAG, EQUIPMENT_SLOT_MAINHAND))
+    if (auto item = GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND))
         return false;
 
     return true;
