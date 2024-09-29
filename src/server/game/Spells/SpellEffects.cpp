@@ -3007,7 +3007,7 @@ void Spell::EffectTameCreature()
     // "kill" original creature
     creatureTarget->DespawnOrUnsummon();
 
-    uint8 level = (creatureTarget->GetLevel() < (unitCaster->GetLevel() - 5)) ? (unitCaster->GetLevel() - 5) : creatureTarget->GetLevel();
+    uint8 level = unitCaster->GetLevel();
 
     // prepare visual effect for levelup
     pet->SetUInt32Value(UNIT_FIELD_LEVEL, level - 1);
@@ -3021,12 +3021,14 @@ void Spell::EffectTameCreature()
     // caster have pet now
     unitCaster->SetMinion(pet, true);
 
-    pet->InitTalentForLevel();
+    // pet->InitTalentForLevel();
 
     if (unitCaster->GetTypeId() == TYPEID_PLAYER)
     {
         pet->SavePetToDB(PET_SAVE_AS_CURRENT);
         unitCaster->ToPlayer()->PetSpellInitialize();
+
+        FIRE_ID(pet->GetCreatureTemplate()->events.id,Creature, InitPetSpells, TSCreature(pet), TSPlayer(unitCaster->ToPlayer()));
     }
 }
 
@@ -3395,9 +3397,6 @@ void Spell::EffectWeaponDmg()
     //         break;
     //     }
     // }
-
-    if (unitCaster->IsPlayer())
-        FIRE(Player, OnCustomScriptedWeaponDamageMod, TSPlayer(const_cast<Player*>(unitCaster->ToPlayer())), TSUnit(const_cast<Unit*>(unitTarget)), TSSpellInfo(m_spellInfo), TSMutableNumber<float>(&totalDamagePercentMod), TSMutableNumber<int32>(&fixed_bonus), TSMutableNumber<int32>(&spell_bonus));
 
     bool normalized = false;
     float weaponDamagePercentMod = 1.0f;

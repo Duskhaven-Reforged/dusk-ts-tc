@@ -2972,9 +2972,8 @@ void UnitAura::FillTargetMap(std::unordered_map<Unit*, uint8>& targets, Unit* ca
                 extraSearchRadius = radius > 0.0f ? EXTRA_CELL_SEARCH_RADIUS : 0.0f;
                 break;
             case SPELL_EFFECT_APPLY_AREA_AURA_PET:
-                if (!condList || sConditionMgr->IsObjectMeetToConditions(GetUnitOwner(), ref, *condList))
-                    units.push_back(GetUnitOwner());
-                [[fallthrough]];
+                selectionType = TARGET_CHECK_PET;
+                break;
             case SPELL_EFFECT_APPLY_AREA_AURA_OWNER:
             {
                 if (Unit* owner = GetUnitOwner()->GetCharmerOrOwner())

@@ -6836,8 +6836,14 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
     float DoneTotalMod = donePctTotal ? *donePctTotal : SpellDamagePctDone(victim, spellProto, damagetype);
 
     uint32 damageTypeMask = 1 << damagetype;
-    if (IsPlayer())
-        FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(victim), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), TSNumber<uint8>(damageTypeMask));
+
+    if (IsPlayer()) {
+        FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(victim), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), false);
+    }
+    else if (IsPet() && GetOwner()) {
+        if (GetOwner()->IsPlayer())
+            FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(GetOwner()->ToPlayer())), TSUnit(victim), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), true);
+    }
 
     // done scripted mod (take it from owner)
     Unit const* owner = GetOwner() ? GetOwner() : this;
@@ -6867,36 +6873,6 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
     // Some spells don't benefit from pct done mods
     if (!spellProto->HasAttribute(SPELL_ATTR6_LIMIT_PCT_DAMAGE_MODS))
         DoneTotal += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_FLAT_SPELL_DAMAGE_VERSUS, victim->GetCreatureTypeMask());
-
-    // Custom scripted damage
-    switch (spellProto->SpellFamilyName)
-    {
-        case SPELLFAMILY_DEATHKNIGHT:
-            // Impurity (dummy effect)
-            if (GetTypeId() == TYPEID_PLAYER)
-            {
-                PlayerSpellMap const& playerSpells = ToPlayer()->GetSpellMap();
-                for (auto itr = playerSpells.begin(); itr != playerSpells.end(); ++itr)
-                {
-                    if (itr->second.state == PLAYERSPELL_REMOVED || itr->second.disabled)
-                        continue;
-
-                    switch (itr->first)
-                    {
-                        case 49220:
-                        case 49633:
-                        case 49635:
-                        case 49636:
-                        case 49638:
-                            if (SpellInfo const* proto = sSpellMgr->GetSpellInfo(itr->first))
-                                AddPct(ApCoeffMod, proto->GetEffect(EFFECT_0).CalcValue());
-                            break;
-                    }
-                }
-            }
-            break;
-        //case SPELLFAMILY_WARLOCK:
-    }
 
     // Done fixed damage bonus auras
     int32 DoneAdvertisedBenefit  = SpellBaseDamageBonusDone(spellProto->GetSchoolMask());
@@ -6951,16 +6927,6 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
         }
         DoneTotal += int32(DoneAdvertisedBenefit * coeff * factorMod);
     }
-
-    /*if (spellProto->Id == 1310048)      // Flame Convergence calc
-    {
-        if (victim->HasAura(1310031))
-        {
-            uint8 auraStacks = victim->GetAura(1310031)->GetStackAmount();
-            int32 dmgBonusPctMult = sSpellMgr->GetSpellInfo(1310047)->GetEffect(EFFECT_0).CalcValue();
-            DoneTotal += round(CalculatePct(DoneTotal, dmgBonusPctMult * auraStacks));
-        }
-    }*/
 
     float tmpDamage = float(int32(pdamage) + DoneTotal) * DoneTotalMod;
 
@@ -8433,6 +8399,15 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
 
             DoneTotalMod *= maxModDamagePercentSchool;
         }
+
+        if (IsPlayer()) {
+            FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(SPELL_DIRECT_DAMAGE), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), false);
+        }
+        else if (IsPet() && GetOwner()) {
+            if (GetOwner()->IsPlayer())
+                FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(GetOwner()->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(SPELL_DIRECT_DAMAGE), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), true);
+        }
+
     } else {
         // Aleist3r: moved this from StatSystem.cpp, probably a better idea to do it in this function
         AuraEffectList const& mModAutoAttack = GetAuraEffectsByType(SPELL_AURA_MOD_AUTOATTACK_DAMAGE_PCT);
@@ -8441,8 +8416,13 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
             AddPct(DoneTotalMod, (*i)->GetAmount());
         }
 
-        if (IsPlayer())
-            FIRE(Player, OnCustomScriptedAutoattackMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage));
+        if (IsPlayer()) {
+            FIRE(Player, OnCustomScriptedAutoattackMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), false);
+        }
+        else if (IsPet() && GetOwner()) {
+            if (GetOwner()->IsPlayer())
+                    FIRE(Player, OnCustomScriptedAutoattackMod, TSPlayer(const_cast<Player*>(GetOwner()->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), true);
+        }
     }
 
     DoneTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS, creatureTypeMask);
@@ -8542,9 +8522,6 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
                             AddPct(DoneTotalMod, aurEff->GetAmount());
                 break;
         }
-
-        if (IsPlayer())
-            FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(0), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), TSNumber<uint8>(1));
     }
 
     float tmpDamage = float(int32(pdamage) + DoneFlatBenefit) * DoneTotalMod;
@@ -10238,8 +10215,8 @@ void Unit::SetPower(Powers power, uint32 val, bool withPowerUpdate /*= true*/, b
         }
 
         // Update the pet's character sheet with happiness damage bonus
-        if (pet->getPetType() == HUNTER_PET && power == POWER_HAPPINESS)
-            pet->UpdateDamagePhysical(BASE_ATTACK);
+        // if (pet->getPetType() == HUNTER_PET && power == POWER_HAPPINESS)
+        //     pet->UpdateDamagePhysical(BASE_ATTACK);
     }
 }
 
@@ -10282,7 +10259,7 @@ uint32 Unit::GetCreatePowerValue(Powers power) const
         case POWER_ENERGY:
             return 100;
         case POWER_HAPPINESS:
-            return (GetTypeId() != TYPEID_UNIT || !ToCreature()->IsPet() || ToPet()->getPetType() != HUNTER_PET) ? 0 : 1050000;
+            return 1050000;
         case POWER_RUNIC_POWER:
             return 1000;
         case POWER_RUNE:
@@ -11870,7 +11847,7 @@ bool Unit::InitTamedPet(Pet* pet, uint8 level, uint32 spell_id)
     pet->GetCharmInfo()->SetPetNumber(sObjectMgr->GeneratePetNumber(), true);
     // this enables pet details window (Shift+P)
     pet->InitPetCreateSpells();
-    //pet->InitLevelupSpellsForLevel();
+    pet->InitLevelupSpellsForLevel();
     pet->SetFullHealth();
 
     pet->FillPetInfo(&petStable.CurrentPet.emplace());

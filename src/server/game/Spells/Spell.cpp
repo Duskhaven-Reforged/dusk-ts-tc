@@ -1108,6 +1108,7 @@ void Spell::SelectImplicitNearbyTargets(SpellEffectInfo const& spellEffectInfo, 
         case TARGET_CHECK_RAID:
         case TARGET_CHECK_RAID_CLASS:
         case TARGET_CHECK_SUMMON:
+        case TARGET_CHECK_PET:
             range = m_spellInfo->GetMaxRange(true, m_caster, this);
             break;
         case TARGET_CHECK_ENTRY:
@@ -8654,6 +8655,19 @@ bool WorldObjectSpellTargetCheck::operator()(WorldObject* target) const
                 if (!target->IsCorpse() && !_caster->IsValidAssistTarget(unitTarget, _spellInfo))
                     return false;
                 if (!refUnit->IsInRaidWith(unitTarget))
+                    return false;
+                break;
+            case TARGET_CHECK_PET:
+                if (!refUnit)
+                    return false;
+                if (unitTarget->IsTotem())
+                    return false;
+                if (!unitTarget->IsPet())
+                    return false;
+                // TODO: restore IsValidAttackTarget for corpses using corpse owner (faction, etc)
+                if (!target->IsCorpse() && !_caster->IsValidAssistTarget(unitTarget, _spellInfo))
+                    return false;
+                if (unitTarget->GetOwnerGUID() != refUnit->GetGUID())
                     return false;
                 break;
             case TARGET_CHECK_SUMMON:

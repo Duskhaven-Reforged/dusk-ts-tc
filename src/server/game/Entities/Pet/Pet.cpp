@@ -270,7 +270,7 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
             ReplaceAllPetFlags(petInfo->WasRenamed ? UNIT_PET_FLAG_CAN_BE_ABANDONED : (UNIT_PET_FLAG_CAN_BE_RENAMED | UNIT_PET_FLAG_CAN_BE_ABANDONED));
             ReplaceAllUnitFlags(UNIT_FLAG_PLAYER_CONTROLLED); // this enables popup window (pet abandon, cancel)
             SetMaxPower(POWER_HAPPINESS, GetCreatePowerValue(POWER_HAPPINESS));
-            SetPower(POWER_HAPPINESS, petInfo->Happiness);
+            SetFullPower(POWER_HAPPINESS);
             break;
         default:
             if (!IsPetGhoul())
@@ -396,7 +396,7 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
         if (!isTemporarySummon)
         {
             _LoadSpells(holder.GetPreparedResult(PetLoadQueryHolder::SPELLS));
-            InitTalentForLevel();                               // re-init to check talent count
+            // InitTalentForLevel();                               // re-init to check talent count
             GetSpellHistory()->LoadFromDB<Pet>(holder.GetPreparedResult(PetLoadQueryHolder::COOLDOWNS));
             LearnPetPassives();
             InitLevelupSpellsForLevel();
@@ -593,8 +593,8 @@ void Pet::setDeathState(DeathState s)                       // overwrite virtual
             RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
 
             // lose happiness when died and not in BG/Arena
-            if (!GetMap()->IsBattlegroundOrArena())
-                ModifyPower(POWER_HAPPINESS, -HAPPINESS_LEVEL_SIZE);
+            // if (!GetMap()->IsBattlegroundOrArena())
+            //     ModifyPower(POWER_HAPPINESS, -HAPPINESS_LEVEL_SIZE);
 
             //SetUnitFlag(UNIT_FLAG_STUNNED);
         }
@@ -712,23 +712,18 @@ void Pet::Update(uint32 diff)
 
 void Pet::LoseHappiness()
 {
-    uint32 curValue = GetPower(POWER_HAPPINESS);
-    if (curValue <= 0)
-        return;
-    int32 addvalue = 670;                                   //value is 70/35/17/8/4 (per min) * 1000 / 8 (timer 7.5 secs)
-    if (IsInCombat())                                        //we know in combat happiness fades faster, multiplier guess
-        addvalue = int32(addvalue * 1.5f);
-    ModifyPower(POWER_HAPPINESS, -addvalue);
+    // uint32 curValue = GetPower(POWER_HAPPINESS);
+    // if (curValue <= 0)
+    //     return;
+    // int32 addvalue = 670;                                   //value is 70/35/17/8/4 (per min) * 1000 / 8 (timer 7.5 secs)
+    // if (IsInCombat())                                        //we know in combat happiness fades faster, multiplier guess
+    //     addvalue = int32(addvalue * 1.5f);
+    // ModifyPower(POWER_HAPPINESS, -addvalue);
 }
 
 HappinessState Pet::GetHappinessState()
 {
-    if (GetPower(POWER_HAPPINESS) < HAPPINESS_LEVEL_SIZE)
-        return UNHAPPY;
-    else if (GetPower(POWER_HAPPINESS) >= HAPPINESS_LEVEL_SIZE * 2)
-        return HAPPY;
-    else
-        return CONTENT;
+    return HAPPY;
 }
 
 void Pet::Remove(PetSaveMode mode, bool returnreagent)
@@ -845,6 +840,7 @@ bool Pet::CreateBaseAtTamed(CreatureTemplate const* cinfo, Map* map, uint32 phas
 
     SetMaxPower(POWER_HAPPINESS, GetCreatePowerValue(POWER_HAPPINESS));
     SetPower(POWER_HAPPINESS, 166500);
+    SetFullPower(POWER_FOCUS);
     SetPetNameTimestamp(0);
     SetPetExperience(0);
     SetPetNextLevelExperience(uint32(sObjectMgr->GetXPForLevel(GetLevel()+1)*PET_XP_FACTOR));
@@ -1539,41 +1535,41 @@ bool Pet::learnSpell(uint32 spell_id)
 
 void Pet::InitLevelupSpellsForLevel()
 {
-    uint8 level = GetLevel();
+    // uint8 level = GetLevel();
 
-    if (PetLevelupSpellSet const* levelupSpells = GetCreatureTemplate()->family ? sSpellMgr->GetPetLevelupSpellList(GetCreatureTemplate()->family) : nullptr)
-    {
-        // PetLevelupSpellSet ordered by levels, process in reversed order
-        for (PetLevelupSpellSet::const_reverse_iterator itr = levelupSpells->rbegin(); itr != levelupSpells->rend(); ++itr)
-        {
-            // will called first if level down
-            if (itr->first > level)
-                unlearnSpell(itr->second, true);                 // will learn prev rank if any
-            // will called if level up
-            else
-                learnSpell(itr->second);                        // will unlearn prev rank if any
-        }
-    }
+    // if (PetLevelupSpellSet const* levelupSpells = GetCreatureTemplate()->family ? sSpellMgr->GetPetLevelupSpellList(GetCreatureTemplate()->family) : nullptr)
+    // {
+    //     // PetLevelupSpellSet ordered by levels, process in reversed order
+    //     for (PetLevelupSpellSet::const_reverse_iterator itr = levelupSpells->rbegin(); itr != levelupSpells->rend(); ++itr)
+    //     {
+    //         // will called first if level down
+    //         if (itr->first > level)
+    //             unlearnSpell(itr->second, true);                 // will learn prev rank if any
+    //         // will called if level up
+    //         else
+    //             learnSpell(itr->second);                        // will unlearn prev rank if any
+    //     }
+    // }
 
-    int32 petSpellsId = GetCreatureTemplate()->PetSpellDataId ? -(int32)GetCreatureTemplate()->PetSpellDataId : GetEntry();
+    // int32 petSpellsId = GetCreatureTemplate()->PetSpellDataId ? -(int32)GetCreatureTemplate()->PetSpellDataId : GetEntry();
 
-    // default spells (can be not learned if pet level (as owner level decrease result for example) less first possible in normal game)
-    if (PetDefaultSpellsEntry const* defSpells = sSpellMgr->GetPetDefaultSpellsEntry(petSpellsId))
-    {
-        for (uint32 spellId : defSpells->spellid)
-        {
-            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
-            if (!spellInfo)
-                continue;
+    // // default spells (can be not learned if pet level (as owner level decrease result for example) less first possible in normal game)
+    // if (PetDefaultSpellsEntry const* defSpells = sSpellMgr->GetPetDefaultSpellsEntry(petSpellsId))
+    // {
+    //     for (uint32 spellId : defSpells->spellid)
+    //     {
+    //         SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+    //         if (!spellInfo)
+    //             continue;
 
-            // will called first if level down
-            if (spellInfo->SpellLevel > level)
-                unlearnSpell(spellInfo->Id, true);
-            // will called if level up
-            else
-                learnSpell(spellInfo->Id);
-        }
-    }
+    //         // will called first if level down
+    //         if (spellInfo->SpellLevel > level)
+    //             unlearnSpell(spellInfo->Id, true);
+    //         // will called if level up
+    //         else
+    //             learnSpell(spellInfo->Id);
+    //     }
+    // }
 }
 
 bool Pet::unlearnSpell(uint32 spell_id, bool learn_prev, bool clear_ab)
