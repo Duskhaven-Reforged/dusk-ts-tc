@@ -5826,10 +5826,20 @@ void Spell::EffectRemoveCurrentSpellCooldown()
     if (m_caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    uint32 SpellId = effectInfo->TriggerSpell;
     Player* player = m_caster->ToPlayer();
-
-    player->GetSpellHistory()->ResetCooldown(SpellId, true);
+    if (auto Mode = effectInfo->MiscValue) {
+        flag96 Flags = effectInfo->SpellClassMask;
+        uint32 Family = GetSpellInfo()->SpellFamilyName;
+        player->GetSpellHistory()->ResetCooldowns([Family, Flags](SpellHistory::CooldownStorageType::iterator itr) -> bool
+            {
+                SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(itr->first);
+                TC_LOG_INFO("server.worldserver", "{} {}", spellInfo->SpellFamilyName == Family, Flags[0] & spellInfo->SpellFamilyFlags[0] || Flags[1] & spellInfo->SpellFamilyFlags[1] || Flags[2] & spellInfo->SpellFamilyFlags[2]);
+                return spellInfo->SpellFamilyName == Family && (Flags[0] & spellInfo->SpellFamilyFlags[0] || Flags[1] & spellInfo->SpellFamilyFlags[1] || Flags[2] & spellInfo->SpellFamilyFlags[2]);
+            }, true);
+    } else {
+        uint32 SpellId = effectInfo->TriggerSpell;
+        player->GetSpellHistory()->ResetCooldown(SpellId, true);
+    }
 }
 
 void Spell::EffectRestoreSpellCharge()

@@ -4297,7 +4297,6 @@ void Unit::RemoveAurasWithInterruptFlags(uint32 flag, uint32 except, Unit* caste
             if (caster->IsPlayer())
                 FIRE_ID(aura->GetSpellInfo()->events.id, Spell, CanAuraBeBrokenBySpell, TSUnit(caster->ToPlayer()), TSUnit(this), TSAura(aura), TSSpellInfo(ExceptInfo), TSNumber<uint8>(damagetype), TSMutable<bool, bool>(&CanBeBrokenBySpell));
         
-        TC_LOG_INFO("server.worldserver", "Can break aura: {}", CanBeBrokenBySpell);
         if ((aura->GetSpellInfo()->AuraInterruptFlags & flag) && (!except || aura->GetId() != except) && CanBeBrokenBySpell)
         {
             uint32 removedAuras = m_removedAurasCount;
