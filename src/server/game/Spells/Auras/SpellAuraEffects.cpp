@@ -1894,56 +1894,60 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
     Unit* target = aurApp->GetTarget();
 
     uint32 modelid = 0;
-    Powers PowerType = POWER_MANA;
+    int8 Power = POWER_MANA;
     ShapeshiftForm form = ShapeshiftForm(GetMiscValue());
 
-    switch (form)
-    {
-        case FORM_CAT:                                      // 0x01
-        case FORM_GHOUL:                                    // 0x07
-            PowerType = POWER_ENERGY;
-            break;
+    FIRE(Unit,OnHandleShapeshiftPower,TSUnit(target),TSNumber<int32>(GetMiscValue()),TSMutableNumber<int8>(&Power));
 
-        case FORM_BEAR:                                     // 0x05
-        case FORM_DIREBEAR:                                 // 0x08
+    Powers PowerType = Powers(Power);
 
-        case FORM_BATTLESTANCE:                             // 0x11
-        case FORM_DEFENSIVESTANCE:                          // 0x12
-        case FORM_BERSERKERSTANCE:                          // 0x13
-            PowerType = POWER_RAGE;
-            break;
-
-        case FORM_TREE:                                     // 0x02
-        case FORM_TRAVEL:                                   // 0x03
-        case FORM_AQUA:                                     // 0x04
-        case FORM_AMBIENT:                                  // 0x06
-
-        case FORM_STEVES_GHOUL:                             // 0x09
-        case FORM_THARONJA_SKELETON:                        // 0x0A
-        case FORM_TEST_OF_STRENGTH:                         // 0x0B
-        case FORM_BLB_PLAYER:                               // 0x0C
-        case FORM_SHADOW_DANCE:                             // 0x0D
-        case FORM_CREATUREBEAR:                             // 0x0E
-        case FORM_CREATURECAT:                              // 0x0F
-        case FORM_GHOSTWOLF:                                // 0x10
-
-        case FORM_TEST:                                     // 0x14
-        case FORM_ZOMBIE:                                   // 0x15
-        case FORM_METAMORPHOSIS:                            // 0x16
-        case FORM_UNDEAD:                                   // 0x19
-        case FORM_MASTER_ANGLER:                            // 0x1A
-        case FORM_FLIGHT_EPIC:                              // 0x1B
-        case FORM_SHADOW:                                   // 0x1C
-        case FORM_FLIGHT:                                   // 0x1D
-        case FORM_STEALTH:                                  // 0x1E
-        case FORM_MOONKIN:                                  // 0x1F
-        case FORM_SPIRITOFREDEMPTION:                       // 0x20
-            break;
-        default:;
-            // @tswow-begin we allow custom shapeshift types, but beware: masks do not work (they are uint32's)
-            //TC_LOG_ERROR("spells.aura.effect", "Auras: Unknown Shapeshift Type: {}", GetMiscValue());
-            // @swow-end
-    }
+    //switch (form)
+    //{
+    //    case FORM_CAT:                                      // 0x01
+    //    case FORM_GHOUL:                                    // 0x07
+    //        PowerType = POWER_ENERGY;
+    //        break;
+    //
+    //    case FORM_BEAR:                                     // 0x05
+    //    case FORM_DIREBEAR:                                 // 0x08
+    //
+    //    case FORM_BATTLESTANCE:                             // 0x11
+    //    case FORM_DEFENSIVESTANCE:                          // 0x12
+    //    case FORM_BERSERKERSTANCE:                          // 0x13
+    //        PowerType = POWER_RAGE;
+    //        break;
+    //
+    //    case FORM_TREE:                                     // 0x02
+    //    case FORM_TRAVEL:                                   // 0x03
+    //    case FORM_AQUA:                                     // 0x04
+    //    case FORM_AMBIENT:                                  // 0x06
+    //
+    //    case FORM_STEVES_GHOUL:                             // 0x09
+    //    case FORM_THARONJA_SKELETON:                        // 0x0A
+    //    case FORM_TEST_OF_STRENGTH:                         // 0x0B
+    //    case FORM_BLB_PLAYER:                               // 0x0C
+    //    case FORM_SHADOW_DANCE:                             // 0x0D
+    //    case FORM_CREATUREBEAR:                             // 0x0E
+    //    case FORM_CREATURECAT:                              // 0x0F
+    //    case FORM_GHOSTWOLF:                                // 0x10
+    //
+    //    case FORM_TEST:                                     // 0x14
+    //    case FORM_ZOMBIE:                                   // 0x15
+    //    case FORM_METAMORPHOSIS:                            // 0x16
+    //    case FORM_UNDEAD:                                   // 0x19
+    //    case FORM_MASTER_ANGLER:                            // 0x1A
+    //    case FORM_FLIGHT_EPIC:                              // 0x1B
+    //    case FORM_SHADOW:                                   // 0x1C
+    //    case FORM_FLIGHT:                                   // 0x1D
+    //    case FORM_STEALTH:                                  // 0x1E
+    //    case FORM_MOONKIN:                                  // 0x1F
+    //    case FORM_SPIRITOFREDEMPTION:                       // 0x20
+    //        break;
+    //    default:;
+    //        // @tswow-begin we allow custom shapeshift types, but beware: masks do not work (they are uint32's)
+    //        //TC_LOG_ERROR("spells.aura.effect", "Auras: Unknown Shapeshift Type: {}", GetMiscValue());
+    //        // @swow-end
+    //}
 
     modelid = target->GetModelForForm(form, GetId());
 
