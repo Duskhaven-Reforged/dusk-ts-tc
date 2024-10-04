@@ -6116,10 +6116,15 @@ void AuraEffect::HandleProcTriggerSpellCopyOfTrigger(AuraApplication* aurApp, Pr
     Unit* target;
     SpellInfo const* triggering;
     int32 amount = 0;
+    bool IsDamage = false;
+    auto DamageType = DamageEffectType::DIRECT_DAMAGE;
+
     if (auto damageInfo = eventInfo.GetDamageInfo()) {
         triggering = damageInfo->GetSpellInfo();
         target = damageInfo->GetVictim();
         amount = damageInfo->GetDamage();
+        IsDamage = true;
+        DamageType = damageInfo->GetDamageType();
     }
     else if (auto healInfo = eventInfo.GetHealInfo()) {
         triggering = healInfo->GetSpellInfo();
@@ -6134,12 +6139,13 @@ void AuraEffect::HandleProcTriggerSpellCopyOfTrigger(AuraApplication* aurApp, Pr
         if (proc->IsTriggered() && GetMiscValueB() < 1)
             return;
 
-    if (triggering)
-    {
-        CastSpellExtraArgs args;
-        args.AddSpellMod(SPELLVALUE_BASE_POINT0, amount);
-        args.SetTriggerFlags(TRIGGERED_FULL_MASK);
-        triggerCaster->CastSpell(target, triggering->Id, args);
+    if (triggering) {
+        if (IsDamage) {
+            triggerCaster->DealDamage(triggerCaster, target, amount, nullptr, DamageType, triggering->GetSchoolMask(), triggering);
+        } else {
+            HealInfo info(triggerCaster, target, amount, triggering, triggering->GetSchoolMask());
+            triggerCaster->DealHeal(info);
+        }
     }
 }
 
