@@ -5798,49 +5798,54 @@ void Unit::SetPowerType(Powers new_powertype, bool sendUpdate/* = true*/)
 
 void Unit::UpdateDisplayPower()
 {
-    Powers displayPower = POWER_MANA;
-    switch (GetShapeshiftForm())
-    {
-        case FORM_GHOUL:
-        case FORM_CAT:
-            displayPower = POWER_ENERGY;
-            break;
-        case FORM_BEAR:
-        case FORM_DIREBEAR:
-            displayPower = POWER_RAGE;
-            break;
-        case FORM_TRAVEL:
-        case FORM_GHOSTWOLF:
-            displayPower = POWER_MANA;
-            break;
-        default:
-        {
-            if (GetTypeId() == TYPEID_PLAYER)
-            {
-                ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(GetClass());
-                if (cEntry && cEntry->DisplayPower < MAX_POWERS)
-                    displayPower = Powers(cEntry->DisplayPower);
-            }
-            else if (GetTypeId() == TYPEID_UNIT)
-            {
-                if (Vehicle* vehicle = GetVehicleKit())
-                {
-                    if (PowerDisplayEntry const* powerDisplay = sPowerDisplayStore.LookupEntry(vehicle->GetVehicleInfo()->PowerDisplayID))
-                        displayPower = Powers(powerDisplay->ActualType);
-                    else if (GetClass() == CLASS_ROGUE)
-                        displayPower = POWER_ENERGY;
-                }
-                else if (Pet* pet = ToPet())
-                {
-                    if (pet->getPetType() == HUNTER_PET) // Hunter pets have focus
-                        displayPower = POWER_FOCUS;
-                    else if (pet->IsPetGhoul() || pet->IsRisenAlly()) // DK pets have energy
-                        displayPower = POWER_ENERGY;
-                }
-            }
-            break;
-        }
-    }
+    int8 power = POWER_MANA;
+
+    FIRE(Unit,OnUpdateDisplayPower,TSUnit(this),TSMutableNumber<int8>(&power));
+
+    Powers displayPower = Powers(power);
+
+    //switch (GetShapeshiftForm())
+    //{
+    //    case FORM_GHOUL:
+    //    case FORM_CAT:
+    //        displayPower = POWER_ENERGY;
+    //        break;
+    //    case FORM_BEAR:
+    //    case FORM_DIREBEAR:
+    //        displayPower = POWER_RAGE;
+    //        break;
+    //    case FORM_TRAVEL:
+    //    case FORM_GHOSTWOLF:
+    //        displayPower = POWER_MANA;
+    //        break;
+    //    default:
+    //    {
+    //        if (GetTypeId() == TYPEID_PLAYER)
+    //        {
+    //            ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(GetClass());
+    //            if (cEntry && cEntry->DisplayPower < MAX_POWERS)
+    //                displayPower = Powers(cEntry->DisplayPower);
+    //        }
+    //        else if (GetTypeId() == TYPEID_UNIT)
+    //        {
+    //            if (Vehicle* vehicle = GetVehicleKit())
+    //            {
+    //                if (PowerDisplayEntry const* powerDisplay = sPowerDisplayStore.LookupEntry(vehicle->GetVehicleInfo()->PowerDisplayID))
+    //                    displayPower = Powers(powerDisplay->ActualType);
+    //                else if (GetClass() == CLASS_ROGUE)
+    //                    displayPower = POWER_ENERGY;
+    //            }
+    //            else if (Pet* pet = ToPet())
+    //            {
+    //                if (pet->getPetType() == HUNTER_PET) // Hunter pets have focus
+    //                    displayPower = POWER_FOCUS;
+    //                else if (pet->IsPetGhoul() || pet->IsRisenAlly()) // DK pets have energy
+    //                    displayPower = POWER_ENERGY;
+    //            }
+    //        }
+    //        break;
+    //    }
+    //}
 
     SetPowerType(displayPower);
 }
