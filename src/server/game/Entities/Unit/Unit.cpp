@@ -923,7 +923,10 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
 
         victim->ModifyHealth(-(int32)damage);
         // Damage taken
-        FIRE(Unit, OnDamageTaken, TSUnit(victim), TSUnit(attacker), damage)
+        FIRE(Unit, OnDamageTaken, TSUnit(victim), TSUnit(attacker), damage);
+
+        if (auto creature = victim->ToCreature())
+            FIRE_ID(creature->GetCreatureTemplate()->events.id, Creature, OnDamageTaken, TSCreature(creature), TSUnit(attacker), damage);
 
         if (damagetype == DIRECT_DAMAGE || damagetype == SPELL_DIRECT_DAMAGE)
             victim->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_DIRECT_DAMAGE, spellProto ? spellProto->Id : 0);

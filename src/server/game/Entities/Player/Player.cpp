@@ -5562,14 +5562,6 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
     switch (combatRating)
     {
         case CR_HASTE:
-            // @dh-begin
-            FIRE(
-                Player,OnUpdateHaste
-                , TSPlayer(this)
-                , TSMutableNumber<float>(&newVal)
-            );
-            // @dh-end
-
             ApplyAttackTimePercentMod(BASE_ATTACK, oldVal, false);
             ApplyAttackTimePercentMod(OFF_ATTACK, oldVal, false);
             ApplyAttackTimePercentMod(BASE_ATTACK, newVal, true);
