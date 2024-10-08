@@ -152,6 +152,14 @@ private:
     void SendClearCooldowns(std::vector<int32> const& cooldowns) const;
     CooldownStorageType::iterator EraseCooldown(CooldownStorageType::iterator itr)
     {
+        /** @dh-begin*/
+        FIRE(Unit
+            , OnCooldownReset, TSUnit(_owner)
+            , TSNumber<uint32>(itr->second.SpellId)
+            , TSNumber<uint32>(itr->second.CategoryId)
+            , TSNumber<uint32>(itr->second.ItemId));
+        /** @dh-end*/
+
         _categoryCooldowns.erase(itr->second.CategoryId);
         return _spellCooldowns.erase(itr);
     }
