@@ -40,16 +40,16 @@ float dodge_cap[MAX_CLASSES] =
     145.560408f,    // Rogue
     150.375940f,    // Priest
     65.631440f,     // DK
-    145.560408f,    // Shaman
+    65.631440f,    // Shaman
     150.375940f,    // Mage
     150.375940f,    // Warlock
     0.0f,           // ??
     116.890707f,     // Druid
 
     // default values for custom classes
-    100,100,100,100,100,100,100,
-    100,100,100,100,100,100,100,
-    100,100,100,100,100,100,100,
+    65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,
+    65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,
+    65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,
 };
 // @tswow-end
 
@@ -65,8 +65,8 @@ float miss_cap[MAX_CLASSES] =
     16.00f,     // Shaman  //?
     16.00f,     // Mage    //?
     16.00f,     // Warlock //?
-    0.0f,       // ??
-    16.00f,      // Druid   //?
+    16.00f,     // ??
+    16.00f,     // Druid   //?
 
     // default values for custom classes
     16,16,16,16,16,16,16,
@@ -105,15 +105,15 @@ float parry_cap[MAX_CLASSES] =
     145.560408f,    // Rogue
     0.0f,           // Priest
     65.631440f,     // DK
-    145.560408f,    // Shaman
+    65.631440f,    // Shaman
     0.0f,           // Mage
     0.0f,           // Warlock
     0.0f,           // ??
     0.0f,           // Druid
 
     // default values for custom classes
-    0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,
+    65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,
+    65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,65.631440f,
 };
 // @tswow-end
 
@@ -819,29 +819,23 @@ void Player::UpdateCritPercentage(WeaponAttackType attType)
         case OFF_ATTACK:
             modGroup = OFFHAND_CRIT_PERCENTAGE;
             index = PLAYER_OFFHAND_CRIT_PERCENTAGE;
-            cr = CR_CRIT_MELEE;
+            cr = CR_CRIT;
             break;
         case RANGED_ATTACK:
             modGroup = RANGED_CRIT_PERCENTAGE;
             index = PLAYER_RANGED_CRIT_PERCENTAGE;
-            cr = CR_CRIT_RANGED;
+            cr = CR_CRIT;
             break;
         case BASE_ATTACK:
         default:
             modGroup = CRIT_PERCENTAGE;
             index = PLAYER_CRIT_PERCENTAGE;
-            cr = CR_CRIT_MELEE;
+            cr = CR_CRIT;
             break;
     }
 
     // flat = bonus from crit auras, pct = bonus from agility, combat rating = mods from items
-    float value = GetBaseModValue(modGroup, FLAT_MOD) + GetBaseModValue(modGroup, PCT_MOD) + GetRatingBonusValue(cr);
-
-    if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
-         value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_CRIT) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_CRIT) : value;
-
-    value = std::max(0.0f, value);
-
+    float value = GetBaseModValue(modGroup, FLAT_MOD) + GetBaseModValue(modGroup, PCT_MOD);
     // @tswow-begin
     FIRE(
         Player,OnUpdateCrit
@@ -850,6 +844,12 @@ void Player::UpdateCritPercentage(WeaponAttackType attType)
         , uint32(attType)
     );
     // @tswow-end
+
+    if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
+         value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_CRIT) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_CRIT) : value;
+
+    value = std::max(0.0f, value);
+
     SetStatFloatValue(index, value);
 }
 
@@ -898,14 +898,15 @@ float CalculateDiminishingReturns(float const (&capArray)[MAX_CLASSES], uint8 pl
 
 float Player::GetMissPercentageFromDefense() const
 {
-    // hater: deprecated
-    float diminishing = 0.0f, nondiminishing = 0.0f;
-    // Modify value from defense skill (only bonus from defense rating diminishes)
-    nondiminishing += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
-    diminishing += (GetRatingBonusValue(CR_DEFENSE_SKILL) * 0.04f);
+    // // hater: deprecated
+    // float diminishing = 0.0f, nondiminishing = 0.0f;
+    // // Modify value from defense skill (only bonus from defense rating diminishes)
+    // nondiminishing += (int32(GetSkillValue(SKILL_DEFENSE)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
+    // diminishing += (GetRatingBonusValue(CR_DEFENSE_SKILL) * 0.04f);
 
-    // apply diminishing formula to diminishing miss chance
-    return CalculateDiminishingReturns(miss_cap, GetClass(), nondiminishing, diminishing);
+    // // apply diminishing formula to diminishing miss chance
+    // return CalculateDiminishingReturns(miss_cap, GetClass(), nondiminishing, diminishing);
+    return 0.f;
 }
 
 // @tswow-begin move parry-cap to top of file
@@ -931,14 +932,15 @@ void Player::UpdateParryPercentage()
              value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_PARRY) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_PARRY) : value;
 
         value = value < 0.0f ? 0.0f : value;
+
+        // @tswow-begin
+        FIRE(
+              Player,OnUpdateParryPercentage
+            , TSPlayer(this)
+            , TSMutableNumber<float>(&value)
+        );
+        // @tswow-end
     }
-    // @tswow-begin
-    FIRE(
-          Player,OnUpdateParryPercentage
-        , TSPlayer(this)
-        , TSMutableNumber<float>(&value)
-    );
-    // @tswow-end
     SetStatFloatValue(PLAYER_PARRY_PERCENTAGE, value);
 }
 
@@ -991,7 +993,7 @@ void Player::UpdateSpellCritChance(uint32 school)
     // Increase crit by school from SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL
     crit += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL, 1<<school);
     // Increase crit from spell crit ratings
-    crit += GetRatingBonusValue(CR_CRIT_SPELL);
+    crit += GetRatingBonusValue(CR_CRIT);
 
     // @tswow-begin
     FIRE(
@@ -1826,6 +1828,9 @@ void Guardian::UpdateDamagePhysical(WeaponAttackType attType)
         return;
 
     float bonusDamage = 0.0f;
+    float mindamage = 0; //((base_value + weapon_mindamage) * base_pct + total_value) * total_pct;
+    float maxdamage = 0; //((base_value + weapon_maxdamage) * base_pct + total_value) * total_pct;
+
     if (m_owner->GetTypeId() == TYPEID_PLAYER)
     {
         FIRE_ID(
@@ -1851,43 +1856,55 @@ void Guardian::UpdateDamagePhysical(WeaponAttackType attType)
         //     if (spellDmg > 0)
         //         bonusDamage = spellDmg * 0.4f;
         // }
+            //  Pet's base damage changes depending on happiness
+        // if (IsHunterPet())
+        // {
+        //     switch (ToPet()->GetHappinessState())
+        //     {
+        //         case HAPPY:
+        //             // 125% of normal damage
+        //             mindamage = mindamage * 1.25f;
+        //             maxdamage = maxdamage * 1.25f;
+        //             break;
+        //         case CONTENT:
+        //             // 100% of normal damage, nothing to modify
+        //             break;
+        //         case UNHAPPY:
+        //             // 75% of normal damage
+        //             mindamage = mindamage * 0.75f;
+        //             maxdamage = maxdamage * 0.75f;
+        //             break;
+        //     }
+        // }
+        // @tswow-begin
+        FIRE_ID(
+              GetCreatureTemplate()->events.id
+            , Creature,OnPetUpdateDamagePhysical
+            , TSCreature(this)
+            , TSPlayer(m_owner->ToPlayer())
+            , TSMutableNumber<float>(&mindamage)
+            , TSMutableNumber<float>(&maxdamage)
+            , TSNumber<float>(bonusDamage)
+            , uint8(attType)
+        );
+        // @tswow-end
+    } else {
+        UnitMods unitMod = UNIT_MOD_DAMAGE_MAINHAND;
+
+        float att_speed = float(GetAttackTime(BASE_ATTACK))/1000.0f;
+
+        float base_value  = GetFlatModifierValue(unitMod, BASE_VALUE) + GetTotalAttackPowerValue(attType) / 14.0f * att_speed + bonusDamage;
+        float base_pct    = GetPctModifierValue(unitMod, BASE_PCT);
+        float total_value = GetFlatModifierValue(unitMod, TOTAL_VALUE);
+        float total_pct   = GetPctModifierValue(unitMod, TOTAL_PCT);
+
+        float weapon_mindamage = GetWeaponDamageRange(BASE_ATTACK, MINDAMAGE);
+        float weapon_maxdamage = GetWeaponDamageRange(BASE_ATTACK, MAXDAMAGE);
+        mindamage = ((base_value + weapon_mindamage) * base_pct + total_value) * total_pct;
+        maxdamage = ((base_value + weapon_maxdamage) * base_pct + total_value) * total_pct;
     }
 
-    // UnitMods unitMod = UNIT_MOD_DAMAGE_MAINHAND;
 
-    // float att_speed = float(GetAttackTime(BASE_ATTACK))/1000.0f;
-
-    // float base_value  = GetFlatModifierValue(unitMod, BASE_VALUE) + GetTotalAttackPowerValue(attType) / 14.0f * att_speed + bonusDamage;
-    // float base_pct    = GetPctModifierValue(unitMod, BASE_PCT);
-    // float total_value = GetFlatModifierValue(unitMod, TOTAL_VALUE);
-    // float total_pct   = GetPctModifierValue(unitMod, TOTAL_PCT);
-
-    // float weapon_mindamage = GetWeaponDamageRange(BASE_ATTACK, MINDAMAGE);
-    // float weapon_maxdamage = GetWeaponDamageRange(BASE_ATTACK, MAXDAMAGE);
-
-    float mindamage = 0; //((base_value + weapon_mindamage) * base_pct + total_value) * total_pct;
-    float maxdamage = 0; //((base_value + weapon_maxdamage) * base_pct + total_value) * total_pct;
-
-    //  Pet's base damage changes depending on happiness
-    // if (IsHunterPet())
-    // {
-    //     switch (ToPet()->GetHappinessState())
-    //     {
-    //         case HAPPY:
-    //             // 125% of normal damage
-    //             mindamage = mindamage * 1.25f;
-    //             maxdamage = maxdamage * 1.25f;
-    //             break;
-    //         case CONTENT:
-    //             // 100% of normal damage, nothing to modify
-    //             break;
-    //         case UNHAPPY:
-    //             // 75% of normal damage
-    //             mindamage = mindamage * 0.75f;
-    //             maxdamage = maxdamage * 0.75f;
-    //             break;
-    //     }
-    // }
 
     // /// @todo: remove this
     // Unit::AuraEffectList const& mDummy = GetAuraEffectsByType(SPELL_AURA_MOD_ATTACKSPEED);
@@ -1904,19 +1921,6 @@ void Guardian::UpdateDamagePhysical(WeaponAttackType attType)
     //             break;
     //     }
     // }
-
-    // @tswow-begin
-    FIRE_ID(
-          GetCreatureTemplate()->events.id
-        , Creature,OnPetUpdateDamagePhysical
-        , TSCreature(this)
-        , TSPlayer(m_owner->ToPlayer())
-        , TSMutableNumber<float>(&mindamage)
-        , TSMutableNumber<float>(&maxdamage)
-        , TSNumber<float>(bonusDamage)
-        , uint8(attType)
-    );
-    // @tswow-end
 
     SetStatFloatValue(UNIT_FIELD_MINDAMAGE, mindamage);
     SetStatFloatValue(UNIT_FIELD_MAXDAMAGE, maxdamage);
