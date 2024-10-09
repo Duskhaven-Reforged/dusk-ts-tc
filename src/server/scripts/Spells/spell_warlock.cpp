@@ -1823,17 +1823,17 @@ void AddSC_warlock_spell_scripts()
     RegisterSpellScriptWithArgs(spell_warl_t4_2p_bonus<SPELL_WARLOCK_SHADOWFLAME>, "spell_warl_t4_2p_bonus_fire");
     RegisterSpellScript(spell_warl_unstable_affliction);
     // Duskhaven
-    RegisterSpellScript(spell_warl_chaos_bolt);
-    RegisterSpellScript(spell_warl_corruption);
-    RegisterSpellScript(spell_warl_demonbolt);
-    RegisterSpellScript(spell_warl_demonbolt_aoe);
-    RegisterSpellScript(spell_warl_felfire_bolt);
-    RegisterSpellScript(spell_warl_felfire_bolts_channel);
-    RegisterSpellScript(spell_warl_felfire_bolts_cast);
-    RegisterSpellScript(spell_warl_grimoire_shadowy_assistance);
-    RegisterSpellScript(spell_warl_grimoire_burning_synergy);
-    RegisterSpellScript(spell_warl_remove_sacrificial_power);
-    RegisterSpellScript(spell_warl_sacrifice_demon);
-    RegisterSpellScript(spell_warl_shadowburn);
-    RegisterSpellScript(spell_warl_soulrend);
+    // RegisterSpellScript(spell_warl_chaos_bolt);
+    // RegisterSpellScript(spell_warl_corruption);
+    // RegisterSpellScript(spell_warl_demonbolt);
+    // RegisterSpellScript(spell_warl_demonbolt_aoe);
+    // RegisterSpellScript(spell_warl_felfire_bolt);
+    // RegisterSpellScript(spell_warl_felfire_bolts_channel);
+    // RegisterSpellScript(spell_warl_felfire_bolts_cast);
+    // RegisterSpellScript(spell_warl_grimoire_shadowy_assistance);
+    // RegisterSpellScript(spell_warl_grimoire_burning_synergy);
+    // RegisterSpellScript(spell_warl_remove_sacrificial_power);
+    // RegisterSpellScript(spell_warl_sacrifice_demon);
+    // RegisterSpellScript(spell_warl_shadowburn);
+    // RegisterSpellScript(spell_warl_soulrend);
 }

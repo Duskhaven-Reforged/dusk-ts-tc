@@ -176,5 +176,5 @@ void AddSC_shaman_pet_scripts()
 {
     RegisterCreatureAI(npc_pet_shaman_earth_elemental);
     RegisterCreatureAI(npc_pet_shaman_fire_elemental);
-    RegisterCreatureAI(npc_pet_shaman_storm_elemental);
+    // RegisterCreatureAI(npc_pet_shaman_storm_elemental);
 }
