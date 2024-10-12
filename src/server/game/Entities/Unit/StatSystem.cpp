@@ -835,7 +835,9 @@ void Player::UpdateCritPercentage(WeaponAttackType attType)
     }
 
     // flat = bonus from crit auras, pct = bonus from agility, combat rating = mods from items
-    float value = GetBaseModValue(modGroup, FLAT_MOD) + GetBaseModValue(modGroup, PCT_MOD);
+    float value = GetBaseModValue(modGroup, FLAT_MOD);
+    value += GetMeleeCritFromAgility();
+    value += GetSpellCritFromIntellect();
     // @tswow-begin
     FIRE(
         Player,OnUpdateCrit
@@ -982,7 +984,7 @@ void Player::UpdateSpellCritChance(uint32 school)
         return;
     }
     // For others recalculate it from:
-    float crit = 5.0f;
+    float crit = 0.0f;
     // Crit from Intellect
     crit += GetSpellCritFromIntellect();
     crit += GetMeleeCritFromAgility();
@@ -992,8 +994,6 @@ void Player::UpdateSpellCritChance(uint32 school)
     crit += GetTotalAuraModifier(SPELL_AURA_MOD_CRIT_PCT);
     // Increase crit by school from SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL
     crit += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL, 1<<school);
-    // Increase crit from spell crit ratings
-    crit += GetRatingBonusValue(CR_CRIT);
 
     // @tswow-begin
     FIRE(
@@ -1150,7 +1150,7 @@ void Player::UpdatePowerRegen(Powers power)
         {
             float Intellect = GetStat(STAT_INTELLECT);
             // Mana regen from spirit and intellect
-            float power_regen = std::sqrt(Intellect) * OCTRegenMPPerSpirit();
+            float power_regen = 4 + (Intellect / 40.f);
             // Apply PCT bonus from SPELL_AURA_MOD_POWER_REGEN_PERCENT aura on spirit base regen
             power_regen *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, POWER_MANA);
 
@@ -1180,8 +1180,8 @@ void Player::UpdatePowerRegen(Powers power)
             result_regen                = power_regen_mp5 + power_regen;
             result_regen_interrupted    = power_regen_mp5 + CalculatePct(power_regen, modManaRegenInterrupt);
 
-            if (GetLevel() < 15)
-                modifier *= 2.066f - (GetLevel() * 0.066f);
+            // if (GetLevel() < 15)
+            //     modifier *= 2.066f - (GetLevel() * 0.066f);
 
             // @tswow-begin
             FIRE(Player, OnUpdateManaRegen
@@ -1195,6 +1195,7 @@ void Player::UpdatePowerRegen(Powers power)
         }
         case POWER_RAGE:
         case POWER_ENERGY:
+        case POWER_FOCUS:
         case POWER_RUNIC_POWER:
         {
             result_regen                = powerRegenInfo[AsUnderlyingType(power)].first;
@@ -1221,7 +1222,7 @@ void Player::UpdatePowerRegen(Powers power)
     if (power != POWER_MANA)
         result_regen -= powerRegenInfo[AsUnderlyingType(power)].first;
 
-    if (power == POWER_ENERGY)
+    if (power == POWER_ENERGY || power == POWER_FOCUS)
         result_regen_interrupted = result_regen;
 
     SetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER + AsUnderlyingType(power), result_regen);

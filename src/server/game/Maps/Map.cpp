@@ -3968,7 +3968,6 @@ Map::EnterState InstanceMap::CannotEnter(Player* player)
     if (player->GetMapRef().getTarget() == this)
     {
         TC_LOG_ERROR("maps", "InstanceMap::CannotEnter - player {} {} already in map {}, {}, {}!", player->GetName(), player->GetGUID().ToString(), GetId(), GetInstanceId(), GetSpawnMode());
-        ABORT();
         return CANNOT_ENTER_ALREADY_IN_MAP;
     }
 
@@ -3992,11 +3991,11 @@ Map::EnterState InstanceMap::CannotEnter(Player* player)
     // @tswow-end
         return CANNOT_ENTER_ZONE_IN_COMBAT;
 
-    // cannot enter if player is permanent saved to a different instance id
-    if (InstancePlayerBind* playerBind = player->GetBoundInstance(GetId(), GetDifficulty()))
-        if (playerBind->perm && playerBind->save)
-            if (playerBind->save->GetInstanceId() != GetInstanceId())
-                return CANNOT_ENTER_INSTANCE_BIND_MISMATCH;
+    // // cannot enter if player is permanent saved to a different instance id
+    // if (InstancePlayerBind* playerBind = player->GetBoundInstance(GetId(), GetDifficulty()))
+    //     if (playerBind->perm && playerBind->save)
+    //         if (playerBind->save->GetInstanceId() != GetInstanceId())
+    //             return CANNOT_ENTER_INSTANCE_BIND_MISMATCH;
 
     return Map::CannotEnter(player);
 }
@@ -4043,7 +4042,7 @@ bool InstanceMap::AddPlayerToMap(Player* player)
                 if (playerBind->save != mapSave)
                 {
                     TC_LOG_ERROR("maps", "InstanceMap::Add: player {} {} is permanently bound to instance {} {}, {}, {}, {}, {}, {} but he is being put into instance {} {}, {}, {}, {}, {}, {}", player->GetName(), player->GetGUID().ToString(), GetMapName(), playerBind->save->GetMapId(), playerBind->save->GetInstanceId(), static_cast<uint32>(playerBind->save->GetDifficulty()), playerBind->save->GetPlayerCount(), playerBind->save->GetGroupCount(), playerBind->save->CanReset(), GetMapName(), mapSave->GetMapId(), mapSave->GetInstanceId(), static_cast<uint32>(mapSave->GetDifficulty()), mapSave->GetPlayerCount(), mapSave->GetGroupCount(), mapSave->CanReset());
-                    return false;
+                    // return false;
                 }
             }
             else

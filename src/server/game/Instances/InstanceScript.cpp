@@ -904,7 +904,7 @@ void InstanceScript::UpdateEncounterState(EncounterCreditType type, uint32 credi
                 updated = true;
 
             // @dh-begin
-            // Add FIRE for encounter completed
+            
             // @dh-end
 
             if (encounter->lastEncounterDungeon)

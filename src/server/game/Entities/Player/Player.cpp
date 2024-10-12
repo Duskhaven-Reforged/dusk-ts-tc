@@ -5381,28 +5381,15 @@ uint32 Player::GetShieldBlockValue() const
 
 float Player::GetMeleeCritFromAgility() const
 {
-    uint8 level = GetLevel();
-    uint32 pclass = GetClass();
-
-    if (level > GT_MAX_LEVEL)
-        level = GT_MAX_LEVEL;
-
-    GtChanceToMeleeCritBaseEntry const* critBase  = sGtChanceToMeleeCritBaseStore.LookupEntry(pclass-1);
-    GtChanceToMeleeCritEntry     const* critRatio = sGtChanceToMeleeCritStore.LookupEntry((pclass-1)*GT_MAX_LEVEL + level-1);
-    if (critBase == nullptr || critRatio == nullptr)
-        return 0.0f;
-
-    float crit = critBase->Data + GetStat(STAT_AGILITY)*critRatio->Data;
+    float crit = 0.0f;
 
     FIRE(Player,OnCalcAgilityCritBonus
         ,TSPlayer(const_cast<Player*>(this))
         ,TSMutableNumber<float>(&crit)
         ,GetStat(STAT_AGILITY)
-        ,critBase->Data
-        ,critRatio->Data
     );
 
-    return crit*100.0f;
+    return crit;
 }
 
 // @tswow-begin move dodge_base/crit_to_doge values to global scope and remove const
@@ -5419,7 +5406,7 @@ float dodge_base[MAX_CLASSES] =
      0.0f, // Mage
      0.0f, // Warlock
      0.0f, // ??
-     0.056097f, // Druid
+     0.0f, // Druid
 
      // default values for custom classes
     .0f,.0f,.0f,.0f,.0f,.0f,.0f,
@@ -5472,14 +5459,13 @@ void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing) cons
 
 float Player::GetSpellCritFromIntellect() const
 {
-    float crit = 0;
-
+    float crit = 0.f;
     FIRE(Player,OnCalcIntellectCritBonus
         ,TSPlayer(const_cast<Player*>(this))
         ,TSMutableNumber<float>(&crit)
     );
 
-    return crit * 100.0f;
+    return crit;
 }
 
 float Player::GetRatingMultiplier(CombatRating cr) const
@@ -5656,6 +5642,11 @@ void Player::UpdateRating(CombatRating cr)
     {
         case CR_WEAPON_SKILL:                               // Implemented in Unit::RollMeleeOutcomeAgainst
         case CR_DEFENSE_SKILL:
+            break;
+        case CR_MASTERY:
+            UpdateDodgePercentage();
+            UpdateParryPercentage();
+            UpdateBlockPercentage();
             break;
         case CR_DODGE:
             UpdateDodgePercentage();
@@ -19395,7 +19386,7 @@ InstancePlayerBind* Player::BindToInstance(InstanceSave* save, bool permanent, B
         }
 
         if (permanent)
-            save->SetCanReset(false);
+            save->SetCanReset(true);
 
         bind.save = save;
         bind.perm = permanent;
@@ -19605,46 +19596,48 @@ bool Player::CheckInstanceValidity(bool /*isLogin*/)
         return true;
 
     // raid instances require the player to be in a raid group to be valid
-    if (map->IsRaid() && !sWorld->getBoolConfig(CONFIG_INSTANCE_IGNORE_RAID))
+    if (map->IsRaid() && !sWorld->getBoolConfig(CONFIG_INSTANCE_IGNORE_RAID)) {
         if (!GetGroup() || !GetGroup()->isRaidGroup())
             return false;
 
-    if (Group* group = GetGroup())
-    {
-        // check if player's group is bound to this instance
-        InstanceGroupBind* bind = group->GetBoundInstance(map->GetDifficulty(), map->GetId());
-        if (!bind || !bind->save || bind->save->GetInstanceId() != map->GetInstanceId())
-            return false;
+        if (Group* group = GetGroup())
+        {
+            // check if player's group is bound to this instance
+            InstanceGroupBind* bind = group->GetBoundInstance(map->GetDifficulty(), map->GetId());
+            if (!bind || !bind->save || bind->save->GetInstanceId() != map->GetInstanceId())
+                return false;
 
-        Map::PlayerList const& players = map->GetPlayers();
-        if (!players.isEmpty())
-            for (Map::PlayerList::const_iterator it = players.begin(); it != players.end(); ++it)
-            {
-                if (Player* otherPlayer = it->GetSource())
+            Map::PlayerList const& players = map->GetPlayers();
+            if (!players.isEmpty())
+                for (Map::PlayerList::const_iterator it = players.begin(); it != players.end(); ++it)
                 {
-                    if (otherPlayer->IsGameMaster())
-                        continue;
-                    if (!otherPlayer->m_InstanceValid) // ignore players that currently have a homebind timer active
-                        continue;
-                    if (group != otherPlayer->GetGroup())
-                        return false;
+                    if (Player* otherPlayer = it->GetSource())
+                    {
+                        if (otherPlayer->IsGameMaster())
+                            continue;
+                        if (!otherPlayer->m_InstanceValid) // ignore players that currently have a homebind timer active
+                            continue;
+                        if (group != otherPlayer->GetGroup())
+                            return false;
+                    }
                 }
-            }
-    }
-    else
-    {
-        // instance is invalid if we are not grouped and there are other players
-        if (map->GetPlayersCountExceptGMs() > 1)
-            return false;
+        }
+        else
+        {
+            // instance is invalid if we are not grouped and there are other players
+            if (map->GetPlayersCountExceptGMs() > 1)
+                return false;
 
-        // check if the player is bound to this instance
-        InstancePlayerBind* bind = GetBoundInstance(map->GetId(), map->GetDifficulty());
-        if (!bind || !bind->save || bind->save->GetInstanceId() != map->GetInstanceId())
-            return false;
-    }
+            // check if the player is bound to this instance
+            InstancePlayerBind* bind = GetBoundInstance(map->GetId(), map->GetDifficulty());
+            if (!bind || !bind->save || bind->save->GetInstanceId() != map->GetInstanceId())
+                return false;
+        }
 
+    }
     return true;
 }
+
 
 bool Player::_LoadHomeBind(PreparedQueryResult result)
 {
@@ -20896,7 +20889,7 @@ void Player::ResetInstances(uint8 method, bool isRaid)
         if (method == INSTANCE_RESET_ALL)
         {
             // the "reset all instances" method can only reset normal maps
-            if (entry->InstanceType == MAP_RAID || diff == DUNGEON_DIFFICULTY_HEROIC)
+            if (diff == DUNGEON_DIFFICULTY_HEROIC)
             {
                 ++itr;
                 continue;
