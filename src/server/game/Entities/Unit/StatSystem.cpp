@@ -1146,7 +1146,8 @@ void Player::UpdatePowerRegen(Powers power)
         {
             float Intellect = GetStat(STAT_INTELLECT);
             // Mana regen from spirit and intellect
-            float power_regen = 4 + (Intellect / 40.f);
+            float power_regen = 4;
+
             // Apply PCT bonus from SPELL_AURA_MOD_POWER_REGEN_PERCENT aura on spirit base regen
             power_regen *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, POWER_MANA);
 
@@ -1163,6 +1164,15 @@ void Player::UpdatePowerRegen(Powers power)
 
             float power_regen_mp5 = (GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, POWER_MANA) * mult + m_baseManaRegen) / 5.0f;
 
+            // @tswow-begin
+            FIRE(Player, OnUpdateManaRegen
+                , TSPlayer(this)
+                , TSMutableNumber<float>(&power_regen)
+                , TSMutableNumber<float>(&power_regen_mp5)
+                , TSMutableNumber<int32>(&modManaRegenInterrupt)
+            );
+            // @tswow-end
+
             // Get bonus from SPELL_AURA_MOD_MANA_REGEN_FROM_STAT aura
             AuraEffectList const& regenAura = GetAuraEffectsByType(SPELL_AURA_MOD_MANA_REGEN_FROM_STAT);
             for (AuraEffectList::const_iterator i = regenAura.begin(); i != regenAura.end(); ++i)
@@ -1178,15 +1188,6 @@ void Player::UpdatePowerRegen(Powers power)
 
             // if (GetLevel() < 15)
             //     modifier *= 2.066f - (GetLevel() * 0.066f);
-
-            // @tswow-begin
-            FIRE(Player, OnUpdateManaRegen
-                , TSPlayer(this)
-                , TSMutableNumber<float>(&power_regen)
-                , TSMutableNumber<float>(&power_regen_mp5)
-                , TSMutableNumber<int32>(&modManaRegenInterrupt)
-            );
-            // @tswow-end
             break;
         }
         case POWER_RAGE:

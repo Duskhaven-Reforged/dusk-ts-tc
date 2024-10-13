@@ -885,7 +885,7 @@ void InstanceScript::SendEncounterUnit(EncounterFrameType type, Unit const* unit
     instance->SendToPlayers(&data);
 }
 
-void InstanceScript::UpdateEncounterState(EncounterCreditType type, uint32 creditEntry, Unit* /*source*/)
+void InstanceScript::UpdateEncounterState(EncounterCreditType type, uint32 creditEntry, Unit* source)
 {
     DungeonEncounterList const* encounters = sObjectMgr->GetDungeonEncounterList(instance->GetId(), instance->GetDifficulty());
     if (!encounters)
@@ -904,7 +904,11 @@ void InstanceScript::UpdateEncounterState(EncounterCreditType type, uint32 credi
                 updated = true;
 
             // @dh-begin
-            
+            if (updated && source)
+                if (InstanceScript* instanceScript = source->GetInstanceScript()) {
+                    if (instance->IsRaid())
+                        FIRE_ID(instance->GetEntry()->ID, Instance, OnRaidBossKilled, TSInstance(instance, this), completedEncounters, TSUnit(source));
+                }
             // @dh-end
 
             if (encounter->lastEncounterDungeon)
@@ -929,11 +933,9 @@ void InstanceScript::UpdateEncounterState(EncounterCreditType type, uint32 credi
                     {
                         sLFGMgr->FinishDungeon(grp->GetGUID(), dungeonId, instance);
                         return;
+                    } else if (instance->IsHeroic()) {
+                        FIRE_ID(instance->GetEntry()->ID, Instance, OnDungeonCompleted, TSInstance(instance, this));
                     }
-
-                    // @dh-begin
-                    // Add FIRE for dungeon completed
-                    // @dh-end
                 }
             }
         }

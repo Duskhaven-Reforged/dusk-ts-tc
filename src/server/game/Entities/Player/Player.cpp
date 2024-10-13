@@ -7576,9 +7576,9 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
             case ITEM_MOD_HASTE_RATING:
                 ApplyRatingMod(CR_HASTE, int32(val), apply);
                 break;
-            // case ITEM_MOD_EXPERTISE_RATING: hater: disable
-            //     ApplyRatingMod(CR_EXPERTISE, int32(val), apply);
-            //     break;
+            case ITEM_MOD_MASTERY:
+                ApplyRatingMod(CR_MASTERY, int32(val), apply);
+                break;
             case ITEM_MOD_ATTACK_POWER:
                 HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(val), apply);
                 HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(val), apply);
@@ -24450,7 +24450,13 @@ bool Player::IsAtGroupRewardDistance(WorldObject const* pRewardSource) const
     if (pRewardSource->GetMap()->IsDungeon())
         return true;
 
-    return pRewardSource->GetDistance(player) <= sWorld->getFloatConfig(CONFIG_GROUP_XP_DISTANCE);
+    if (pRewardSource->GetDistance(player) > sWorld->getFloatConfig(CONFIG_GROUP_XP_DISTANCE))
+        return false;
+
+    bool CanLoot = true;
+    FIRE(Player, CanLoot, TSPlayer(const_cast<Player*>(this)), TSWorldObject(const_cast<WorldObject*>(pRewardSource)), TSMutable<bool, bool>(&CanLoot));
+
+    return CanLoot;
 }
 
 bool Player::IsAtRecruitAFriendDistance(WorldObject const* pOther) const
