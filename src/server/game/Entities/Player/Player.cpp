@@ -2026,11 +2026,11 @@ void Player::RegenerateAll()
     Regenerate(POWER_ENERGY);
     Regenerate(POWER_FOCUS);
     Regenerate(POWER_MANA);
-    Regenerate(POWER_RUNIC_POWER);
+
     Regenerate(POWER_RAGE);
     //@tswow-begin
-    //if (HasRunes())
-    //    Regenerate(POWER_RUNIC_POWER);
+    if (HasRunes())
+        Regenerate(POWER_RUNIC_POWER);
 
     // Runes act as cooldowns, and they don't need to send any data
     //@tswow-begin
@@ -5375,8 +5375,17 @@ float Player::GetTotalBaseModValue(BaseModGroup modGroup) const
 
 uint32 Player::GetShieldBlockValue() const
 {
-    float value = std::max(0.f, (m_auraBaseFlatMod[SHIELD_BLOCK_VALUE] + GetStat(STAT_STRENGTH) * 0.5f - 10) * m_auraBasePctMod[SHIELD_BLOCK_VALUE]);
-    return uint32(value);
+    float value = m_auraBaseFlatMod[SHIELD_BLOCK_VALUE]; // from gear
+    FIRE(Player,OnCalcBlockValueFlat
+        ,TSPlayer(const_cast<Player*>(this))
+        ,TSMutableNumber<float>(&value)
+    );
+    float pct = m_auraBasePctMod[SHIELD_BLOCK_VALUE];
+    FIRE(Player,OnCalcBlockValuePctMod
+        ,TSPlayer(const_cast<Player*>(this))
+        ,TSMutableNumber<float>(&value)
+    );
+    return uint32(std::max(0.f, value * pct));
 }
 
 float Player::GetMeleeCritFromAgility() const
@@ -5393,68 +5402,15 @@ float Player::GetMeleeCritFromAgility() const
 }
 
 // @tswow-begin move dodge_base/crit_to_doge values to global scope and remove const
-// Table for base dodge values
-float dodge_base[MAX_CLASSES] =
-{
-     0.0f, // Warrior
-     0.0f, // Paladin
-     0.0f, // Hunter
-     0.0f, // Rogue
-     0.0f, // Priest
-     0.0f, // DK
-     0.0f, // Shaman
-     0.0f, // Mage
-     0.0f, // Warlock
-     0.0f, // ??
-     0.0f, // Druid
 
-     // default values for custom classes
-    .0f,.0f,.0f,.0f,.0f,.0f,.0f,
-    .0f,.0f,.0f,.0f,.0f,.0f,.0f,
-    .0f,.0f,.0f,.0f,.0f,.0f,.0f,
-};
-// Crit/agility to dodge/agility coefficient multipliers; 3.2.0 increased required agility by 15%
-float crit_to_dodge[MAX_CLASSES] =
-{
-     0.85f/1.15f,    // Warrior
-     1.00f/1.15f,    // Paladin
-     1.11f/1.15f,    // Hunter
-     2.00f/1.15f,    // Rogue
-     1.00f/1.15f,    // Priest
-     0.85f/1.15f,    // DK
-     1.60f/1.15f,    // Shaman
-     1.00f/1.15f,    // Mage
-     0.97f/1.15f,    // Warlock (?)
-     0.0f,           // ??
-     2.00f/1.15f,     // Druid
-
-     // default values for custom classes
-     .87f,.87f,.87f,.87f,.87f,.87f,.87f,
-     .87f,.87f,.87f,.87f,.87f,.87f,.87f,
-     .87f,.87f,.87f,.87f,.87f,.87f,.87f,
-};
 void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing) const
 {
-// @tswow-end
-
-    uint8 level = GetLevel();
-    uint32 pclass = GetClass();
-
-    if (level > GT_MAX_LEVEL)
-        level = GT_MAX_LEVEL;
-
-    // Dodge per agility is proportional to crit per agility, which is available from DBC files
-    GtChanceToMeleeCritEntry  const* dodgeRatio = sGtChanceToMeleeCritStore.LookupEntry((pclass-1)*GT_MAX_LEVEL + level-1);
-    if (dodgeRatio == nullptr || pclass > MAX_CLASSES)
-        return;
-
-    /// @todo research if talents/effects that increase total agility by x% should increase non-diminishing part
-    float base_agility = GetCreateStat(STAT_AGILITY) * GetPctModifierValue(UnitMods(UNIT_MOD_STAT_START + AsUnderlyingType(STAT_AGILITY)), BASE_PCT);
-    float bonus_agility = GetStat(STAT_AGILITY) - base_agility;
-
-    // calculate diminishing (green in char screen) and non-diminishing (white) contribution
-    diminishing = 100.0f * bonus_agility * dodgeRatio->Data * crit_to_dodge[pclass-1];
-    nondiminishing = 100.0f * (dodge_base[pclass-1] + base_agility * dodgeRatio->Data * crit_to_dodge[pclass-1]);
+    // @tswow-end
+    FIRE(Player,OnCalcDodgeFromAgility
+        ,TSPlayer(const_cast<Player*>(this))
+        ,TSMutableNumber<float>(&diminishing)
+    );
+    nondiminishing = 0.f;
 }
 
 float Player::GetSpellCritFromIntellect() const
@@ -19596,48 +19552,47 @@ bool Player::CheckInstanceValidity(bool /*isLogin*/)
         return true;
 
     // raid instances require the player to be in a raid group to be valid
-    if (map->IsRaid() && !sWorld->getBoolConfig(CONFIG_INSTANCE_IGNORE_RAID)) {
+    if (map->IsRaid() && !sWorld->getBoolConfig(CONFIG_INSTANCE_IGNORE_RAID))
         if (!GetGroup() || !GetGroup()->isRaidGroup())
             return false;
 
-        if (Group* group = GetGroup())
-        {
-            // check if player's group is bound to this instance
-            InstanceGroupBind* bind = group->GetBoundInstance(map->GetDifficulty(), map->GetId());
-            if (!bind || !bind->save || bind->save->GetInstanceId() != map->GetInstanceId())
-                return false;
+    if (Group* group = GetGroup())
+    {
+        // check if player's group is bound to this instance
+        InstanceGroupBind* bind = group->GetBoundInstance(map->GetDifficulty(), map->GetId());
+        if (!bind || !bind->save || bind->save->GetInstanceId() != map->GetInstanceId())
+            return false;
 
-            Map::PlayerList const& players = map->GetPlayers();
-            if (!players.isEmpty())
-                for (Map::PlayerList::const_iterator it = players.begin(); it != players.end(); ++it)
+        Map::PlayerList const& players = map->GetPlayers();
+        if (!players.isEmpty())
+            for (Map::PlayerList::const_iterator it = players.begin(); it != players.end(); ++it)
+            {
+                if (Player* otherPlayer = it->GetSource())
                 {
-                    if (Player* otherPlayer = it->GetSource())
-                    {
-                        if (otherPlayer->IsGameMaster())
-                            continue;
-                        if (!otherPlayer->m_InstanceValid) // ignore players that currently have a homebind timer active
-                            continue;
-                        if (group != otherPlayer->GetGroup())
-                            return false;
-                    }
+                    if (otherPlayer->IsGameMaster())
+                        continue;
+                    if (!otherPlayer->m_InstanceValid) // ignore players that currently have a homebind timer active
+                        continue;
+                    if (group != otherPlayer->GetGroup())
+                        return false;
                 }
-        }
-        else
-        {
-            // instance is invalid if we are not grouped and there are other players
-            if (map->GetPlayersCountExceptGMs() > 1)
-                return false;
-
-            // check if the player is bound to this instance
-            InstancePlayerBind* bind = GetBoundInstance(map->GetId(), map->GetDifficulty());
-            if (!bind || !bind->save || bind->save->GetInstanceId() != map->GetInstanceId())
-                return false;
-        }
-
+            }
     }
+    else
+    {
+        // instance is invalid if we are not grouped and there are other players
+        if (map->GetPlayersCountExceptGMs() > 1)
+            return false;
+
+        // check if the player is bound to this instance
+        InstancePlayerBind* bind = GetBoundInstance(map->GetId(), map->GetDifficulty());
+        if (!bind || !bind->save || bind->save->GetInstanceId() != map->GetInstanceId())
+            return false;
+    }
+
+
     return true;
 }
-
 
 bool Player::_LoadHomeBind(PreparedQueryResult result)
 {

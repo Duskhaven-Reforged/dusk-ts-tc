@@ -578,12 +578,6 @@ void LoadAPFormulas()
                 case ClassStatValueTypes::PARRY_CAP:
                     parry_cap[cls] = value;
                     break;
-                case ClassStatValueTypes::DODGE_BASE:
-                    dodge_base[cls] = value;
-                    break;
-                case ClassStatValueTypes::CRIT_TO_DODGE:
-                    crit_to_dodge[cls] = value;
-                    break;
                 }
             } while (result->NextRow());
         }
@@ -924,6 +918,10 @@ void Player::UpdateParryPercentage()
         float nondiminishing  = 5.0f;
         // Parry from rating
         float diminishing = GetRatingBonusValue(CR_PARRY);
+        FIRE(Player,OnCalcParryFromStr
+            ,TSPlayer(const_cast<Player*>(this))
+            ,TSMutableNumber<float>(&diminishing)
+        );
         // Parry from SPELL_AURA_MOD_PARRY_PERCENT aura
         nondiminishing += GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
 
@@ -955,8 +953,6 @@ void Player::UpdateDodgePercentage()
     GetDodgeFromAgility(diminishing, nondiminishing);
     // Dodge from SPELL_AURA_MOD_DODGE_PERCENT aura
     nondiminishing += GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
-    // Dodge from rating
-    diminishing += GetRatingBonusValue(CR_DODGE);
 
     // apply diminishing formula to diminishing dodge chance
     float value = CalculateDiminishingReturns(dodge_cap, GetClass(), nondiminishing, diminishing);
