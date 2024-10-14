@@ -654,6 +654,10 @@ class TC_GAME_API World
         time_t GetNextWeeklyQuestsResetTime() const { return m_NextWeeklyQuestReset; }
         time_t GetNextRandomBGResetTime() const { return m_NextRandomBGReset; }
 
+        time_t GetNextDailyResetTime(time_t t);
+        time_t GetNextWeeklyResetTime(time_t t);
+        time_t GetNextMonthlyResetTime(time_t t);
+
         /// Get the maximum skill level a player can reach
         uint16 GetConfigMaxSkillValue() const
         {

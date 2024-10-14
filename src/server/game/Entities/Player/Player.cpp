@@ -24450,13 +24450,7 @@ bool Player::IsAtGroupRewardDistance(WorldObject const* pRewardSource) const
     if (pRewardSource->GetMap()->IsDungeon())
         return true;
 
-    if (pRewardSource->GetDistance(player) > sWorld->getFloatConfig(CONFIG_GROUP_XP_DISTANCE))
-        return false;
-
-    bool CanLoot = true;
-    FIRE(Player, CanLoot, TSPlayer(const_cast<Player*>(this)), TSWorldObject(const_cast<WorldObject*>(pRewardSource)), TSMutable<bool, bool>(&CanLoot));
-
-    return CanLoot;
+    return pRewardSource->GetDistance(player) <= sWorld->getFloatConfig(CONFIG_GROUP_XP_DISTANCE);
 }
 
 bool Player::IsAtRecruitAFriendDistance(WorldObject const* pOther) const

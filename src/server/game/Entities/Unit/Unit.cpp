@@ -14890,7 +14890,11 @@ void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player const* t
                             dynamicFlags |= UNIT_DYNFLAG_TAPPED_BY_PLAYER;
                     }
 
-                    if (!target->isAllowedToLoot(creature))
+                    bool CanLoot = target->isAllowedToLoot(creature);
+                    if (CanLoot)
+                        FIRE(Player, CanLoot, TSPlayer(const_cast<Player*>(target)), TSCreature(const_cast<Creature*>(creature)), TSMutable<bool, bool>(&CanLoot));
+
+                    if (!CanLoot)
                         dynamicFlags &= ~UNIT_DYNFLAG_LOOTABLE;
                 }
 

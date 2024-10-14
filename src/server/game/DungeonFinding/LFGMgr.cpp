@@ -1506,32 +1506,32 @@ void LFGMgr::FinishDungeon(ObjectGuid gguid, const uint32 dungeonId, Map const* 
             player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_USE_LFD_TO_GROUP_WITH_PLAYERS, lfdRandomPlayers);
         }
 
-        LfgReward const* reward = GetRandomDungeonReward(rDungeonId, player->GetLevel());
-        if (!reward)
-            continue;
+        // LfgReward const* reward = GetRandomDungeonReward(rDungeonId, player->GetLevel());
+        // if (!reward)
+        //     continue;
 
-        bool done = false;
-        Quest const* quest = sObjectMgr->GetQuestTemplate(reward->firstQuest);
-        if (!quest)
-            continue;
+        // bool done = false;
+        // Quest const* quest = sObjectMgr->GetQuestTemplate(reward->firstQuest);
+        // if (!quest)
+        //     continue;
 
-        // if we can take the quest, means that we haven't done this kind of "run", IE: First Heroic Random of Day.
-        if (player->CanRewardQuest(quest, false))
-            player->RewardQuest(quest, 0, nullptr, false);
-        else
-        {
-            done = true;
-            quest = sObjectMgr->GetQuestTemplate(reward->otherQuest);
-            if (!quest)
-                continue;
-            // we give reward without informing client (retail does this)
-            player->RewardQuest(quest, 0, nullptr, false);
-        }
+        // // if we can take the quest, means that we haven't done this kind of "run", IE: First Heroic Random of Day.
+        // if (player->CanRewardQuest(quest, false))
+        //     player->RewardQuest(quest, 0, nullptr, false);
+        // else
+        // {
+        //     done = true;
+        //     quest = sObjectMgr->GetQuestTemplate(reward->otherQuest);
+        //     if (!quest)
+        //         continue;
+        //     // we give reward without informing client (retail does this)
+        //     player->RewardQuest(quest, 0, nullptr, false);
+        // }
 
         // Give rewards
-        TC_LOG_DEBUG("lfg.dungeon.finish", "Group: {}, Player: {} done dungeon {}, {} previously done.", gguid.ToString(), guid.ToString(), GetDungeon(gguid), done ? " " : " not");
-        LfgPlayerRewardData data = LfgPlayerRewardData(dungeon->Entry(), GetDungeon(gguid, false), done, quest);
-        player->GetSession()->SendLfgPlayerReward(data);
+        // TC_LOG_DEBUG("lfg.dungeon.finish", "Group: {}, Player: {} done dungeon {}, {} previously done.", gguid.ToString(), guid.ToString(), GetDungeon(gguid), done ? " " : " not");
+        // LfgPlayerRewardData data = LfgPlayerRewardData(dungeon->Entry(), GetDungeon(gguid, false), done, quest);
+        // player->GetSession()->SendLfgPlayerReward(data);
     }
 }
 

@@ -3361,7 +3361,7 @@ void World::InitQuestResetTimes()
     m_NextMonthlyQuestReset = sWorld->getWorldState(WS_MONTHLY_QUEST_RESET_TIME);
 }
 
-static time_t GetNextDailyResetTime(time_t t)
+time_t World::GetNextDailyResetTime(time_t t)
 {
     return GetLocalHourTimestamp(t, sWorld->getIntConfig(CONFIG_DAILY_QUEST_RESET_TIME_HOUR), true);
 }
@@ -3390,7 +3390,7 @@ void World::ResetDailyQuests()
     TC_LOG_INFO("misc", "Daily quests for all characters have been reset.");
 }
 
-static time_t GetNextWeeklyResetTime(time_t t)
+time_t World::GetNextWeeklyResetTime(time_t t)
 {
     t = GetNextDailyResetTime(t);
     tm time = TimeBreakdown(t);
@@ -3426,7 +3426,7 @@ void World::ResetWeeklyQuests()
     TC_LOG_INFO("misc", "Weekly quests for all characters have been reset.");
 }
 
-static time_t GetNextMonthlyResetTime(time_t t)
+time_t World::GetNextMonthlyResetTime(time_t t)
 {
     t = GetNextDailyResetTime(t);
     tm time = TimeBreakdown(t);
