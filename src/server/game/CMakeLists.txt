@@ -101,11 +101,11 @@ target_link_libraries(game
   PRIVATE
     trinity-core-interface
     efsw
-    sol2
   PUBLIC
     # tswow-begin
     nlohmann_json::nlohmann_json
     liblua
+    sol2
     # sourcemaps
     TracyClient
     # tswow-end
