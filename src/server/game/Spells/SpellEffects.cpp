@@ -1795,9 +1795,10 @@ void Spell::EffectEnergize()
         return;
 
     Powers power = Powers(effectInfo->MiscValue);
-    if (unitTarget->GetTypeId() == TYPEID_PLAYER && unitTarget->GetPowerType() != power && m_spellInfo->SpellFamilyName != SPELLFAMILY_POTION
-        && !m_spellInfo->HasAttribute(SPELL_ATTR7_CAN_RESTORE_SECONDARY_POWER))
-        return;
+
+    // if (unitTarget->GetTypeId() == TYPEID_PLAYER && unitTarget->GetPowerType() != power && m_spellInfo->SpellFamilyName != SPELLFAMILY_POTION
+    //     && !m_spellInfo->HasAttribute(SPELL_ATTR7_CAN_RESTORE_SECONDARY_POWER))
+    //     return;
 
     if (unitTarget->GetMaxPower(power) == 0)
         return;
@@ -1868,8 +1869,8 @@ void Spell::EffectEnergizePct()
 
     Powers power = Powers(effectInfo->MiscValue);
 
-    if (unitTarget->GetTypeId() == TYPEID_PLAYER && unitTarget->GetPowerType() != power && !m_spellInfo->HasAttribute(SPELL_ATTR7_CAN_RESTORE_SECONDARY_POWER))
-        return;
+    // if (unitTarget->GetTypeId() == TYPEID_PLAYER && unitTarget->GetPowerType() != power && !m_spellInfo->HasAttribute(SPELL_ATTR7_CAN_RESTORE_SECONDARY_POWER))
+    //     return;
 
     uint32 maxPower = unitTarget->GetMaxPower(power);
     if (!maxPower)

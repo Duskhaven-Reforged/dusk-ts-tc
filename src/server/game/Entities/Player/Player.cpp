@@ -2029,7 +2029,7 @@ void Player::RegenerateAll()
 
     Regenerate(POWER_RAGE);
     //@tswow-begin
-    if (HasRunes())
+    //if (HasRunes()) // Aleist3r: pls don't touch this again, it breaks RP decay for priest and other classes using it as a base for their class specific resource
         Regenerate(POWER_RUNIC_POWER);
 
     // Runes act as cooldowns, and they don't need to send any data
