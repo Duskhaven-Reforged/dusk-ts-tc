@@ -27,6 +27,8 @@
 #include "Random.h"
 #include "World.h"
 
+#include "TSCreature.h"
+
  //
  // --------- LootItem ---------
  //
@@ -52,6 +54,8 @@ LootItem::LootItem(LootStoreItem const& li)
     is_underthreshold = false;
     is_counted = false;
     rollWinnerGUID = ObjectGuid::Empty;
+
+    droppedBy = li.droppedBy;
 }
 
 bool LootItem::AllowedForPlayer(Player const* player, ObjectGuid ownerGuid) const
@@ -103,7 +107,11 @@ bool LootItem::AllowedForPlayer(Player const* player, bool isGivenByMasterLooter
     if (!pProto->HasFlag(ITEM_FLAGS_CU_IGNORE_QUEST_STATUS) && ((needs_quest || (pProto->StartQuest && player->GetQuestStatus(pProto->StartQuest) != QUEST_STATUS_NONE)) && !player->HasQuestForItem(itemid)))
         return false;
 
-    return true;
+    bool CanLoot = true;
+    if (droppedBy != nullptr) {
+        FIRE(Player, CanLoot, TSPlayer(const_cast<Player*>(player)), TSCreature(droppedBy), TSMutable<bool, bool>(&CanLoot));
+    }
+    return CanLoot;
 }
 
 void LootItem::AddAllowedLooter(Player const* player)
@@ -196,7 +204,7 @@ void Loot::AddItem(LootStoreItem const& item)
 }
 
 // Calls processor of corresponding LootTemplate (which handles everything including references)
-bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bool personal, bool noEmptyError, uint16 lootMode /*= LOOT_MODE_DEFAULT*/)
+bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bool personal, bool noEmptyError, uint16 lootMode /*= LOOT_MODE_DEFAULT*/, Creature* container)
 {
     // Must be provided
     if (!lootOwner)
@@ -216,9 +224,8 @@ bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bo
     items.reserve(MAX_NR_LOOT_ITEMS);
     quest_items.reserve(MAX_NR_QUEST_ITEMS);
 
-    tab->Process(*this, store.IsRatesAllowed(), lootMode);          // Processing is done there, callback via Loot::AddItem()
-
-                                                                    // Setting access rights for group loot case
+    tab->Process(*this, store.IsRatesAllowed(), lootMode, 0, container);        // Processing is done there, callback via Loot::AddItem()
+                                                                                // Setting access rights for group loot case
     Group* group = lootOwner->GetGroup();
     if (!personal && group)
     {

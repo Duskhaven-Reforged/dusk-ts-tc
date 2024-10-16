@@ -88,7 +88,7 @@ class LootTemplate::LootGroup                               // A set of loot def
         bool HasQuestDrop() const;                          // True if group includes at least 1 quest drop entry
         bool HasQuestDropForPlayer(Player const* player) const;
                                                             // The same for active quests of the player
-        void Process(Loot& loot, uint16 lootMode) const;    // Rolls an item from the group (if any) and adds the item to the loot
+        void Process(Loot& loot, uint16 lootMode, Creature* creature) const; // Rolls an item from the group (if any) and adds the item to the loot
         float RawTotalChance() const;                       // Overall chance for the group (without equal chanced items)
         float TotalChance() const;                          // Overall chance for the group
 
@@ -101,7 +101,7 @@ class LootTemplate::LootGroup                               // A set of loot def
         LootStoreItemList ExplicitlyChanced;                // Entries with chances defined in DB
         LootStoreItemList EqualChanced;                     // Zero chances - every entry takes the same chance
 
-        LootStoreItem const* Roll(Loot& loot, uint16 lootMode) const;   // Rolls an item from the group, returns NULL if all miss their chances
+        LootStoreItem const* Roll(Loot& loot, uint16 lootMode, Creature* creature) const;   // Rolls an item from the group, returns NULL if all miss their chances
 
         // This class must never be copied - storing pointers
         LootGroup(LootGroup const&) = delete;
@@ -372,7 +372,7 @@ void LootTemplate::LootGroup::AddEntry(LootStoreItem* item)
 }
 
 // Rolls an item from the group, returns NULL if all miss their chances
-LootStoreItem const* LootTemplate::LootGroup::Roll(Loot& loot, uint16 lootMode) const
+LootStoreItem const* LootTemplate::LootGroup::Roll(Loot& loot, uint16 lootMode, Creature* creature) const
 {
     LootStoreItemList possibleLoot = ExplicitlyChanced;
     possibleLoot.remove_if(LootGroupInvalidSelector(loot, lootMode));
@@ -384,6 +384,8 @@ LootStoreItem const* LootTemplate::LootGroup::Roll(Loot& loot, uint16 lootMode) 
         for (LootStoreItemList::const_iterator itr = possibleLoot.begin(); itr != possibleLoot.end(); ++itr)   // check each explicitly chanced entry in the template and modify its chance based on quality.
         {
             LootStoreItem* item = *itr;
+            item->droppedBy = creature;
+
             if (item->chance >= 100.0f)
                 return item;
 
@@ -395,9 +397,11 @@ LootStoreItem const* LootTemplate::LootGroup::Roll(Loot& loot, uint16 lootMode) 
 
     possibleLoot = EqualChanced;
     possibleLoot.remove_if(LootGroupInvalidSelector(loot, lootMode));
-    if (!possibleLoot.empty())                              // If nothing selected yet - an item is taken from equal-chanced part
-        return Trinity::Containers::SelectRandomContainerElement(possibleLoot);
-
+    if (!possibleLoot.empty()) {                              // If nothing selected yet - an item is taken from equal-chanced part
+        LootStoreItem* item = Trinity::Containers::SelectRandomContainerElement(possibleLoot);
+        item->droppedBy = creature;
+        return item;
+    }
     return nullptr;                                            // Empty drop from the group
 }
 
@@ -439,9 +443,9 @@ void LootTemplate::LootGroup::CopyConditions(ConditionContainer /*conditions*/)
 }
 
 // Rolls an item from the group (if any takes its chance) and adds the item to the loot
-void LootTemplate::LootGroup::Process(Loot& loot, uint16 lootMode) const
+void LootTemplate::LootGroup::Process(Loot& loot, uint16 lootMode, Creature* creature) const
 {
-    if (LootStoreItem const* item = Roll(loot, lootMode))
+    if (LootStoreItem const* item = Roll(loot, lootMode, creature))
         loot.AddItem(*item);
 }
 
@@ -559,7 +563,7 @@ void LootTemplate::CopyConditions(LootItem* li) const
 }
 
 // Rolls for every item in the template and adds the rolled items the the loot
-void LootTemplate::Process(Loot& loot, bool rate, uint16 lootMode, uint8 groupId) const
+void LootTemplate::Process(Loot& loot, bool rate, uint16 lootMode, uint8 groupId, Creature* creature) const
 {
     if (groupId)                                            // Group reference uses own processing of the group
     {
@@ -569,7 +573,7 @@ void LootTemplate::Process(Loot& loot, bool rate, uint16 lootMode, uint8 groupId
         if (!Groups[groupId - 1])
             return;
 
-        Groups[groupId - 1]->Process(loot, lootMode);
+        Groups[groupId - 1]->Process(loot, lootMode, creature);
         return;
     }
 
@@ -583,6 +587,8 @@ void LootTemplate::Process(Loot& loot, bool rate, uint16 lootMode, uint8 groupId
         if (!item->Roll(rate))
             continue;                                           // Bad luck for the entry
 
+        item->droppedBy = creature;
+
         if (item->reference > 0)                            // References processing
         {
             LootTemplate const* Referenced = LootTemplates_Reference.GetLootFor(item->reference);
@@ -591,7 +597,7 @@ void LootTemplate::Process(Loot& loot, bool rate, uint16 lootMode, uint8 groupId
 
             uint32 maxcount = uint32(float(item->maxcount) * sWorld->getRate(RATE_DROP_ITEM_REFERENCED_AMOUNT));
             for (uint32 loop = 0; loop < maxcount; ++loop)      // Ref multiplicator
-                Referenced->Process(loot, rate, lootMode, item->groupid);
+                Referenced->Process(loot, rate, lootMode, item->groupid, creature);
         }
         else                                                    // Plain entries (not a reference, not grouped)
             loot.AddItem(*item);                                // Chance is already checked, just add
@@ -600,7 +606,7 @@ void LootTemplate::Process(Loot& loot, bool rate, uint16 lootMode, uint8 groupId
     // Now processing groups
     for (LootGroups::const_iterator i = Groups.begin(); i != Groups.end(); ++i)
         if (LootGroup* group = *i)
-            group->Process(loot, lootMode);
+            group->Process(loot, lootMode, creature);
 }
 
 // True if template includes at least 1 quest drop entry

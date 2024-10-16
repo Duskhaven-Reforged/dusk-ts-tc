@@ -142,6 +142,8 @@ struct TC_GAME_API LootItem
     // @tswow-begin
     uint32 fakeRandomSuffix = 0;
     uint32 fakeRandomPropertyId = 0;
+
+    Creature* droppedBy;
     // @tswow-end
 
     // Constructor, copies most fields from LootStoreItem, generates random count and random suffixes/properties
@@ -252,7 +254,7 @@ struct TC_GAME_API Loot
     void RemoveLooter(ObjectGuid GUID) { PlayersLooting.erase(GUID); }
 
     void generateMoneyLoot(uint32 minAmount, uint32 maxAmount);
-    bool FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bool personal, bool noEmptyError = false, uint16 lootMode = LOOT_MODE_DEFAULT);
+    bool FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bool personal, bool noEmptyError = false, uint16 lootMode = LOOT_MODE_DEFAULT, Creature* container = nullptr);
 
     // Inserts the item into the loot (called by LootTemplate processors)
     void AddItem(LootStoreItem const & item);

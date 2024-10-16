@@ -43,6 +43,8 @@ struct TC_GAME_API LootStoreItem
     uint8 maxcount;                                        // max drop count for the item mincount or Ref multiplicator
     ConditionContainer conditions;                         // additional loot condition
 
+    Creature* droppedBy = nullptr;
+
     // Constructor
     // displayid is filled in IsValid() which must be called after
     LootStoreItem(uint32 _itemid, uint32 _reference, float _chance, bool _needs_quest, uint16 _lootmode, uint8 _groupid, int32 _mincount, uint8 _maxcount)
@@ -108,7 +110,7 @@ class TC_GAME_API LootTemplate
         // Adds an entry to the group (at loading stage)
         void AddEntry(LootStoreItem* item);
         // Rolls for every item in the template and adds the rolled items the the loot
-        void Process(Loot& loot, bool rate, uint16 lootMode, uint8 groupId = 0) const;
+        void Process(Loot& loot, bool rate, uint16 lootMode, uint8 groupId = 0, Creature* creature =  nullptr) const;
         void CopyConditions(ConditionContainer const& conditions);
         void CopyConditions(LootItem* li) const;
 

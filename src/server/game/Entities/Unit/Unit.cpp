@@ -11973,7 +11973,7 @@ bool Unit::InitTamedPet(Pet* pet, uint8 level, uint32 spell_id)
                 // @tswow-begin
                 if(loot->generateNormally)
                 // @tswow-end
-                    loot->FillLoot(lootid, LootTemplates_Creature, looter, false, false, creature->GetLootMode());
+                    loot->FillLoot(lootid, LootTemplates_Creature, looter, false, false, creature->GetLootMode(), creature);
 
             if (creature->GetLootMode() > 0)
                 loot->generateMoneyLoot(creature->GetCreatureTemplate()->mingold, creature->GetCreatureTemplate()->maxgold);
@@ -14890,11 +14890,7 @@ void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player const* t
                             dynamicFlags |= UNIT_DYNFLAG_TAPPED_BY_PLAYER;
                     }
 
-                    bool CanLoot = target->isAllowedToLoot(creature);
-                    if (CanLoot)
-                        FIRE(Player, CanLoot, TSPlayer(const_cast<Player*>(target)), TSCreature(const_cast<Creature*>(creature)), TSMutable<bool, bool>(&CanLoot));
-
-                    if (!CanLoot)
+                    if (!target->isAllowedToLoot(creature))
                         dynamicFlags &= ~UNIT_DYNFLAG_LOOTABLE;
                 }
 
