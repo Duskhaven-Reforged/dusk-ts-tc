@@ -211,6 +211,15 @@ bool Player::UpdateStats(Stats stat)
     // value = ((base_value * base_pct) + total_value) * total_pct
     float value  = GetTotalStatValue(stat);
 
+    // @dh-start
+    FIRE(
+          Player,OnUpdateStats
+        , TSPlayer(this)
+        , TSMutableNumber<float>(&value)
+        , TSNumber<uint32>(stat)
+    );
+    // @dh-end
+
     SetStat(stat, int32(value));
 
     if (stat == STAT_STAMINA || stat == STAT_INTELLECT || stat == STAT_STRENGTH)
