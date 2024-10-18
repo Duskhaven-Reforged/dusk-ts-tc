@@ -9781,7 +9781,7 @@ void Unit::ToggleOnPowerPctAuras()
 ########                         ########
 #######################################*/
 
-void Unit::HandleStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifierType, float amount, bool apply)
+void Unit::HandleStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifierType, float amount, bool apply, bool skipCheck /*= false*/)
 {
     if (unitMod >= UNIT_MOD_END || modifierType >= MODIFIER_TYPE_FLAT_END)
     {
@@ -9789,7 +9789,7 @@ void Unit::HandleStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifie
         return;
     }
 
-    if (!amount)
+    if (!amount && !skipCheck)
         return;
 
     switch (modifierType)
@@ -9805,7 +9805,7 @@ void Unit::HandleStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifie
     UpdateUnitMod(unitMod);
 }
 
-void Unit::ApplyStatPctModifier(UnitMods unitMod, UnitModifierPctType modifierType, float pct)
+void Unit::ApplyStatPctModifier(UnitMods unitMod, UnitModifierPctType modifierType, float pct, bool skipCheck /*= false*/)
 {
     if (unitMod >= UNIT_MOD_END || modifierType >= MODIFIER_TYPE_PCT_END)
     {
@@ -9813,7 +9813,7 @@ void Unit::ApplyStatPctModifier(UnitMods unitMod, UnitModifierPctType modifierTy
         return;
     }
 
-    if (!pct)
+    if (!pct && !skipCheck)
         return;
 
     switch (modifierType)

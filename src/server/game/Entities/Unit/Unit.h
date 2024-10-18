@@ -1563,8 +1563,8 @@ class TC_GAME_API Unit : public WorldObject
         uint32 m_focusRegen;
 
         // stat system
-        void HandleStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifierType, float amount, bool apply);
-        void ApplyStatPctModifier(UnitMods unitMod, UnitModifierPctType modifierType, float amount);
+        void HandleStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifierType, float amount, bool apply, bool skipCheck = false);
+        void ApplyStatPctModifier(UnitMods unitMod, UnitModifierPctType modifierType, float amount, bool skipCheck /*= false*/);
 
         void SetStatFlatModifier(UnitMods unitMod, UnitModifierFlatType modifierType, float val);
         void SetStatPctModifier(UnitMods unitMod, UnitModifierPctType modifierType, float val);

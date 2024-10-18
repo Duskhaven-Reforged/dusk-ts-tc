@@ -202,6 +202,21 @@ void Unit::UpdateDamagePhysical(WeaponAttackType attType)
 ########   PLAYERS STAT SYSTEM   ########
 ########                         ########
 #######################################*/
+// @dh-start
+float Player::StatChanged(Stats stat, float val)
+{
+    float value = val;
+
+    FIRE(
+          Player,OnUpdateStats
+        , TSPlayer(this)
+        , TSMutableNumber<float>(&value)
+        , TSNumber<uint32>(stat)
+    );
+
+    return value;
+}
+// @dh-end
 
 bool Player::UpdateStats(Stats stat)
 {
@@ -209,16 +224,7 @@ bool Player::UpdateStats(Stats stat)
         return false;
 
     // value = ((base_value * base_pct) + total_value) * total_pct
-    float value  = GetTotalStatValue(stat);
-
-    // @dh-start
-    FIRE(
-          Player,OnUpdateStats
-        , TSPlayer(this)
-        , TSMutableNumber<float>(&value)
-        , TSNumber<uint32>(stat)
-    );
-    // @dh-end
+    float value = StatChanged(stat, GetTotalStatValue(stat));
 
     SetStat(stat, int32(value));
 
@@ -335,7 +341,7 @@ bool Player::UpdateAllStats()
 {
     for (uint8 i = STAT_STRENGTH; i < MAX_STATS; ++i)
     {
-        float value = GetTotalStatValue(Stats(i));
+        float value = StatChanged(Stats(i) ,GetTotalStatValue(Stats(i)));
         SetStat(Stats(i), int32(value));
     }
 

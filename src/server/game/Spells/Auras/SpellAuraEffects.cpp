@@ -3659,7 +3659,7 @@ void AuraEffect::HandleAuraModStat(AuraApplication const* aurApp, uint8 mode, bo
 
     Unit* target = aurApp->GetTarget();
     int32 spellGroupVal = target->GetHighestExclusiveSameEffectSpellGroupValue(this, SPELL_AURA_MOD_STAT, true, GetMiscValue());
-    if (std::abs(spellGroupVal) >= std::abs(GetAmount()))
+    if (std::abs(spellGroupVal) >= std::abs(GetAmount()) && !GetMiscValueB())
         return;
 
     for (int32 i = STAT_STRENGTH; i < MAX_STATS; ++i)
@@ -3669,12 +3669,12 @@ void AuraEffect::HandleAuraModStat(AuraApplication const* aurApp, uint8 mode, bo
         {
             if (spellGroupVal)
             {
-                target->HandleStatFlatModifier(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_VALUE, float(spellGroupVal), !apply);
+                target->HandleStatFlatModifier(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_VALUE, float(spellGroupVal), !apply, GetMiscValueB() ? true : false);
                 if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
                     target->UpdateStatBuffMod(Stats(i));
             }
 
-            target->HandleStatFlatModifier(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_VALUE, float(GetAmount()), apply);
+            target->HandleStatFlatModifier(UnitMods(UNIT_MOD_STAT_START + i), TOTAL_VALUE, float(GetAmount()), apply, GetMiscValueB() ? true : false);
             if (target->GetTypeId() == TYPEID_PLAYER || target->IsPet())
                 target->UpdateStatBuffMod(Stats(i));
         }
