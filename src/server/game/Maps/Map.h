@@ -265,7 +265,7 @@ public:
 
 enum LevelRequirementVsMode
 {
-    LEVELREQUIREMENT_HEROIC = 70
+    LEVELREQUIREMENT_HEROIC = 60
 };
 
 struct ZoneDynamicInfo

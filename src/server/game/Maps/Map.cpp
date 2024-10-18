@@ -188,8 +188,12 @@ void Map::LoadVMap(int gx, int gy)
 {
     if (!VMAP::VMapFactory::createOrGetVMapManager()->isMapLoadingEnabled())
         return;
+
+    // should use a base ID instead of new:
+    uint32 MapId = GetId();
+    FIRE_ID(GetId(),Map,CopyMapIfAble,TSMap(this),TSMutableNumber<uint32>(&MapId));
                                                             // x and y are swapped !!
-    int vmapLoadResult = VMAP::VMapFactory::createOrGetVMapManager()->loadMap((sWorld->GetDataPath()+ "vmaps").c_str(),  GetId(), gx, gy);
+    int vmapLoadResult = VMAP::VMapFactory::createOrGetVMapManager()->loadMap((sWorld->GetDataPath()+ "vmaps").c_str(),  MapId, gx, gy);
     switch (vmapLoadResult)
     {
         case VMAP::VMAP_LOAD_RESULT_OK:
