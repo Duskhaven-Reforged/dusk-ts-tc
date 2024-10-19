@@ -906,10 +906,12 @@ void InstanceScript::UpdateEncounterState(EncounterCreditType type, uint32 credi
             // @dh-begin
             if (updated && source)
                 if (InstanceScript* instanceScript = source->GetInstanceScript()) {
-                    if (instance->IsRaid())
+                    if (instance->IsRaid()) {
                         FIRE_ID(instance->GetEntry()->ID, Instance, OnRaidBossKilled, TSInstance(instance, this), TSUnit(source));
-                    else if (instance->IsDungeon())
-                        FIRE_ID(instance->GetEntry()->ID, Instance, OnDungeonCompleted, TSInstance(instance, this), TSUnit(source));
+                    }
+                    else if (instance->IsDungeon()) {
+                        FIRE_ID(instance->GetEntry()->ID, Instance, OnDungeonBossKilled, TSInstance(instance, this), TSUnit(source));
+                    }
 
                 }
             // @dh-end
