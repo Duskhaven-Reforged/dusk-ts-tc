@@ -133,12 +133,17 @@ enum LfgRoleClasses {
     TANK = (1 << (CLASS_WARRIOR - 1)) |
            (1 << (CLASS_PALADIN - 1)) |
            (1 << (CLASS_DEATH_KNIGHT - 1)) |
-           (1 << (CLASS_DRUID - 1)),
+           (1 << (CLASS_DRUID - 1)) |
+           (1 << (CLASS_MONK -1)) |
+           (1 << (CLASS_TINKER - 1)) |
+           (1 << (CLASS_DEMON_HUNTER - 1)),
 
     HEALER = (1 << (CLASS_PALADIN - 1)) |
              (1 << (CLASS_PRIEST - 1)) |
              (1 << (CLASS_SHAMAN - 1)) |
-             (1 << (CLASS_DRUID - 1)),
+             (1 << (CLASS_DRUID - 1)) |
+             (1 << (CLASS_MONK -1)) |
+             (1 << (CLASS_TINKER - 1)),
 };
 
 // Forward declaration (just to have all typedef together)

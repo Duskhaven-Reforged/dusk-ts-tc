@@ -9753,7 +9753,7 @@ uint8 Player::FindEquipSlot(ItemTemplate const* proto, uint32 slot, bool swap) c
                         slots[0] = EQUIPMENT_SLOT_RANGED;
                     break;
                 case ITEM_SUBCLASS_ARMOR_IDOL:
-                    if (playerClass == CLASS_DRUID)
+                    if (playerClass == CLASS_DRUID || playerClass == CLASS_MONK)
                         slots[0] = EQUIPMENT_SLOT_RANGED;
                     break;
                 case ITEM_SUBCLASS_ARMOR_TOTEM:
@@ -9765,7 +9765,11 @@ uint8 Player::FindEquipSlot(ItemTemplate const* proto, uint32 slot, bool swap) c
                         slots[0] = EQUIPMENT_SLOT_RANGED;
                     break;
                 case ITEM_SUBCLASS_ARMOR_SIGIL:
-                    if (playerClass == CLASS_DEATH_KNIGHT)
+                    if (playerClass == CLASS_DEATH_KNIGHT || playerClass == CLASS_DEMON_HUNTER)
+                        slots[0] = EQUIPMENT_SLOT_RANGED;
+                    break;
+                case ITEM_SUBCLASS_ARMOR_INSTRUMENT:
+                    if (playerClass == CLASS_BARD)
                         slots[0] = EQUIPMENT_SLOT_RANGED;
                     break;
             }
@@ -12030,7 +12034,7 @@ InventoryResult Player::CanRollForItemInLFG(ItemTemplate const* proto, WorldObje
 
     if (proto->Class == ITEM_CLASS_ARMOR && proto->SubClass > ITEM_SUBCLASS_ARMOR_MISC && proto->SubClass < ITEM_SUBCLASS_ARMOR_BUCKLER && proto->InventoryType != INVTYPE_CLOAK)
     {
-        if (_class == CLASS_WARRIOR || _class == CLASS_PALADIN || _class == CLASS_DEATH_KNIGHT)
+        if (_class == CLASS_WARRIOR || _class == CLASS_PALADIN || _class == CLASS_DEATH_KNIGHT || _class == CLASS_TINKER)
         {
             if (GetLevel() < 40)
             {
@@ -12051,11 +12055,11 @@ InventoryResult Player::CanRollForItemInLFG(ItemTemplate const* proto, WorldObje
                 return EQUIP_ERR_CANT_DO_RIGHT_NOW;
         }
 
-        if (_class == CLASS_ROGUE || _class == CLASS_DRUID)
+        if (_class == CLASS_ROGUE || _class == CLASS_DRUID || _class == CLASS_DEMON_HUNTER)
             if (proto->SubClass != ITEM_SUBCLASS_ARMOR_LEATHER)
                 return EQUIP_ERR_CANT_DO_RIGHT_NOW;
 
-        if (_class == CLASS_MAGE || _class == CLASS_PRIEST || _class == CLASS_WARLOCK)
+        if (_class == CLASS_MAGE || _class == CLASS_PRIEST || _class == CLASS_WARLOCK || _class == CLASS_MONK)
             if (proto->SubClass != ITEM_SUBCLASS_ARMOR_CLOTH)
                 return EQUIP_ERR_CANT_DO_RIGHT_NOW;
     }
