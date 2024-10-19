@@ -104,12 +104,16 @@ TC_API_EXPORT EnumText EnumUtils<Classes>::ToString(Classes value)
         case CLASS_MAGE: return { "CLASS_MAGE", "Mage", "" };
         case CLASS_WARLOCK: return { "CLASS_WARLOCK", "Warlock", "" };
         case CLASS_DRUID: return { "CLASS_DRUID", "Druid", "" };
+        case CLASS_MONK: return { "CLASS_MONK", "Monk", "" };
+        case CLASS_BARD: return { "CLASS_BARD", "Bard", "" };
+        case CLASS_TINKER: return { "CLASS_TINKER", "Tinker", "" };
+        case CLASS_DEMON_HUNTER: return { "CLASS_DEMON_HUNTER", "Demon Hunter", "" };
         default: throw std::out_of_range("value");
     }
 }
 
 template <>
-TC_API_EXPORT size_t EnumUtils<Classes>::Count() { return 10; }
+TC_API_EXPORT size_t EnumUtils<Classes>::Count() { return 14; }
 
 template <>
 TC_API_EXPORT Classes EnumUtils<Classes>::FromIndex(size_t index)
@@ -126,6 +130,10 @@ TC_API_EXPORT Classes EnumUtils<Classes>::FromIndex(size_t index)
         case 7: return CLASS_MAGE;
         case 8: return CLASS_WARLOCK;
         case 9: return CLASS_DRUID;
+        case 10: return CLASS_MONK;
+        case 11: return CLASS_BARD;
+        case 12: return CLASS_TINKER;
+        case 13: return CLASS_DEMON_HUNTER;
         default: throw std::out_of_range("index");
     }
 }
@@ -145,6 +153,10 @@ TC_API_EXPORT size_t EnumUtils<Classes>::ToIndex(Classes value)
         case CLASS_MAGE: return 7;
         case CLASS_WARLOCK: return 8;
         case CLASS_DRUID: return 9;
+        case CLASS_MONK: return 10;
+        case CLASS_BARD: return 11;
+        case CLASS_TINKER: return 12;
+        case CLASS_DEMON_HUNTER: return 13;
         default: throw std::out_of_range("value");
     }
 }
