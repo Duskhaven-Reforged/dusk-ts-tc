@@ -5463,7 +5463,7 @@ float Player::OCTRegenHPPerSpirit() const
         return 0.0f;
 
     // Formula from PaperDollFrame script
-    float spirit = GetStat(STAT_SPIRIT);
+    float spirit = GetStat(STAT_STAMINA);
     float baseSpirit = spirit;
     if (baseSpirit > 50)
         baseSpirit = 50;
