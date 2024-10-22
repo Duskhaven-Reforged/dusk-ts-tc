@@ -7728,13 +7728,16 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
     int32 crit_bonus;
     switch (spellProto->DmgClass)
     {
+        // Aleist3r: splitting those two as well
         case SPELL_DAMAGE_CLASS_MELEE:                      // for melee based spells is 100%
+            crit_bonus += damage + CalculatePct(damage, caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_MELEE));
+            break;
         case SPELL_DAMAGE_CLASS_RANGED:
             /// @todo write here full calculation for melee/ranged spells
-            crit_bonus = damage;
+            crit_bonus += damage + CalculatePct(damage, caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_RANGED));
             break;
-        default:
-            crit_bonus = damage / 2;                        // for spells is 50%
+        default:                                            // for spells is 50%
+            crit_bonus = damage / 2 + CalculatePct(damage, caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_MAGIC));
             break;
     }
 
@@ -7746,6 +7749,9 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
             crit_bonus = int32(crit_bonus * caster->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CRIT_PERCENT_VERSUS, creatureTypeMask));
         }
     }
+
+    if (caster->IsPlayer())
+            FIRE(Player, OnCustomScriptedCritDamageMod, TSPlayer(const_cast<Player*>(caster->ToPlayer())), TSUnit(victim), TSSpellInfo(const_cast<SpellInfo*>(spellProto)), TSMutableNumber<float>(&crit_bonus));
 
     if (crit_bonus > 0)
         damage += crit_bonus;
