@@ -7751,7 +7751,7 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
     }
 
     if (caster->IsPlayer())
-            FIRE(Player, OnCustomScriptedCritDamageMod, TSPlayer(const_cast<Player*>(caster->ToPlayer())), TSUnit(victim), TSSpellInfo(const_cast<SpellInfo*>(spellProto)), TSMutableNumber<float>(&crit_bonus));
+            FIRE(Player, OnCustomScriptedCritHealingMod, TSPlayer(const_cast<Player*>(caster->ToPlayer())), TSUnit(victim), TSSpellInfo(const_cast<SpellInfo*>(spellProto)), TSMutableNumber<float>(&crit_bonus));
 
     if (crit_bonus > 0)
         damage += crit_bonus;
