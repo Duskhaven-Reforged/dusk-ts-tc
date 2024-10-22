@@ -7725,7 +7725,8 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
 /*static*/ uint32 Unit::SpellCriticalHealingBonus(Unit const* caster, SpellInfo const* spellProto, uint32 damage, Unit* victim)
 {
     // Calculate critical bonus
-    int32 crit_bonus;
+    int32 crit_bonus = 0;
+    float crit_mult = 100.0f;
     switch (spellProto->DmgClass)
     {
         // Aleist3r: splitting those two as well
@@ -7751,10 +7752,10 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
     }
 
     if (caster->IsPlayer())
-            FIRE(Player, OnCustomScriptedCritHealingMod, TSPlayer(const_cast<Player*>(caster->ToPlayer())), TSUnit(victim), TSSpellInfo(const_cast<SpellInfo*>(spellProto)), TSMutableNumber<float>(&crit_bonus));
+            FIRE(Player, OnCustomScriptedCritHealingMod, TSPlayer(const_cast<Player*>(caster->ToPlayer())), TSUnit(victim), TSSpellInfo(const_cast<SpellInfo*>(spellProto)), TSMutableNumber<float>(&crit_mult));
 
     if (crit_bonus > 0)
-        damage += crit_bonus;
+        damage += CalculatePct(crit_bonus, crit_mult);
 
     if (caster)
         damage = int32(float(damage) * caster->GetTotalAuraMultiplier(SPELL_AURA_MOD_CRITICAL_HEALING_AMOUNT));
