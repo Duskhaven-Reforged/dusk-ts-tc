@@ -2141,11 +2141,6 @@ void Player::Regenerate(Powers power)
             m_powerFraction[power] = addvalue - integerValue;
     }
 
-    if (power == POWER_FOCUS && m_focusRegen >= 1000) // we send focus every second.
-    {
-        SetPower(power, curValue);
-        m_focusRegen -= 1000;
-    }
     if (m_regenTimerCount >= 2000 || curValue == maxValue || curValue == 0)
         SetPower(power, curValue, true, true);
     else

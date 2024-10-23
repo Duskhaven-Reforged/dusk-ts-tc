@@ -1127,7 +1127,7 @@ static std::pair<float, Optional<Rates>> const powerRegenInfo[MAX_POWERS] =
 {
     { 0.f,      RATE_POWER_MANA             }, // POWER_MANA
     { -12.5f,   RATE_POWER_RAGE_LOSS        }, // POWER_RAGE,           -1.25 rage per second
-    { 10.f,     RATE_POWER_FOCUS            }, // POWER_FOCUS
+    { 5.f,     RATE_POWER_FOCUS            }, // POWER_FOCUS
     { 10.f,     RATE_POWER_ENERGY           }, // POWER_ENERGY,         +10 energy per second
     { 0.f,      std::nullopt                }, // POWER_HAPPINESS
     { 0.f,      std::nullopt                }, // POWER_RUNE
@@ -1252,7 +1252,7 @@ float Player::GetPowerRegen(Powers power) const
 
     float regen = GetFloatValue((interrupted ? UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER : UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) + AsUnderlyingType(power));
     if (power != POWER_MANA)
-        regen += (power == POWER_ENERGY || !interrupted) ? powerRegenInfo[AsUnderlyingType(power)].first : 0.f;
+        regen += (power == POWER_ENERGY || power == POWER_FOCUS || !interrupted) ? powerRegenInfo[AsUnderlyingType(power)].first : 0.f;
 
     return regen;
 }
