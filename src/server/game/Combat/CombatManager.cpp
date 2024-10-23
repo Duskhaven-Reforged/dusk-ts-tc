@@ -80,11 +80,19 @@ void CombatReference::EndCombat()
 
     // ...and if that happened, also notify the AI of it...
     if (needFirstAI)
-        if (UnitAI* firstAI = first->GetAI())
+        if (UnitAI* firstAI = first->GetAI()) {
+            if(Creature *c = first->ToCreature())
+                FIRE_ID(c->GetCreatureTemplate()->events.id,Creature,OnJustExitedCombat,TSCreature(c->ToCreature()),TSUnit(second));
+            
             firstAI->JustExitedCombat();
+        }
     if (needSecondAI)
-        if (UnitAI* secondAI = second->GetAI())
+        if (UnitAI* secondAI = second->GetAI()) {
+            if(Creature *c = second->ToCreature())
+                FIRE_ID(c->GetCreatureTemplate()->events.id,Creature,OnJustExitedCombat,TSCreature(c->ToCreature()),TSUnit(first));
+
             secondAI->JustExitedCombat();
+        }
 
     // @tswow-begin
     FIRE(Unit,OnExitCombatWith, TSUnit(first), TSUnit(second));
