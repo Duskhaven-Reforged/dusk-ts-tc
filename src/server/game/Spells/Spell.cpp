@@ -4518,21 +4518,40 @@ void Spell::UpdateSpellCastDataAmmo(WorldPackets::Spells::SpellAmmo& ammo)
                 ammoDisplayID = pItem->GetTemplate()->DisplayInfoID;
             else
             {
-                uint32 ammoID = m_caster->ToPlayer()->GetUInt32Value(PLAYER_AMMO_ID);
-                if (ammoID)
+                if (ItemEntry const* itemEntry = sItemStore.LookupEntry(pItem->GetTemplate()->ItemId))
                 {
-                    ItemTemplate const* pProto = sObjectMgr->GetItemTemplate(ammoID);
-                    if (pProto)
+                    if (itemEntry->ClassID == ITEM_CLASS_WEAPON)
                     {
-                        ammoDisplayID = pProto->DisplayInfoID;
-                        ammoInventoryType = pProto->InventoryType;
+                        switch (itemEntry->SubclassID)
+                        {
+                            case ITEM_SUBCLASS_WEAPON_BOW:
+                            case ITEM_SUBCLASS_WEAPON_CROSSBOW:
+                                ammoDisplayID = 5996;
+                                ammoInventoryType = INVTYPE_AMMO;
+                                break;
+                            case ITEM_SUBCLASS_WEAPON_GUN:
+                                ammoDisplayID = 5998;
+                                ammoInventoryType = INVTYPE_AMMO;
+                                break;
+                        }
                     }
                 }
-                else if (m_caster->ToPlayer()->HasAura(46699))      // Requires No Ammo
-                {
-                    ammoDisplayID = 5996;                   // normal arrow
-                    ammoInventoryType = INVTYPE_AMMO;
-                }
+
+                // uint32 ammoID = m_caster->ToPlayer()->GetUInt32Value(PLAYER_AMMO_ID);
+                // if (ammoID)
+                // {
+                //     ItemTemplate const* pProto = sObjectMgr->GetItemTemplate(ammoID);
+                //     if (pProto)
+                //     {
+                //         ammoDisplayID = pProto->DisplayInfoID;
+                //         ammoInventoryType = pProto->InventoryType;
+                //     }
+                // }
+                // else if (m_caster->ToPlayer()->HasAura(46699))      // Requires No Ammo
+                // {
+                //     ammoDisplayID = 5996;                   // normal arrow
+                //     ammoInventoryType = INVTYPE_AMMO;
+                // }
             }
         }
     }
