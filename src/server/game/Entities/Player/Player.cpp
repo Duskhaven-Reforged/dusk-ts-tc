@@ -2099,6 +2099,9 @@ void Player::Regenerate(Powers power)
     uint32 curValue = GetPower(power);
     float addvalue = GetPowerRegen(power) * 0.001f * m_regenTimer;
 
+    if (power == POWER_ENERGY || power == POWER_FOCUS)
+        FIRE(Player, ScaleRegenByHaste, TSPlayer(this), &addvalue);
+
     if (addvalue < 0.0f)
     {
         if (curValue == 0)
@@ -5498,18 +5501,23 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
 
     switch (combatRating)
     {
-        case CR_HASTE:
-            ApplyAttackTimePercentMod(BASE_ATTACK, oldVal, false);
-            ApplyAttackTimePercentMod(OFF_ATTACK, oldVal, false);
-            ApplyAttackTimePercentMod(BASE_ATTACK, newVal, true);
-            ApplyAttackTimePercentMod(OFF_ATTACK, newVal, true);
+        case CR_HASTE: {
+            float NewHaste = 0.f;
+            float OldHaste = 0.f;
+            FIRE(Player, OnUpdateHasteRating, TSPlayer(this), m_baseRatingValue[combatRating], oldRating, &NewHaste, &OldHaste);
 
-            ApplyAttackTimePercentMod(RANGED_ATTACK, oldVal, false);
-            ApplyAttackTimePercentMod(RANGED_ATTACK, newVal, true);
+            ApplyAttackTimePercentMod(BASE_ATTACK, OldHaste, false);
+            ApplyAttackTimePercentMod(BASE_ATTACK, NewHaste, true);
 
-            ApplyCastTimePercentMod(oldVal, false);
-            ApplyCastTimePercentMod(newVal, true);
-            break;
+            ApplyAttackTimePercentMod(OFF_ATTACK, OldHaste, false);
+            ApplyAttackTimePercentMod(OFF_ATTACK, NewHaste, true);
+
+            ApplyAttackTimePercentMod(RANGED_ATTACK, OldHaste, false);
+            ApplyAttackTimePercentMod(RANGED_ATTACK, NewHaste, true);
+
+            ApplyCastTimePercentMod(OldHaste, false);
+            ApplyCastTimePercentMod(NewHaste, true);
+            } break;
         case CR_HASTE_RANGED:
         case CR_HASTE_SPELL:
             break;
@@ -12078,10 +12086,6 @@ InventoryResult Player::CanUseAmmo(uint32 item) const
         InventoryResult res = CanUseItem(pProto);
         if (res != EQUIP_ERR_OK)
             return res;
-
-        /*if (GetReputationMgr().GetReputation() < pProto->RequiredReputation)
-        return EQUIP_ERR_CANT_EQUIP_REPUTATION;
-        */
 
         // Requires No Ammo
         if (HasAura(46699))

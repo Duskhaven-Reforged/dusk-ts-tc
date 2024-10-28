@@ -4518,21 +4518,9 @@ void Spell::UpdateSpellCastDataAmmo(WorldPackets::Spells::SpellAmmo& ammo)
                 ammoDisplayID = pItem->GetTemplate()->DisplayInfoID;
             else
             {
-                uint32 ammoID = m_caster->ToPlayer()->GetUInt32Value(PLAYER_AMMO_ID);
-                if (ammoID)
-                {
-                    ItemTemplate const* pProto = sObjectMgr->GetItemTemplate(ammoID);
-                    if (pProto)
-                    {
-                        ammoDisplayID = pProto->DisplayInfoID;
-                        ammoInventoryType = pProto->InventoryType;
-                    }
-                }
-                else if (m_caster->ToPlayer()->HasAura(46699))      // Requires No Ammo
-                {
-                    ammoDisplayID = 5996;                   // normal arrow
-                    ammoInventoryType = INVTYPE_AMMO;
-                }
+                ammoDisplayID = 5996;                   // normal arrow
+                FIRE(Player, LoadPresetAmmo, TSPlayer(m_caster->ToPlayer()), &ammoDisplayID);
+                ammoInventoryType = INVTYPE_AMMO;
             }
         }
     }
@@ -7805,20 +7793,18 @@ void Spell::HandleLaunchPhase()
 
     PrepareTargetProcessing();
 
-    // Take ammunition if the ranged attack requires ammunition
-    if (Player* player = m_caster->ToPlayer())
-    {
-        bool usesAmmo = m_spellInfo->HasAttribute(SPELL_ATTR0_REQ_AMMO);
-        if (player->HasAuraTypeWithAffectMask(SPELL_AURA_ABILITY_CONSUME_NO_AMMO, m_spellInfo))
-            usesAmmo = false;
+    // // Take ammunition if the ranged attack requires ammunition
+    // if (Player* player = m_caster->ToPlayer())
+    // {
+    //     bool usesAmmo = false;
 
-        // Do not consume ammo for the triggered AoE ticks of Volley (Hunter spell)
-        if (IsTriggered() && m_spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER && m_spellInfo->IsTargetingArea())
-            usesAmmo = false;
+    //     // Do not consume ammo for the triggered AoE ticks of Volley (Hunter spell)
+    //     if (IsTriggered() && m_spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER && m_spellInfo->IsTargetingArea())
+    //         usesAmmo = false;
 
-        if (usesAmmo)
-            TakeAmmo();
-    }
+    //     if (usesAmmo)
+    //         TakeAmmo();
+    // }
 
     for (TargetInfo& target : m_UniqueTargetInfo)
         PreprocessSpellLaunch(target);
