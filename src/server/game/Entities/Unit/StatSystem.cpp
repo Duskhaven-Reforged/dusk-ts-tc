@@ -1150,8 +1150,34 @@ void Player::UpdatePowerRegen(Powers power)
     /// @todo possible use of miscvalueb instead of amount
     if (HasAuraTypeWithValue(SPELL_AURA_PREVENT_REGENERATE_POWER, power))
     {
-        SetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER + AsUnderlyingType(power), power == POWER_ENERGY ? -10.f : 0.f);
-        SetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER + AsUnderlyingType(power), power == POWER_ENERGY ? -10.f : 0.f);
+        float flatMod;
+        float interruptedMod;
+
+        switch (power) {
+        case POWER_RAGE:
+            flatMod = 12.5f;
+            interruptedMod = 0.f;
+            break;
+        case POWER_FOCUS:
+            flatMod = -5.f;
+            interruptedMod = -5.f;
+            break;
+        case POWER_ENERGY:
+            flatMod = -10.f;
+            interruptedMod = -10.f;
+            break;
+        case POWER_RUNIC_POWER:
+            flatMod = 12.5f;
+            interruptedMod = 0.f;
+            break;
+        default:
+            flatMod = 0.f;
+            interruptedMod = 0.f;
+            break;
+        }
+
+        SetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER + AsUnderlyingType(power), flatMod);
+        SetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER + AsUnderlyingType(power), interruptedMod);
         return;
     }
 
