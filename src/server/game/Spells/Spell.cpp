@@ -4519,7 +4519,7 @@ void Spell::UpdateSpellCastDataAmmo(WorldPackets::Spells::SpellAmmo& ammo)
             else
             {
                 ammoDisplayID = 5996;                   // normal arrow
-                FIRE(Player, LoadPresetAmmo, TSPlayer(m_caster->ToPlayer()), &ammoDisplayID);
+                FIRE(Player, LoadPresetAmmo, TSPlayer(m_caster->ToPlayer()), TSItemTemplate(pItem->GetTemplate()), &ammoDisplayID);
                 ammoInventoryType = INVTYPE_AMMO;
             }
         }
