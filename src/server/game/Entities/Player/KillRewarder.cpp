@@ -271,8 +271,15 @@ void KillRewarder::Reward()
     }
 
     // 5. Credit instance encounter.
-    if (Creature* victim = _victim->ToCreature())
-        if (victim->IsDungeonBoss())
-            if (InstanceScript* instance = _victim->GetInstanceScript())
+    if (Creature* victim = _victim->ToCreature()) {
+        bool boss = false;
+        if (InstanceScript* instance = _killer->GetInstanceScript()) {
+            if (victim->IsDungeonBoss()) {
                 instance->UpdateEncounterStateForKilledCreature(_victim->GetEntry(), _victim);
+                boss = true;
+            }
+
+            FIRE_ID(instance->instance->GetEntry()->ID, Instance, OnUpdateCriteria, TSInstance(_killer->GetMap(), instance), TSUnit(_victim));
+        }
+    }
 }

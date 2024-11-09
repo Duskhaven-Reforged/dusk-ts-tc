@@ -6892,11 +6892,11 @@ void ObjectMgr::LoadInstanceEncounters()
             continue;
         }
 
-        if (lastEncounterDungeon && !sLFGMgr->GetLFGDungeonEntry(lastEncounterDungeon))
-        {
-            TC_LOG_ERROR("sql.sql", "Table `instance_encounters` has an encounter {} ({}) marked as final for invalid dungeon id {}, skipped!", entry, dungeonEncounter->Name[0], lastEncounterDungeon);
-            continue;
-        }
+        // if (lastEncounterDungeon)
+        // {
+        //     TC_LOG_ERROR("sql.sql", "Table `instance_encounters` has an encounter {} ({}) marked as final for invalid dungeon id {}, skipped!", entry, dungeonEncounter->Name[0], lastEncounterDungeon);
+        //     continue;
+        // }
 
         auto itr = dungeonLastBosses.find(lastEncounterDungeon);
         if (lastEncounterDungeon)
