@@ -8537,7 +8537,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                     group->UpdateLooterGuid(go);
             }
 
-            if (go->GetLootMode() > 0)
+            if (go->GetLootMode() > 0 && loot->generateNormally)
                 if (GameObjectTemplateAddon const* addon = go->GetTemplateAddon())
                     loot->generateMoneyLoot(addon->Mingold, addon->Maxgold);
 
