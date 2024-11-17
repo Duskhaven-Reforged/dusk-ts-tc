@@ -658,7 +658,7 @@ void AuraEffect::CalculatePeriodic(Unit* caster, bool resetPeriodicTimer /*= tru
             if (m_spellInfo->IsChanneled())
                 caster->ModSpellDurationTime(m_spellInfo, _amplitude);
             // and periodic time of auras affected by SPELL_AURA_PERIODIC_HASTE
-            else if (m_spellInfo->HasAttribute(SPELL_ATTR5_HASTE_AFFECT_DURATION))
+            else
                 _amplitude = int32(_amplitude * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
         }
     }
