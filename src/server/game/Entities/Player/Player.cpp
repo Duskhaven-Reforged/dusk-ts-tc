@@ -21353,6 +21353,8 @@ void Player::PetSpellInitialize()
 
     CharmInfo* charmInfo = pet->GetCharmInfo();
 
+    FIRE_ID(pet->GetCreatureTemplate()->events.id,Creature, InitPetSpells, TSCreature(pet), TSPlayer(this));
+
     WorldPacket data(SMSG_PET_SPELLS, 8+2+4+4+4*MAX_UNIT_ACTION_BAR_INDEX+1+1);
     data << uint64(pet->GetGUID());
     data << uint16(pet->GetCreatureTemplate()->family);         // creature family (required for pet talents)

@@ -1011,7 +1011,7 @@ void InstanceScript::OnPlayerEnter(Player* player)
 void InstanceScript::OnPlayerLeave(Player* player)
 {
     FIRE_ID(
-          instance->GetEntry()->ID
+          instance->GetEntry()->ID 
         , Instance,OnPlayerLeave
         , TSInstance(instance, this)
         , TSPlayer(player)
@@ -1066,6 +1066,14 @@ void InstanceScript::SetBossNumber(uint32 number)
         number = tmp;
     }
     bosses.resize(number);
+}
+
+void InstanceScript::TriggerResetHook() {
+    FIRE_ID(
+        instance->GetEntry()->ID
+        , Instance,ResetInstance
+        , TSInstance(instance, this)
+    );
 }
 
 InstanceScript::~InstanceScript()

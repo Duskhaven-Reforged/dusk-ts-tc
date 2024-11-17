@@ -295,6 +295,16 @@ class TC_GAME_API InstanceScript : public ZoneScript
             return (*_bossCreatures)[bossId];
         }
         // @tswow-end
+
+        void SetActiveCriteria(uint32 id) {
+            m_activeCriteria = id;
+        }
+        uint32 GetActiveCriteria() {
+            return m_activeCriteria;
+        }
+
+        void TriggerResetHook();
+
     protected:
         void SetHeaders(std::string const& dataHeaders);
 
@@ -348,7 +358,7 @@ class TC_GAME_API InstanceScript : public ZoneScript
         // @tswow-begin
         std::vector<AreaBoundary*> _customBoundaries;
         InstanceBossCreatures const* _bossCreatures;
-
+        uint32 m_activeCriteria = 0;
         // @tswow-end
 
     #ifdef TRINITY_API_USE_DYNAMIC_LINKING

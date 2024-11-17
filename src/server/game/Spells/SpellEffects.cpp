@@ -3028,8 +3028,6 @@ void Spell::EffectTameCreature()
     {
         pet->SavePetToDB(PET_SAVE_AS_CURRENT);
         unitCaster->ToPlayer()->PetSpellInitialize();
-
-        FIRE_ID(pet->GetCreatureTemplate()->events.id,Creature, InitPetSpells, TSCreature(pet), TSPlayer(unitCaster->ToPlayer()));
     }
 }
 

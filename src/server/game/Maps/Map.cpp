@@ -3206,6 +3206,16 @@ size_t Map::DespawnAll(SpawnObjectType type, ObjectGuid::LowType spawnId)
     return toUnload.size();
 }
 
+void Map::RespawnAll(SpawnObjectTypeMask type) {
+    std::vector<RespawnInfo const*> data;
+    GetRespawnInfo(data, type);
+
+    if (!data.empty()) {
+        for (RespawnInfo const* info : data)
+            Respawn(info->type, info->spawnId);
+    }
+}
+
 bool Map::AddRespawnInfo(RespawnInfo const& info)
 {
     if (!info.spawnId)

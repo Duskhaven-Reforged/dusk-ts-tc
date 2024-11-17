@@ -819,6 +819,8 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         }
         size_t DespawnAll(SpawnObjectType type, ObjectGuid::LowType spawnId);
 
+        void RespawnAll(SpawnObjectTypeMask type);
+
         bool ShouldBeSpawnedOnGridLoad(SpawnObjectType type, ObjectGuid::LowType spawnId) const;
         template <typename T> bool ShouldBeSpawnedOnGridLoad(ObjectGuid::LowType spawnId) const { return ShouldBeSpawnedOnGridLoad(SpawnData::TypeFor<T>, spawnId); }
 
