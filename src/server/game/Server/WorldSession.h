@@ -273,7 +273,7 @@ enum AccountDataType
 #define GLOBAL_CACHE_MASK           0x15
 #define PER_CHARACTER_CACHE_MASK    0xEA
 
-uint32 constexpr MAX_CHARACTERS_PER_REALM = 10; // max supported by client in char enum
+uint32 constexpr MAX_CHARACTERS_PER_REALM = 50; // Aleist3r: uncapping this but the client still is capped at 10 max for now, without exe edits and ui changes it's worthless
 
 struct AccountData
 {
