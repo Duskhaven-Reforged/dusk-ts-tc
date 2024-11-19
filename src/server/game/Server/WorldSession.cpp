@@ -319,10 +319,18 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                         //! the client to be in world yet. We will re-add the packets to the bottom of the queue and process them later.
                         if (!m_playerRecentlyLogout)
                         {
-                            requeuePackets.push_back(packet);
-                            deletePacket = false;
-                            TC_LOG_DEBUG("network", "Re-enqueueing packet with opcode {} with with status STATUS_LOGGEDIN. "
-                                "Player is currently not in world yet.", GetOpcodeNameForLogging(static_cast<OpcodeClient>(packet->GetOpcode())));
+                            //@tswow-begin 
+                            if (packet->GetOpcode() == 0x51f)
+                            {
+                                HandleCustomNotInWorld(*packet);
+                            }
+                            else {
+                            //@tswow-end
+                                requeuePackets.push_back(packet);
+                                deletePacket = false;
+                                TC_LOG_DEBUG("network", "Re-enqueueing packet with opcode {} with with status STATUS_LOGGEDIN. "
+                                    "Player is currently not in world yet.", GetOpcodeNameForLogging(static_cast<OpcodeClient>(packet->GetOpcode())));
+                            }
                         }
                     }
                     else if (_player->IsInWorld())
@@ -1792,5 +1800,10 @@ void WorldSession::HandleCustom(WorldPacket& packet)
 {
     GetPlayer()->m_msg_buffer
         .ReceivePacket(packet.size(),(char*)packet.contents());
+}
+
+void WorldSession::HandleCustomNotInWorld(WorldPacket& packet)
+{
+    TSServerBuffer(GetAccountId()).ReceivePacket(packet.size(), (char*)packet.contents());
 }
 // @tswow-end

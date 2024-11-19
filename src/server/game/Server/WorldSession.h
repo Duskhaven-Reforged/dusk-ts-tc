@@ -1177,6 +1177,7 @@ class TC_GAME_API WorldSession
 
         // @tswow-begin
         void HandleCustom(WorldPacket& recvPacket);
+        void HandleCustomNotInWorld(WorldPacket& recvPacket);
         // @tswow-end
 
     public:
