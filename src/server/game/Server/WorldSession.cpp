@@ -324,13 +324,11 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                             {
                                 HandleCustomNotInWorld(*packet);
                             }
-                            else {
                             //@tswow-end
-                                requeuePackets.push_back(packet);
-                                deletePacket = false;
-                                TC_LOG_DEBUG("network", "Re-enqueueing packet with opcode {} with with status STATUS_LOGGEDIN. "
-                                    "Player is currently not in world yet.", GetOpcodeNameForLogging(static_cast<OpcodeClient>(packet->GetOpcode())));
-                            }
+                            requeuePackets.push_back(packet);
+                            deletePacket = false;
+                            TC_LOG_DEBUG("network", "Re-enqueueing packet with opcode {} with with status STATUS_LOGGEDIN. "
+                                "Player is currently not in world yet.", GetOpcodeNameForLogging(static_cast<OpcodeClient>(packet->GetOpcode())));
                         }
                     }
                     else if (_player->IsInWorld())
