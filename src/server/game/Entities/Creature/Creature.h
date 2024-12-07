@@ -475,6 +475,32 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool _regenerateHealthLock; // Dynamically set
 
         bool _isMissingCanSwimFlagOutOfCombat;
+
+        // in combat w/ by roles
+        std::vector<ObjectGuid> ic_tanks = {};
+        std::vector<ObjectGuid> ic_healers = {};
+        std::vector<ObjectGuid> ic_dps = {};
+    public:
+        void ClearInCombatRoles() {
+            ic_tanks.clear();
+            ic_healers.clear();
+            ic_dps.clear();
+        }
+
+        void AddInCombatRole(uint8 Role, ObjectGuid who) {
+            switch (Role) {
+            case 0:
+                ic_dps.push_back(who);
+                break;
+            case 1:
+                ic_tanks.push_back(who);
+                break;
+            case 2:
+                ic_healers.push_back(who);
+            }
+        }
+
+        
 };
 
 class TC_GAME_API AssistDelayEvent : public BasicEvent
