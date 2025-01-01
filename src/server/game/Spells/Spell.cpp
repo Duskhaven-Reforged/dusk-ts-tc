@@ -3355,7 +3355,7 @@ void Spell::cancel(SpellCastResult result /*= SPELL_FAILED_INTERRUPTED*/, Option
             break;
     }
 
-    if (m_caster->IsUnit())
+    if (m_caster->IsUnit() && unitTarget)
         FIRE_ID(GetSpellInfo()->events.id, Spell, OnCastCancelled, TSUnit(static_cast<Unit*>(m_caster->ToUnit())), TSUnit(unitTarget), TSSpell(this), TSNumber<int32>(m_timer), TSNumber<int32>(m_channeledDuration > 0 ? m_channeledDuration : GetSpellInfo()->GetDuration()));
 
     SetReferencedFromCurrent(false);
