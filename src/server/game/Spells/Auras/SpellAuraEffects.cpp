@@ -703,47 +703,47 @@ void AuraEffect::CalculateSpellMod()
             m_spellmod->value = GetAmount();
             break;
         case SPELL_AURA_ADD_MASTERY_PCT_TO_SPELL_EFFECT:
-            if (!m_spellmod)
-            {
-                m_spellmod = new SpellModifier(GetBase());
+            // if (!m_spellmod)
+            // {
+            //     m_spellmod = new SpellModifier(GetBase());
 
-                m_spellmod->type = SPELLMOD_FLAT;
-                m_spellmod->spellId = GetId();
-                m_spellmod->mask = GetSpellInfo()->GetEffect(GetEffIndex()).SpellClassMask;
-                m_spellmod->charges = GetBase()->GetCharges();
+            //     m_spellmod->type = SPELLMOD_FLAT;
+            //     m_spellmod->spellId = GetId();
+            //     m_spellmod->mask = GetSpellInfo()->GetEffect(GetEffIndex()).SpellClassMask;
+            //     m_spellmod->charges = GetBase()->GetCharges();
 
-                int32 tempMisc = GetMiscValue();
+            //     int32 tempMisc = GetMiscValue();
 
-                switch (tempMisc)
-                {
-                    case 2:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                        break;
-                    case 3:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                        break;
-                    case 4:
-                        m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
-                        break;
-                    case 5:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                        break;
-                    case 6:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                        break;
-                    case 7:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                        break;
-                    case 1:
-                    default:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                        break;
-                }
-            }
-            m_spellmod->value = int32(GetCaster()->ToPlayer()->GetRatingBonusValue(CR_MASTERY) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
+            //     switch (tempMisc)
+            //     {
+            //         case 2:
+            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+            //             break;
+            //         case 3:
+            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+            //             break;
+            //         case 4:
+            //             m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
+            //             break;
+            //         case 5:
+            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+            //             break;
+            //         case 6:
+            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+            //             break;
+            //         case 7:
+            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
+            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
+            //             break;
+            //         case 1:
+            //         default:
+            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
+            //             break;
+            //     }
+            // }
+            // m_spellmod->value = int32(GetCaster()->ToPlayer()->GetRatingBonusValue(CR_MASTERY) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
             break;
         case SPELL_AURA_ADD_MASTERY_RATING_TO_SPELL_EFFECT:
             if (!m_spellmod)
