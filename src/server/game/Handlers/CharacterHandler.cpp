@@ -523,40 +523,40 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
 
                 // search same race for cinematic or same class if need
                 /// @todo check if cinematic already shown? (already logged in?; cinematic field)
-                while ((skipCinematics == 1 && !haveSameRace) || createInfo->Class == CLASS_DEATH_KNIGHT)
-                {
-                    if (!result->NextRow())
-                        break;
+                // while ((skipCinematics == 1 && !haveSameRace) || createInfo->Class == CLASS_DEATH_KNIGHT)
+                // {
+                //     if (!result->NextRow())
+                //         break;
 
-                    field = result->Fetch();
-                    accRace = field[1].GetUInt8();
+                //     field = result->Fetch();
+                //     accRace = field[1].GetUInt8();
 
-                    if (!haveSameRace)
-                        haveSameRace = createInfo->Race == accRace;
+                //     if (!haveSameRace)
+                //         haveSameRace = createInfo->Race == accRace;
 
-                    if (checkDeathKnightReqs)
-                    {
-                        uint8 acc_class = field[2].GetUInt8();
-                        if (acc_class == CLASS_DEATH_KNIGHT)
-                        {
-                            if (freeDeathKnightSlots > 0)
-                                --freeDeathKnightSlots;
+                //     if (checkDeathKnightReqs)
+                //     {
+                //         uint8 acc_class = field[2].GetUInt8();
+                //         if (acc_class == CLASS_DEATH_KNIGHT)
+                //         {
+                //             if (freeDeathKnightSlots > 0)
+                //                 --freeDeathKnightSlots;
 
-                            if (freeDeathKnightSlots == 0)
-                            {
-                                SendCharCreate(CHAR_CREATE_UNIQUE_CLASS_LIMIT);
-                                return;
-                            }
-                        }
+                //             if (freeDeathKnightSlots == 0)
+                //             {
+                //                 SendCharCreate(CHAR_CREATE_UNIQUE_CLASS_LIMIT);
+                //                 return;
+                //             }
+                //         }
 
-                        if (!hasDeathKnightReqLevel)
-                        {
-                            uint8 acc_level = field[0].GetUInt8();
-                            if (acc_level >= deathKnightReqLevel)
-                                hasDeathKnightReqLevel = true;
-                        }
-                    }
-                }
+                //         if (!hasDeathKnightReqLevel)
+                //         {
+                //             uint8 acc_level = field[0].GetUInt8();
+                //             if (acc_level >= deathKnightReqLevel)
+                //                 hasDeathKnightReqLevel = true;
+                //         }
+                //     }
+                // }
             }
 
             if (checkDeathKnightReqs && !hasDeathKnightReqLevel)
@@ -815,22 +815,22 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
     pCurrChar->SendInitialPacketsBeforeAddToMap();
 
     //Show cinematic at the first time that player login
-    if (!pCurrChar->getCinematic())
-    {
-        pCurrChar->setCinematic(1);
+    // if (!pCurrChar->getCinematic())
+    // {
+    //     pCurrChar->setCinematic(1);
 
-        if (ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(pCurrChar->GetClass()))
-        {
-            if (cEntry->CinematicSequenceID)
-                pCurrChar->SendCinematicStart(cEntry->CinematicSequenceID);
-            else if (ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(pCurrChar->GetRace()))
-                pCurrChar->SendCinematicStart(rEntry->CinematicSequenceID);
+    //     if (ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(pCurrChar->GetClass()))
+    //     {
+    //         if (cEntry->CinematicSequenceID)
+    //             pCurrChar->SendCinematicStart(cEntry->CinematicSequenceID);
+    //         else if (ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(pCurrChar->GetRace()))
+    //             pCurrChar->SendCinematicStart(rEntry->CinematicSequenceID);
 
-            // send new char string if not empty
-            if (!sWorld->GetNewCharString().empty())
-                chH.PSendSysMessage("%s", sWorld->GetNewCharString().c_str());
-        }
-    }
+    //         // send new char string if not empty
+    //         if (!sWorld->GetNewCharString().empty())
+    //             chH.PSendSysMessage("%s", sWorld->GetNewCharString().c_str());
+    //     }
+    // }
 
     if (!pCurrChar->GetMap()->AddPlayerToMap(pCurrChar))
     {
