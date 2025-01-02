@@ -850,14 +850,12 @@ void Spell::EffectTriggerSpell()
     if (effectInfo->Effect == SPELL_EFFECT_TRIGGER_SPELL_WITH_VALUE) { 
         for (uint32 i = 0; i < MAX_SPELL_EFFECTS; ++i) {
             args.AddSpellMod(SpellValueMod(SPELLVALUE_BASE_POINT0 + i), damage);
-            if (effectInfo->MiscValueB > 0)
+            if (effectInfo->MiscValue == 0 && effectInfo->MiscValueB > 0)
                 args.AddSpellMod(SpellValueMod(SPELLVALUE_DURATION), effectInfo->MiscValueB);
-        }
-    } else {
-        if (effectInfo->MiscValue == 8)
+            else if (effectInfo->MiscValue == 8)
             args.AddSpellMod(SpellValueMod(SPELLVALUE_AURA_STACK), effectInfo->MiscValueB);
+        }
     }
-
 
     // original caster guid only for GO cast
     m_caster->CastSpell(std::move(targets), spellInfo->Id, args);
