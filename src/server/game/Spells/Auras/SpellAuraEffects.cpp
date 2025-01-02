@@ -6108,8 +6108,6 @@ void AuraEffect::HandleProcTriggerSpellWithPctOfTriggerer(AuraApplication* aurAp
             args.AddSpellMod(SPELLVALUE_BASE_POINT0, pct);
             args.SetTriggerFlags(TRIGGERED_FULL_MASK);
 
-            TC_LOG_INFO("server.worldserver", "Triggering {} at {}", trigger, pct);
-
             triggerCaster->CastSpell(target, trigger, args);
         }
     }

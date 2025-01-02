@@ -2337,7 +2337,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     // if victim is casting or cc'd it can't avoid attacks
     if (victim->IsNonMeleeSpellCast(false, false, true) || victim->HasUnitState(UNIT_STATE_CONTROLLED))
     {
-        canDodge = false;
+        canDodge = false;[]
         canParryOrBlock = false;
     }
 
@@ -5260,7 +5260,6 @@ void Unit::UpdateResistanceBuffModsMod(SpellSchools school)
 
     auto healthPct = GetTotalAuraModifier(SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT, [school, this](AuraEffect const* aurEff) -> bool
     {
-        TC_LOG_INFO("server.worldserver", "Health pct from max hp mod to res {}: {} applied on {} for total {}", (1 << school), aurEff->GetAmount(), this->GetMaxHealth(), CalculatePct(this->GetMaxHealth(), aurEff->GetAmount()));
         if (aurEff->GetMiscValue() == 2 && (aurEff->GetMiscValueB() & (1 << school)) && aurEff->GetAmount() > 0)
             return true;
         return false;
