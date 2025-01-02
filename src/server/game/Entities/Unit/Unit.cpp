@@ -1438,8 +1438,6 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
             }
             if (leveldif == 0)
                 leveldif = 1;
-            if (leveldif > 3)
-                leveldif = 3;
 
             // against boss-level targets - 24% chance of 25% average damage reduction (damage reduction range : 20-30%)
             // against level 82 elites - 18% chance of 15% average damage reduction (damage reduction range : 10-20%)
