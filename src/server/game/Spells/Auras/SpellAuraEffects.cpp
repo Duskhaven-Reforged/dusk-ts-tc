@@ -6091,15 +6091,17 @@ void AuraEffect::HandleRaidProcFromChargeWithValueAuraProc(AuraApplication* aurA
 // @dh-begin
 void AuraEffect::HandleProcTriggerSpellWithPctOfTriggerer(AuraApplication* aurApp, ProcEventInfo& eventInfo)
 {
-        Unit* triggerCaster = aurApp->GetTarget();
-        Unit* triggerTarget = eventInfo.GetProcTarget();
+    Unit* triggerCaster = aurApp->GetTarget();
+    Unit* triggerTarget = eventInfo.GetProcTarget();
 
-        if (auto proc = eventInfo.GetProcSpell())
-            if (proc->IsTriggered())
-                return;
+    if (auto proc = eventInfo.GetProcSpell())
+        if (proc->IsTriggered())
+            return;
 
-        if (int32 dealt = eventInfo.GetDamageInfo()->GetDamage()) {
-            auto target = eventInfo.GetDamageInfo()->GetVictim();
+    auto Info = eventInfo.GetDamageInfo();
+    if (Info) {
+        if (int32 dealt = Info->GetDamage()) {
+            auto target = Info->GetVictim();
             auto pct = CalculatePct(dealt, GetAmount());
             auto trigger = GetTriggerSpell();
             CastSpellExtraArgs args;
@@ -6110,6 +6112,7 @@ void AuraEffect::HandleProcTriggerSpellWithPctOfTriggerer(AuraApplication* aurAp
 
             triggerCaster->CastSpell(target, trigger, args);
         }
+    }
 }
 
 void AuraEffect::HandleProcTriggerSpellCopyOfTrigger(AuraApplication* aurApp, ProcEventInfo& eventInfo)
