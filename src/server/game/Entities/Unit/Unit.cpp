@@ -2335,7 +2335,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     // if victim is casting or cc'd it can't avoid attacks
     if (victim->IsNonMeleeSpellCast(false, false, true) || victim->HasUnitState(UNIT_STATE_CONTROLLED))
     {
-        canDodge = false;[]
+        canDodge = false;
         canParryOrBlock = false;
     }
 
