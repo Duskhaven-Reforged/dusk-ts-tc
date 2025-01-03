@@ -581,7 +581,7 @@ void FreezeDetector::Handler(std::weak_ptr<FreezeDetector> freezeDetectorRef, bo
             // possible freeze
             else
             {
-                uint32 msTOimeDiff = getMSTimeDiff(freezeDetector->_lastChangeMsTime, curtime);
+                uint32 msTimeDiff = getMSTimeDiff(freezeDetector->_lastChangeMsTime, curtime);
                 if (msTimeDiff > freezeDetector->_maxCoreStuckTimeInMs)
                 {
                     TC_LOG_ERROR("server.worldserver", "World Thread hangs for {} ms, forcing a crash!", msTimeDiff);
