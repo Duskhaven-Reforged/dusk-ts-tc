@@ -847,13 +847,15 @@ void Spell::EffectTriggerSpell()
 
     CastSpellExtraArgs args(m_originalCasterGUID);
     // set basepoints for trigger with value effect
-    if (effectInfo->Effect == SPELL_EFFECT_TRIGGER_SPELL_WITH_VALUE) { 
+    if (effectInfo->Effect == SPELL_EFFECT_TRIGGER_SPELL_WITH_VALUE) {
+        TC_LOG_INFO("server.worldserver", "TRIGGER W/ A {} AND B {}", effectInfo->MiscValue, effectInfo->MiscValueB);
+
         for (uint32 i = 0; i < MAX_SPELL_EFFECTS; ++i) {
             args.AddSpellMod(SpellValueMod(SPELLVALUE_BASE_POINT0 + i), damage);
             if (effectInfo->MiscValue == 0 && effectInfo->MiscValueB > 0)
                 args.AddSpellMod(SpellValueMod(SPELLVALUE_DURATION), effectInfo->MiscValueB);
             else if (effectInfo->MiscValue == 8)
-            args.AddSpellMod(SpellValueMod(SPELLVALUE_AURA_STACK), effectInfo->MiscValueB);
+                args.AddSpellMod(SpellValueMod(SPELLVALUE_AURA_STACK), effectInfo->MiscValueB);
         }
     }
 
