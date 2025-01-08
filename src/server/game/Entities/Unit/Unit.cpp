@@ -7354,7 +7354,7 @@ uint32 Unit::SpellDamageBonusTaken(Unit* caster, SpellInfo const* spellProto, ui
         }
     }
 
-    if (IsPlayer())
+    if (caster && IsPlayer())
         FIRE(Player, OnCustomScriptedDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(caster)), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&TakenTotalMod), TSNumber<uint8>(1 << damagetype));
 
     // Sanctified Wrath (bypass damage reduction)
