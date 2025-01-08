@@ -700,12 +700,12 @@ class TC_GAME_API Spell
 
         struct HitTriggerSpell
         {
-            HitTriggerSpell(SpellInfo const* spellInfo, SpellInfo const* auraSpellInfo, int32 procChance) :
-                triggeredSpell(spellInfo), triggeredByAura(auraSpellInfo), chance(procChance) { }
+            HitTriggerSpell(SpellInfo const* spellInfo, SpellInfo const* auraSpellInfo, int32 procChance, uint8 index) :
+                triggeredSpell(spellInfo), triggeredByAura(auraSpellInfo), chance(procChance), triggeredByEffIdx(index) { }
 
             SpellInfo const* triggeredSpell;
             SpellInfo const* triggeredByAura;
-            // uint8 triggeredByEffIdx          This might be needed at a later stage - No need known for now
+            uint8 triggeredByEffIdx;
             int32 chance;
         };
 

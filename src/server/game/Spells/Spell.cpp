@@ -3026,7 +3026,12 @@ void Spell::DoTriggersOnSpellHit(Unit* unit, uint8 effMask)
         {
             if (CanExecuteTriggersOnHit(effMask, i->triggeredByAura) && roll_chance_i(i->chance))
             {
-                m_caster->CastSpell(unit, i->triggeredSpell->Id, true);
+                SpellEffIndex index = SpellEffIndex(i->triggeredByEffIdx);
+                auto Mode = i->triggeredByAura->GetEffect(index).MiscValue;
+                if (Mode > 0 && m_caster->IsUnit())
+                    m_caster->ToUnit()->AddAura(i->triggeredSpell->Id, unit);
+                else
+                    m_caster->CastSpell(unit, i->triggeredSpell->Id, true);
                 TC_LOG_DEBUG("spells", "Spell {} triggered spell {} by SPELL_AURA_ADD_TARGET_TRIGGER aura", m_spellInfo->Id, i->triggeredSpell->Id);
 
                 // SPELL_AURA_ADD_TARGET_TRIGGER auras shouldn't trigger auras without duration
@@ -8445,7 +8450,7 @@ void Spell::PrepareTriggersExecutedOnHit()
             int32 chance = unitCaster->CalculateSpellDamage(aurEff->GetSpellEffectInfo(), &auraBaseAmount);
             chance *= aurEff->GetBase()->GetStackAmount();
             // build trigger and add to the list
-            m_hitTriggerSpells.emplace_back(spellInfo, auraSpellInfo, chance);
+            m_hitTriggerSpells.emplace_back(spellInfo, auraSpellInfo, chance, aurEff->GetEffIndex());
         }
     }
 }
