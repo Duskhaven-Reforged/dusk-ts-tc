@@ -1737,16 +1737,16 @@ void Unit::HandleEmoteCommand(Emote emoteId)
             // no more than 100%
             RoundToInterval(arpPct, 0.f, 100.f);
 
-            float maxArmorPen = 0.f;
-            if (victim->GetLevel() < 60)
-                maxArmorPen = float(400 + 85 * victim->GetLevel());
-            else
-                maxArmorPen = 400 + 85 * victim->GetLevel() + 4.5f * 85 * (victim->GetLevel() - 59);
+            // float maxArmorPen = 0.f;
+            // if (victim->GetLevel() < 60)
+            //     maxArmorPen = float(400 + 85 * victim->GetLevel());
+            // else
+            //     maxArmorPen = 400 + 85 * victim->GetLevel() + 4.5f * 85 * (victim->GetLevel() - 59);
 
-            // Cap armor penetration to this number
-            maxArmorPen = std::min((armor + maxArmorPen) / 3.f, armor);
-            // Figure out how much armor do we ignore
-            armor -= CalculatePct(maxArmorPen, arpPct);
+            // // Cap armor penetration to this number
+            // maxArmorPen = std::min((armor + maxArmorPen) / 3.f, armor);
+            // // Figure out how much armor do we ignore
+            armor -= CalculatePct(armor, arpPct);
         }
     }
 
