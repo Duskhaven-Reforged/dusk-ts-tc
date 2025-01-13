@@ -7353,7 +7353,7 @@ void Spell::Delayed() // only called in DealDamage()
         return;
 
     //check pushback reduce
-    int32 delaytime = 500;                                  // spellcasting delay is normally 500ms
+    int32 delaytime = 200;                                  // spellcasting delay is normally 500ms, hater set to 200ms
 
     int32 delayReduce = 100;                                // must be initialized to 100 for percent modifiers
     playerCaster->ApplySpellMod(m_spellInfo->Id, SPELLMOD_NOT_LOSE_CASTING_TIME, delayReduce, this);
@@ -7398,7 +7398,7 @@ void Spell::DelayedChannel()
     // should be affected by modifiers, not take the dbc duration.
     int32 duration = ((m_channeledDuration > 0) ? m_channeledDuration : m_spellInfo->GetDuration());
 
-    int32 delaytime = CalculatePct(duration, 25); // channeling delay is normally 25% of its time per hit
+    int32 delaytime = CalculatePct(duration, 10); // channeling delay is normally 25% of its time per hit; hater set to 10%
 
     int32 delayReduce = 100;                                    // must be initialized to 100 for percent modifiers
     playerCaster->ApplySpellMod(m_spellInfo->Id, SPELLMOD_NOT_LOSE_CASTING_TIME, delayReduce, this);

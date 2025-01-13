@@ -6243,8 +6243,6 @@ void AuraEffect::HandleAuraModForgeStat(AuraApplication const* aurApp, uint8 mod
     auto Type = GetMiscValueB();
     auto Amount = GetAmount();
     FIRE(Player, OnCustomStatAura, TSPlayer(target->ToPlayer()), apply, TSSpellInfo(m_spellInfo), TSNumber<uint8>(Stat), TSNumber<uint8>(Type), TSNumber<float>(Amount));
-
-    return;
 }
 
 void AuraEffect::HandleModRatingPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const
