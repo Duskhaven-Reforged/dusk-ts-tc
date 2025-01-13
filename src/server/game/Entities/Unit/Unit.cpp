@@ -1729,6 +1729,11 @@ void Unit::HandleEmoteCommand(Emote emoteId)
                 return false;
             });
 
+            // custom arp pct
+            if (attacker->IsPlayer()) {
+                FIRE(Player, ScriptedArmorPenMod, TSPlayer(const_cast<Player*>(attacker->ToPlayer())), TSUnit(victim), TSMutableNumber<float>(&arpPct));
+            }
+
             // no more than 100%
             RoundToInterval(arpPct, 0.f, 100.f);
 
