@@ -6226,6 +6226,9 @@ void AuraEffect::HandleAuraModForgeStat(AuraApplication const* aurApp, uint8 mod
         return;
 
     Unit* target = aurApp->GetTarget();
+    if (!target->IsPlayer())
+        return;
+
     auto Stat = GetMiscValue();
     auto Type = GetMiscValueB();
     auto Amount = GetAmount();
