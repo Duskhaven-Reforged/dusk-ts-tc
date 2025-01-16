@@ -2494,6 +2494,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         float m_auraBaseFlatMod[BASEMOD_END];
         float m_auraBasePctMod[BASEMOD_END];
         int16 m_baseRatingValue[MAX_COMBAT_RATING];
+        int16 m_bonusRatingValue[MAX_COMBAT_RATING];
         uint32 m_baseSpellPower;
         uint32 m_baseFeralAP;
         uint32 m_baseManaRegen;

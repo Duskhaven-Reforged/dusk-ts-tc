@@ -359,8 +359,10 @@ Player::Player(WorldSession* session): Unit(true)
         m_auraBasePctMod[i] = 1.0f;
     }
 
-    for (uint8 i = 0; i < MAX_COMBAT_RATING; i++)
+    for (uint8 i = 0; i < MAX_COMBAT_RATING; i++) {
         m_baseRatingValue[i] = 0;
+        m_bonusRatingValue[i] = 0;
+    }
 
     m_baseSpellPower = 0;
     m_baseFeralAP = 0;
@@ -5493,18 +5495,47 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
 {
     float oldRating = m_baseRatingValue[combatRating];
     m_baseRatingValue[combatRating] += (apply ? value : -value);
+    m_bonusRatingValue[combatRating] = 0;
+
+    // @dh-begin:
+    // Aleist3r: moving this stuff here, discarding the rest
+    // Apply bonus from SPELL_AURA_MOD_RATING_FROM_STAT
+    // stat used stored in miscValueB for this aura
+    AuraEffectList const& modRatingFromStat = GetAuraEffectsByType(SPELL_AURA_MOD_RATING_FROM_STAT);
+    for (AuraEffect const* aurEff : modRatingFromStat)
+        if (aurEff->GetMiscValue() & (1 << combatRating))
+            m_bonusRatingValue[combatRating] += int32(CalculatePct(GetStat(Stats(aurEff->GetMiscValueB())), aurEff->GetAmount()));
+
+    // apply bonus from SPELL_AURA_MOD_RATING_FROM_ALL_SOURCES_BY_PCT
+    m_bonusRatingValue[combatRating] *= GetTotalAuraMultiplier(SPELL_AURA_MOD_RATING_FROM_ALL_SOURCES_BY_PCT, [combatRating](AuraEffect const* aurEff) -> bool
+        {
+            if (aurEff->GetMiscValue() & (1 << combatRating))
+                return true;
+            return false;
+        });
+
+    // apply bonus from SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT
+    m_bonusRatingValue[combatRating] += GetTotalAuraModifier(SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT, [combatRating](AuraEffect const* aurEff) -> bool
+        {
+            if (aurEff->GetMiscValue() == 1 && aurEff->GetMiscValueB() & (1 << combatRating))
+                return true;
+            return false;
+        });
+    // @dh-end
 
     // explicit affected values
     float const multiplier = GetRatingMultiplier(combatRating);
-    float const oldVal = oldRating * multiplier;
-    float newVal = m_baseRatingValue[combatRating] * multiplier;
+    float const oldVal = (oldRating + m_bonusRatingValue[combatRating]) * multiplier;
+    float newVal = (m_baseRatingValue[combatRating] + m_bonusRatingValue[combatRating]) * multiplier;
 
     switch (combatRating)
     {
         case CR_HASTE: {
             float NewHaste = 0.f;
             float OldHaste = 0.f;
-            FIRE(Player, OnUpdateHasteRating, TSPlayer(this), m_baseRatingValue[combatRating], oldRating, &NewHaste, &OldHaste);
+            float BonusHaste = 0.f;
+            FIRE(Player, OnUpdateHasteRating, TSPlayer(this), m_baseRatingValue[CR_HASTE], &BonusHaste, oldRating, &NewHaste, &OldHaste);
+            m_bonusRatingValue[CR_HASTE] += BonusHaste;
 
             ApplyAttackTimePercentMod(BASE_ATTACK, OldHaste, false);
             ApplyAttackTimePercentMod(BASE_ATTACK, NewHaste, true);
@@ -5545,52 +5576,7 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
 
 void Player::UpdateRating(CombatRating cr)
 {
-    int32 amount = m_baseRatingValue[cr];
-    // Apply bonus from SPELL_AURA_MOD_RATING_FROM_STAT
-    // stat used stored in miscValueB for this aura
-    AuraEffectList const& modRatingFromStat = GetAuraEffectsByType(SPELL_AURA_MOD_RATING_FROM_STAT);
-    for (AuraEffect const* aurEff : modRatingFromStat)
-        if (aurEff->GetMiscValue() & (1 << cr))
-            amount += int32(CalculatePct(GetStat(Stats(aurEff->GetMiscValueB())), aurEff->GetAmount()));
-
-    // @dh-begin:
-    // Apply bonus from SPELL_AURA_MOD_RATING_PCT
-    AuraEffectList const& modRatingPct = GetAuraEffectsByType(SPELL_AURA_MOD_RATING_PCT);
-    for (AuraEffectList::const_iterator i = modRatingPct.begin(); i != modRatingPct.end(); ++i)
-        if ((*i)->GetMiscValue() & (1 << cr))
-        {
-            uint8 level = GetLevel();
-            GtCombatRatingsEntry const* combatRating = sGtCombatRatingsStore.LookupEntry(cr * GT_MAX_LEVEL + level - 1);
-            float mult = 1;
-            amount += round((*i)->GetAmount() * mult);
-        }
-
-    // Apply bonus from SPELL_AURA_MOD_RATING_OF_RATING_PCT
-    AuraEffectList const& modRatingFromRating = GetAuraEffectsByType(SPELL_AURA_MOD_RATING_OF_RATING_PCT);
-    for (AuraEffectList::const_iterator i = modRatingFromRating.begin(); i != modRatingFromRating.end(); ++i)
-        if ((*i)->GetMiscValue() & (1 << cr))
-            for (int8 tempCr = 0; tempCr < MAX_COMBAT_RATING; ++tempCr)
-                if ((*i)->GetMiscValueB() & (1 << tempCr))
-                    amount = int32(CalculatePct(GetRatingBonusValue(CombatRating(tempCr)), (*i)->GetAmount()));
-
-    // now apply bonus from SPELL_AURA_MOD_RATING_FROM_ALL_SOURCES_BY_PCT, it is cummulative
-    AuraEffectList const& modRatingFromAllSourcesPct = GetAuraEffectsByType(SPELL_AURA_MOD_RATING_FROM_ALL_SOURCES_BY_PCT);
-    for (AuraEffectList::const_iterator i = modRatingFromAllSourcesPct.begin(); i != modRatingFromAllSourcesPct.end(); ++i)
-        if ((*i)->GetMiscValue() & (1 << cr))
-            amount += int32(CalculatePct(GetRatingBonusValue(cr), (*i)->GetAmount()));
-
-    amount += GetTotalAuraModifier(SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT, [cr](AuraEffect const* aurEff) -> bool
-        {
-            if (aurEff->GetMiscValue() == 1 && aurEff->GetMiscValueB() & (1 << cr))
-                return true;
-            return false;
-        });
-
-    for (AuraEffectList::const_iterator i = modRatingFromAllSourcesPct.begin(); i != modRatingFromAllSourcesPct.end(); ++i)
-        if ((*i)->GetMiscValue() & (1 << cr))
-            amount += int32(CalculatePct(GetMaxHealth(), (*i)->GetAmount()));
-    // @dh-end
-
+    int32 amount = m_baseRatingValue[cr] + m_bonusRatingValue[cr];
     if (amount < 0)
         amount = 0;
     SetUInt32Value(PLAYER_FIELD_COMBAT_RATING_1 + AsUnderlyingType(cr), uint32(amount));
