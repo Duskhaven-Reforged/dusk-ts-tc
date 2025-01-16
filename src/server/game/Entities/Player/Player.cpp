@@ -5493,7 +5493,7 @@ float Player::OCTRegenMPPerSpirit() const
 
 void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
 {
-    float oldRating = m_baseRatingValue[combatRating];
+    float oldRating = m_baseRatingValue[combatRating] + m_bonusRatingValue[combatRating];
     m_baseRatingValue[combatRating] += (apply ? value : -value);
     m_bonusRatingValue[combatRating] = 0;
 
