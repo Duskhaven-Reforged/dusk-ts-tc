@@ -848,14 +848,16 @@ void Spell::EffectTriggerSpell()
     CastSpellExtraArgs args(m_originalCasterGUID);
     // set basepoints for trigger with value effect
     if (effectInfo->Effect == SPELL_EFFECT_TRIGGER_SPELL_WITH_VALUE) {
+        TC_LOG_INFO("server.worldserver", "TWV: {}", damage);
+        if (damage > 0)
+            for (uint32 i = 0; i < MAX_SPELL_EFFECTS; ++i) {
+                args.AddSpellMod(SpellValueMod(SPELLVALUE_BASE_POINT0 + i), damage);
+            }
 
-        for (uint32 i = 0; i < MAX_SPELL_EFFECTS; ++i) {
-            args.AddSpellMod(SpellValueMod(SPELLVALUE_BASE_POINT0 + i), damage);
-            if (effectInfo->MiscValue == 0 && effectInfo->MiscValueB > 0)
-                args.AddSpellMod(SpellValueMod(SPELLVALUE_DURATION), effectInfo->MiscValueB);
-            else if (effectInfo->MiscValue == 8)
-                args.AddSpellMod(SpellValueMod(SPELLVALUE_AURA_STACK), effectInfo->MiscValueB);
-        }
+        if (effectInfo->MiscValue == 0 && effectInfo->MiscValueB > 0)
+            args.AddSpellMod(SpellValueMod(SPELLVALUE_DURATION), effectInfo->MiscValueB);
+        else if (effectInfo->MiscValue == 8)
+            args.AddSpellMod(SpellValueMod(SPELLVALUE_AURA_STACK), effectInfo->MiscValueB);
     }
 
     // original caster guid only for GO cast
@@ -2971,6 +2973,8 @@ void Spell::EffectEnchantItemTmp()
 
     // add new enchanting if equipped
     item_owner->ApplyEnchantment(itemTarget, TEMP_ENCHANTMENT_SLOT, true);
+
+    FIRE(Player, OnTempEnchant, TSPlayer(item_owner), enchant_id);
 }
 
 void Spell::EffectTameCreature()

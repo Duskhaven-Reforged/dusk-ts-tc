@@ -2951,24 +2951,118 @@ void SpellInfo::_LoadImmunityInfo()
                         break;
                 }
 
+                bool UseNew = effect.MiscValueB > 0;
+
                 if (immuneInfo.AuraTypeImmune.empty())
                 {
-                    if (miscVal & (1 << 10))
-                        immuneInfo.AuraTypeImmune.insert(SPELL_AURA_MOD_STUN);
-                    if (miscVal & (1 << 1))
-                        immuneInfo.AuraTypeImmune.insert(SPELL_AURA_TRANSFORM);
+                    if (UseNew) {
+                        if (miscVal & (1 << MECHANIC_CHARM)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_CHARM);
+                        }
+                        if (miscVal & (1 << MECHANIC_DISORIENTED)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_DISORIENTED);
+                        }
+                        if (miscVal & (1 << MECHANIC_DISARM)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_DISARM);
+                        }
+                        if (miscVal & (1 << MECHANIC_FEAR)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_FEAR);
+                        }
+                        if (miscVal & (1 << MECHANIC_ROOT)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_ROOT);
+                        }
+                        if (miscVal & (1 << MECHANIC_SLOW_ATTACK)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_SLOW_ATTACK);
+                        }
+                        if (miscVal & (1 << MECHANIC_SILENCE)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_SILENCE);
+                        }
+                        if (miscVal & (1 << MECHANIC_SLEEP)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_SLEEP);
+                        }
+                        if (miscVal & (1 << MECHANIC_SNARE)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_SNARE);
+                        }
+                        if (miscVal & (1 << MECHANIC_STUN)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_STUN);
+                        }
+                        if (miscVal & (1 << MECHANIC_FREEZE)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_FREEZE);
+                        }
+                        if (miscVal & (1 << MECHANIC_KNOCKOUT)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_KNOCKOUT);
+                        }
+                        if (miscVal & (1 << MECHANIC_BLEED)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_BLEED);
+                        }
+                        if (miscVal & (1 << MECHANIC_BANDAGE)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_BANDAGE);
+                        }
+                        if (miscVal & (1 << MECHANIC_POLYMORPH)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_POLYMORPH);
+                        }
+                        if (miscVal & (1 << MECHANIC_BANISH)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_BANISH);
+                        }
+                        if (miscVal & (1 << MECHANIC_SHIELD)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_SHIELD);
+                        }
+                        if (miscVal & (1 << MECHANIC_SHACKLE)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_SHACKLE);
+                        }
+                        if (miscVal & (1 << MECHANIC_MOUNT)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_MOUNT);
+                        }
+                        if (miscVal & (1 << MECHANIC_INFECTED)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_INFECTED);
+                        }
+                        if (miscVal & (1 << MECHANIC_TURN)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_TURN);
+                        }
+                        if (miscVal & (1 << MECHANIC_HORROR)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_HORROR);
+                        }
+                        if (miscVal & (1 << MECHANIC_INVULNERABILITY)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_INVULNERABILITY);
+                        }
+                        if (miscVal & (1 << MECHANIC_INTERRUPT)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_INTERRUPT);
+                        }
+                        if (miscVal & (1 << MECHANIC_DAZE)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_DAZE);
+                        }
+                        if (miscVal & (1 << MECHANIC_DISCOVERY)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_DISCOVERY);
+                        }
+                        if (miscVal & (1 << MECHANIC_IMMUNE_SHIELD)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_IMMUNE_SHIELD);
+                        }
+                        if (miscVal & (1 << MECHANIC_SAPPED)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_SAPPED);
+                        }
+                        if (miscVal & (1 << MECHANIC_ENRAGED)) {
+                            mechanicImmunityMask |= (1 << MECHANIC_ENRAGED);
+                        }
 
-                    // These flag can be recognized wrong:
-                    if (miscVal & (1 << 6))
-                        immuneInfo.AuraTypeImmune.insert(SPELL_AURA_MOD_DECREASE_SPEED);
-                    if (miscVal & (1 << 0))
-                        immuneInfo.AuraTypeImmune.insert(SPELL_AURA_MOD_ROOT);
-                    if (miscVal & (1 << 2))
-                        immuneInfo.AuraTypeImmune.insert(SPELL_AURA_MOD_CONFUSE);
-                    if (miscVal & (1 << 9))
-                        immuneInfo.AuraTypeImmune.insert(SPELL_AURA_MOD_FEAR);
-                    if (miscVal & (1 << 7))
-                        immuneInfo.AuraTypeImmune.insert(SPELL_AURA_MOD_DISARM);
+                        removeEffectsWithMechanic = true;
+                    } else {
+                        if (miscVal & (1 << 10))
+                            immuneInfo.AuraTypeImmune.insert(SPELL_AURA_MOD_STUN);
+                        if (miscVal & (1 << 1))
+                            immuneInfo.AuraTypeImmune.insert(SPELL_AURA_TRANSFORM);
+
+                        // These flag can be recognized wrong:
+                        if (miscVal & (1 << 6))
+                            immuneInfo.AuraTypeImmune.insert(SPELL_AURA_MOD_DECREASE_SPEED);
+                        if (miscVal & (1 << 0))
+                            immuneInfo.AuraTypeImmune.insert(SPELL_AURA_MOD_ROOT);
+                        if (miscVal & (1 << 2))
+                            immuneInfo.AuraTypeImmune.insert(SPELL_AURA_MOD_CONFUSE);
+                        if (miscVal & (1 << 9))
+                            immuneInfo.AuraTypeImmune.insert(SPELL_AURA_MOD_FEAR);
+                        if (miscVal & (1 << 7))
+                            immuneInfo.AuraTypeImmune.insert(SPELL_AURA_MOD_DISARM);
+                    }
                 }
                 break;
             }
