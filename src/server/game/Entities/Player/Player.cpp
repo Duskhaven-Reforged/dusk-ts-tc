@@ -3911,18 +3911,6 @@ void Player::IncreaseResetTalentsCostAndCounters(uint32 lastResetTalentsCost)
 
 bool Player::ResetTalents(bool involuntarily /*= false*/)
 {
-    
-    if (lastResetTalentsCost > 0) // We don't want to reset the accumulated talent reset cost if we decide to temporarily enable CONFIG_NO_RESET_TALENT_COST
-        m_resetTalentsCost = lastResetTalentsCost;
-
-    m_resetTalentsTime = GameTime::GetGameTime();
-
-    UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_GOLD_SPENT_FOR_TALENTS, lastResetTalentsCost);
-    UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_NUMBER_OF_TALENT_RESETS, 1);
-}
-
-bool Player::ResetTalents(bool involuntarily /*= false*/)
-{
         // @tswow-begin
     FIRE(
         Player, OnTalentsResetEarly
