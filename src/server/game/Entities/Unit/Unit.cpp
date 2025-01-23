@@ -374,7 +374,7 @@ Unit::Unit(bool isWorldObject) :
     m_modMeleeHitChance = 0.0f;
     m_modRangedHitChance = 0.0f;
     m_modSpellHitChance = 0.0f;
-    m_baseSpellCritChance = 5;
+    m_baseSpellCritChance = 5.0f;
 
     m_lastManaUse = 0;
     m_lastPowerCost = 0;
@@ -3301,6 +3301,11 @@ bool Unit::IsMovementPreventedByCasting() const
     if (!HasUnitState(UNIT_STATE_CASTING))
         return false;
 
+    if (Spell* spell = m_currentSpells[CURRENT_GENERIC_SPELL])
+        if (spell->getState() == SPELL_STATE_FINISHED ||
+            !(spell->m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT))
+            return false;
+
     // channeled spells during channel stage (after the initial cast timer) allow movement with a specific spell attribute
     if (Spell* spell = m_currentSpells[CURRENT_CHANNELED_SPELL])
         if (spell->getState() != SPELL_STATE_FINISHED && spell->IsChannelActive()) {
@@ -4463,8 +4468,8 @@ void Unit::RemoveAllAuras()
             {
                 sstr << "m_ownedAuras:" << "\n";
 
-                for (std::pair<uint32 const, Aura*>& auraPair : m_ownedAuras)
-                    sstr << auraPair.second->GetDebugInfo() << "\n";
+                for (auto const& [spellId, aura] : m_ownedAuras)
+                    sstr << aura->GetDebugInfo() << "\n";
             }
 
             TC_LOG_ERROR("entities.unit", "{}", sstr.str());
@@ -7017,6 +7022,111 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
             continue;
 
         AddPct(DoneTotalMod, (*i)->GetAmount());
+            break;
+        case SPELLFAMILY_PRIEST:
+            // Mind Flay
+            if (spellProto->SpellFamilyFlags[0] & 0x800000)
+            {
+                // Glyph of Shadow Word: Pain
+                if (AuraEffect* aurEff = GetAuraEffect(55687, 0))
+                    // Increase Mind Flay damage if Shadow Word: Pain present on target
+                    if (victim->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_PRIEST, 0x8000, 0, 0, GetGUID()))
+                        AddPct(DoneTotalMod, aurEff->GetAmount());
+
+                // Twisted Faith - Mind Flay part
+                if (AuraEffect* aurEff = GetAuraEffect(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS, SPELLFAMILY_PRIEST, 2848, 1))
+                    // Increase Mind Flay damage if Shadow Word: Pain present on target
+                    if (victim->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_PRIEST, 0x8000, 0, 0, GetGUID()))
+                        AddPct(DoneTotalMod, aurEff->GetAmount());
+            }
+            // Smite
+            else if (spellProto->SpellFamilyFlags[0] & 0x80)
+            {
+                // Glyph of Smite
+                if (AuraEffect* aurEff = GetAuraEffect(55692, 0))
+                    if (victim->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_PRIEST, 0x100000, 0, 0, GetGUID()))
+                        AddPct(DoneTotalMod, aurEff->GetAmount());
+            }
+            // Shadow Word: Death
+            else if (spellProto->SpellFamilyFlags[1] & 0x2)
+            {
+                // Glyph of Shadow Word: Death
+                if (AuraEffect* aurEff = GetAuraEffect(55682, 1))
+                    if (victim->HasAuraState(AURA_STATE_HEALTHLESS_35_PERCENT))
+                        AddPct(DoneTotalMod, aurEff->GetAmount());
+            }
+            break;
+        case SPELLFAMILY_PALADIN:
+            // Judgement of Vengeance/Judgement of Corruption
+            if ((spellProto->SpellFamilyFlags[1] & 0x400000) && spellProto->SpellIconID == 2292)
+            {
+                // Get stack of Holy Vengeance/Blood Corruption on the target added by caster
+                uint32 stacks = 0;
+                Unit::AuraEffectList const& auras = victim->GetAuraEffectsByType(SPELL_AURA_PERIODIC_DAMAGE);
+                for (Unit::AuraEffectList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
+                {
+                    if (((*itr)->GetId() == 31803 || (*itr)->GetId() == 53742) && (*itr)->GetCasterGUID() == GetGUID())
+                    {
+                        stacks = (*itr)->GetBase()->GetStackAmount();
+                        break;
+                    }
+                }
+                // + 10% for each application of Holy Vengeance/Blood Corruption on the target
+                if (stacks)
+                    AddPct(DoneTotalMod, 10 * stacks);
+            }
+            break;
+        case SPELLFAMILY_DRUID:
+            // Thorns
+            if (spellProto->SpellFamilyFlags[0] & 0x100)
+            {
+                // Brambles
+                if (AuraEffect* aurEff = GetAuraEffectOfRankedSpell(16836, 0))
+                    AddPct(DoneTotalMod, aurEff->GetAmount());
+            }
+            break;
+        case SPELLFAMILY_WARLOCK:
+            // Fire and Brimstone
+            if (spellProto->SpellFamilyFlags[1] & 0x00020040)
+            {
+                if (victim->HasAuraState(AURA_STATE_CONFLAGRATE, nullptr, this))
+                {
+                    if (AuraEffect const* aurEFf = GetDummyAuraEffect(SPELLFAMILY_WARLOCK, 3173, EFFECT_0))
+                        AddPct(DoneTotalMod, aurEFf->GetAmount());
+                }
+            }
+            // Shadow Bite (15% increase from each dot)
+            if (spellProto->SpellFamilyFlags[1] & 0x00400000 && IsPet())
+                if (uint8 count = victim->GetDoTsByCaster(GetOwnerGUID()))
+                    AddPct(DoneTotalMod, 15 * count);
+
+            // Drain Soul - If the target is at or below 25% health, Drain Soul causes four times the normal damage
+            if (spellProto->SpellFamilyFlags[0] & 0x00004000 && !victim->HealthAbovePct(25))
+                DoneTotalMod *= 4;
+
+            // Don't let Conflagrate double dip from damage done bonuses (from Immolate/Shadowflame and then for itself)
+            if (spellProto->SpellFamilyFlags[1] & 0x800000)
+                DoneTotalMod = 1.0f;
+            break;
+        case SPELLFAMILY_HUNTER:
+            // Steady Shot
+            if (spellProto->SpellFamilyFlags[1] & 0x1)
+                if (AuraEffect* aurEff = GetAuraEffect(56826, 0))  // Glyph of Steady Shot
+                    if (victim->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_HUNTER, 0x00004000, 0, 0, GetGUID()))
+                        AddPct(DoneTotalMod, aurEff->GetAmount());
+            break;
+        case SPELLFAMILY_DEATHKNIGHT:
+            // Improved Icy Touch
+            if (spellProto->SpellFamilyFlags[0] & 0x2)
+                if (AuraEffect* aurEff = GetDummyAuraEffect(SPELLFAMILY_DEATHKNIGHT, 2721, 0))
+                    AddPct(DoneTotalMod, aurEff->GetAmount());
+
+            // Glacier Rot
+            if (spellProto->SpellFamilyFlags[0] & 0x2 || spellProto->SpellFamilyFlags[1] & 0x6)
+                if (AuraEffect* aurEff = GetDummyAuraEffect(SPELLFAMILY_DEATHKNIGHT, 196, 0))
+                    if (victim->GetDiseasesByCaster(owner->GetGUID()) > 0)
+                        AddPct(DoneTotalMod, aurEff->GetAmount());
+            break;
     }
 
     // AuraEffectList const& mOverrideClassScript = owner->GetAuraEffectsByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
@@ -7442,18 +7552,27 @@ float Unit::SpellCritChanceDone(SpellInfo const* spellInfo, SpellSchoolMask scho
     float crit_chance = 0.0f;
     switch (spellInfo->DmgClass)
     {
+        case SPELL_DAMAGE_CLASS_NONE:
         case SPELL_DAMAGE_CLASS_MAGIC:
         {
-            if (schoolMask & SPELL_SCHOOL_MASK_NORMAL)
-                crit_chance = 0.0f;
-            // For other schools
-            else if (GetTypeId() == TYPEID_PLAYER)
-                crit_chance = GetFloatValue(PLAYER_SPELL_CRIT_PERCENTAGE1 + AsUnderlyingType(GetFirstSchoolInMask(schoolMask)));
-            else
+            auto getPhysicalCritChance = [&]
             {
-                crit_chance = (float)m_baseSpellCritChance;
-                crit_chance += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL, schoolMask);
-            }
+                return GetUnitCriticalChanceDone(attackType) + GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL, schoolMask);
+            };
+
+            auto getMagicCritChance = [&]
+            {
+                if (IsPlayer())
+                    return GetFloatValue(PLAYER_SPELL_CRIT_PERCENTAGE1 + AsUnderlyingType(GetFirstSchoolInMask(schoolMask)));
+
+                return m_baseSpellCritChance + GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL, schoolMask);
+            };
+
+            if (schoolMask & SPELL_SCHOOL_MASK_NORMAL)
+                crit_chance = std::max(crit_chance, getPhysicalCritChance());
+
+            if (schoolMask & ~SPELL_SCHOOL_MASK_NORMAL)
+                crit_chance = std::max(crit_chance, getMagicCritChance());
             break;
         }
         case SPELL_DAMAGE_CLASS_MELEE:
@@ -7463,7 +7582,6 @@ float Unit::SpellCritChanceDone(SpellInfo const* spellInfo, SpellSchoolMask scho
             crit_chance += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL, schoolMask);
             break;
         }
-        case SPELL_DAMAGE_CLASS_NONE:
         default:
             return 0.0f;
     }
@@ -10442,6 +10560,12 @@ void Unit::CleanupBeforeRemoveFromMap(bool finalCleanup)
 
     if (IsInWorld())
         RemoveFromWorld();
+    else
+    {
+        // cleanup that must happen even if not in world
+        if (IsVehicle())
+            RemoveVehicleKit();
+    }
 
     ASSERT(GetGUID());
 
@@ -14001,11 +14125,11 @@ void Unit::_EnterVehicle(Vehicle* vehicle, int8 seatId, AuraApplication const* a
             return;
         }
 
-        if (vehicle->GetBase()->GetTypeId() == TYPEID_UNIT)
+        if (Creature* vehicleBaseCreature = vehicle->GetBase()->ToCreature())
         {
             // If a player entered a vehicle that is part of a formation, remove it from said formation
-            if (CreatureGroup* creatureGroup = vehicle->GetBase()->ToCreature()->GetFormation())
-                creatureGroup->RemoveMember(vehicle->GetBase()->ToCreature());
+            if (CreatureGroup* creatureGroup = vehicleBaseCreature->GetFormation())
+                sFormationMgr->RemoveCreatureFromGroup(creatureGroup, vehicleBaseCreature);
         }
     }
 

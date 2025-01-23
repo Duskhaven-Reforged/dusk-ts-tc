@@ -37,10 +37,8 @@
 // @tswow-end
 
 /// Create the Weather object
-// @tswow-begin map parameter
 Weather::Weather(Map* map, uint32 zoneId, WeatherData const* weatherChances)
     : m_map(map), m_zone(zoneId), m_weatherChances(weatherChances)
-// @tswow-end
 {
     m_timer.SetInterval(sWorld->getIntConfig(CONFIG_INTERVAL_CHANGEWEATHER));
     m_type = WEATHER_TYPE_FINE;

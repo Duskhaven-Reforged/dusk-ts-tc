@@ -213,7 +213,7 @@ public:
              // @tswow-begin call super
              InstanceScript::Update(diff);
              // @tswow-end
-         };
+         }
 
         void UseStatue(GameObject* go)
         {

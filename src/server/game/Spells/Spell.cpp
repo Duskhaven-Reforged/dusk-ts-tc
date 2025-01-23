@@ -3378,6 +3378,7 @@ void Spell::cancel(SpellCastResult result /*= SPELL_FAILED_INTERRUPTED*/, Option
     //set state back so finish will be processed
     m_spellState = oldState;
 
+    FIRE_ID(m_spellInfo->events.id, Spell, OnCancel, TSSpell(this), oldState);
     finish(false);
 }
 
