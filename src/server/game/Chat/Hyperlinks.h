@@ -76,9 +76,8 @@ namespace Trinity::Hyperlinks
 
     struct TalentLinkData
     {
-        TalentEntry const* Talent;
-        uint8 Rank;
-        SpellInfo const* Spell;
+        std::string talentString;
+        std::string name;
     };
 
     struct TradeskillLinkData

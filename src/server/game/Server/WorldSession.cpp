@@ -658,6 +658,16 @@ void WorldSession::KickPlayer(std::string const& reason)
 
 bool WorldSession::ValidateHyperlinksAndMaybeKick(std::string const& str)
 {
+    if (str.length() > 18) {
+        std::string linktype = str.substr(13, 6);
+        if (linktype == "talent") {
+            bool Valid = false;
+            FIRE(Player, CheckLoadoutString, TSPlayer(GetPlayer()), str, TSMutable<bool, bool>(&Valid));
+            if (Valid)
+                return Valid;
+        }
+    }
+
     if (Trinity::Hyperlinks::CheckAllLinks(str))
         return true;
 

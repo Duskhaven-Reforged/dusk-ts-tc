@@ -285,12 +285,7 @@ struct LinkValidator<LinkTags::talent>
 {
     static bool IsTextValid(TalentLinkData const& data, std::string_view text)
     {
-        SpellInfo const* info = data.Spell;
-        if (!info)
-            info = sSpellMgr->GetSpellInfo(data.Talent->SpellRank[0]);
-        if (!info)
-            return false;
-        return LinkValidator<LinkTags::spell>::IsTextValid(info, text);
+        return true;
     }
 
     static bool IsColorValid(TalentLinkData const&, HyperlinkColor c)
