@@ -3028,15 +3028,15 @@ void Player::AddNewMailDeliverTime(time_t deliver_time)
 
 void DeleteSpellFromAllPlayers(uint32 spellId)
 {
-    CharacterDatabaseStatements stmts[2] = {CHAR_DEL_INVALID_SPELL_SPELLS, CHAR_DEL_INVALID_SPELL_TALENTS};
-    for (uint8 i = 0; i < 2; i++)
-    {
-        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(stmts[i]);
+    // CharacterDatabaseStatements stmts[2] = {CHAR_DEL_INVALID_SPELL_SPELLS, CHAR_DEL_INVALID_SPELL_TALENTS};
+    // for (uint8 i = 0; i < 2; i++)
+    // {
+    //     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(stmts[i]);
 
-        stmt->setUInt32(0, spellId);
+    //     stmt->setUInt32(0, spellId);
 
-        CharacterDatabase.Execute(stmt);
-    }
+    //     CharacterDatabase.Execute(stmt);
+    // }
 }
 
 bool Player::AddTalent(uint32 spellId, uint8 spec, bool learning)
@@ -4433,9 +4433,9 @@ void Player::DeleteFromDB(ObjectGuid playerguid, uint32 accountId, bool updateRe
             stmt->setUInt32(0, guid);
             trans->Append(stmt);
 
-            stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_TALENT);
-            stmt->setUInt32(0, guid);
-            trans->Append(stmt);
+            // stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_TALENT);
+            // stmt->setUInt32(0, guid);
+            // trans->Append(stmt);
 
             stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_SKILLS);
             stmt->setUInt32(0, guid);
@@ -18106,7 +18106,7 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
     }
 
     UpdateDisplayPower();
-    _LoadTalents(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_TALENTS));
+    // _LoadTalents(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_TALENTS));
     _LoadSpells(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_SPELLS));
 
     _LoadGlyphs(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_GLYPHS));
@@ -26546,52 +26546,52 @@ void Player::_SaveGlyphs(CharacterDatabaseTransaction trans) const
 void Player::_LoadTalents(PreparedQueryResult result)
 {
     // SetPQuery(PLAYER_LOGIN_QUERY_LOADTALENTS, "SELECT spell, talentGroup FROM character_talent WHERE guid = '{}'", GUID_LOPART(m_guid));
-    if (result)
-    {
-        do
-            AddTalent((*result)[0].GetUInt32(), (*result)[1].GetUInt8(), false);
-        while (result->NextRow());
-    }
+    // if (result)
+    // {
+    //     do
+    //         AddTalent((*result)[0].GetUInt32(), (*result)[1].GetUInt8(), false);
+    //     while (result->NextRow());
+    // }
 }
 
 void Player::_SaveTalents(CharacterDatabaseTransaction trans)
 {
-    CharacterDatabasePreparedStatement* stmt = nullptr;
+    // CharacterDatabasePreparedStatement* stmt = nullptr;
 
-    for (uint8 i = 0; i < MAX_TALENT_SPECS; ++i)
-    {
-        for (PlayerTalentMap::iterator itr = m_talents[i]->begin(); itr != m_talents[i]->end();)
-        {
-            if (itr->second->state == PLAYERSPELL_REMOVED || itr->second->state == PLAYERSPELL_CHANGED)
-            {
-                stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_TALENT_BY_SPELL_SPEC);
-                stmt->setUInt32(0, GetGUID().GetCounter());
-                stmt->setUInt32(1, itr->first);
-                stmt->setUInt8(2, itr->second->spec);
-                trans->Append(stmt);
-            }
+    // for (uint8 i = 0; i < MAX_TALENT_SPECS; ++i)
+    // {
+    //     for (PlayerTalentMap::iterator itr = m_talents[i]->begin(); itr != m_talents[i]->end();)
+    //     {
+    //         if (itr->second->state == PLAYERSPELL_REMOVED || itr->second->state == PLAYERSPELL_CHANGED)
+    //         {
+    //             stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_TALENT_BY_SPELL_SPEC);
+    //             stmt->setUInt32(0, GetGUID().GetCounter());
+    //             stmt->setUInt32(1, itr->first);
+    //             stmt->setUInt8(2, itr->second->spec);
+    //             trans->Append(stmt);
+    //         }
 
-            if (itr->second->state == PLAYERSPELL_NEW || itr->second->state == PLAYERSPELL_CHANGED)
-            {
-                stmt = CharacterDatabase.GetPreparedStatement(CHAR_INS_CHAR_TALENT);
-                stmt->setUInt32(0, GetGUID().GetCounter());
-                stmt->setUInt32(1, itr->first);
-                stmt->setUInt8(2, itr->second->spec);
-                trans->Append(stmt);
-            }
+    //         if (itr->second->state == PLAYERSPELL_NEW || itr->second->state == PLAYERSPELL_CHANGED)
+    //         {
+    //             stmt = CharacterDatabase.GetPreparedStatement(CHAR_INS_CHAR_TALENT);
+    //             stmt->setUInt32(0, GetGUID().GetCounter());
+    //             stmt->setUInt32(1, itr->first);
+    //             stmt->setUInt8(2, itr->second->spec);
+    //             trans->Append(stmt);
+    //         }
 
-            if (itr->second->state == PLAYERSPELL_REMOVED)
-            {
-                delete itr->second;
-                m_talents[i]->erase(itr++);
-            }
-            else
-            {
-                itr->second->state = PLAYERSPELL_UNCHANGED;
-                ++itr;
-            }
-        }
-    }
+    //         if (itr->second->state == PLAYERSPELL_REMOVED)
+    //         {
+    //             delete itr->second;
+    //             m_talents[i]->erase(itr++);
+    //         }
+    //         else
+    //         {
+    //             itr->second->state = PLAYERSPELL_UNCHANGED;
+    //             ++itr;
+    //         }
+    //     }
+    // }
 }
 
 void Player::UpdateSpecCount(uint8 count)

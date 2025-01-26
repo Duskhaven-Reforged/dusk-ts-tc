@@ -755,7 +755,7 @@ enum PlayerLoginQueryIndex
     PLAYER_LOGIN_QUERY_LOAD_EQUIPMENT_SETS          = 20,
     PLAYER_LOGIN_QUERY_LOAD_BG_DATA                 = 21,
     PLAYER_LOGIN_QUERY_LOAD_GLYPHS                  = 22,
-    PLAYER_LOGIN_QUERY_LOAD_TALENTS                 = 23,
+    // PLAYER_LOGIN_QUERY_LOAD_TALENTS                 = 23,
     PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_DATA            = 24,
     PLAYER_LOGIN_QUERY_LOAD_SKILLS                  = 25,
     PLAYER_LOGIN_QUERY_LOAD_WEEKLY_QUEST_STATUS     = 26,
