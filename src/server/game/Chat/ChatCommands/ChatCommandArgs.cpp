@@ -100,14 +100,13 @@ struct SpellInfoVisitor
     value_type operator()(Hyperlink<enchant> enchant) const { return enchant; };
     value_type operator()(Hyperlink<glyph> glyph) const { return operator()(glyph->Glyph->SpellID); };
     value_type operator()(Hyperlink<spell> spell) const { return *spell; }
-    value_type operator()(Hyperlink<talent> talent) const { return talent->Spell; };
     value_type operator()(Hyperlink<trade> trade) const { return trade->Spell; };
 
     value_type operator()(uint32 spellId) const { return sSpellMgr->GetSpellInfo(spellId); }
 };
 ChatCommandResult Trinity::Impl::ChatCommands::ArgInfo<SpellInfo const*>::TryConsume(SpellInfo const*& data, ChatHandler const* handler, std::string_view args)
 {
-    Variant<Hyperlink<enchant>, Hyperlink<glyph>, Hyperlink<spell>, Hyperlink<talent>, Hyperlink<trade>, uint32> val;
+    Variant<Hyperlink<enchant>, Hyperlink<glyph>, Hyperlink<spell>, Hyperlink<trade>, uint32> val;
     ChatCommandResult result = ArgInfo<decltype(val)>::TryConsume(val, handler, args);
     if (!result || (data = val.visit(SpellInfoVisitor())))
         return result;

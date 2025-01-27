@@ -111,7 +111,7 @@ DumpTable const DumpTables[] =
     { "character_skills",               DTT_CHAR_TABLE   },
     { "character_spell",                DTT_CHAR_TABLE   },
     { "character_spell_cooldown",       DTT_CHAR_TABLE   },
-    { "character_talent",               DTT_CHAR_TABLE   },
+    // { "character_talent",               DTT_CHAR_TABLE   },
     { "mail",                           DTT_MAIL         },
     { "mail_items",                     DTT_MAIL_ITEM    }, // must be after mail
     { "pet_aura",                       DTT_PET_TABLE    }, // must be after character_pet

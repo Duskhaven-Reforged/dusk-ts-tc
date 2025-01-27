@@ -192,18 +192,15 @@ bool Trinity::Hyperlinks::LinkTags::spell::StoreTo(SpellInfo const*& val, std::s
 bool Trinity::Hyperlinks::LinkTags::talent::StoreTo(TalentLinkData& val, std::string_view text)
 {
     HyperlinkDataTokenizer t(text);
-    uint32 talentId;
-    int8 rank; // talent links contain <learned rank>-1, we store <learned rank>
-    if (!(t.TryConsumeTo(talentId) && t.TryConsumeTo(rank) && t.IsEmpty()))
+    std::string talentString;
+    std::string loadoutName;
+
+    if (!(t.TryConsumeTo(talentString) && t.TryConsumeTo(loadoutName) && t.IsEmpty()))
         return false;
-    if (rank < -1 || rank >= MAX_TALENT_RANK)
-        return false;
-    val.Talent = sTalentStore.LookupEntry(talentId);
-    val.Rank = rank + 1;
-    if (!val.Talent)
-        return false;
-    val.Spell = sSpellMgr->GetSpellInfo(val.Talent->SpellRank[std::max<int32>(rank, 0)]);
-    if (!val.Spell)
+    
+    val.talentString = talentString;
+    val.name = loadoutName;
+    if (val.talentString.empty() || val.name.empty())
         return false;
     return true;
 }
