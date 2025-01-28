@@ -2028,6 +2028,8 @@ void Player::RegenerateAll()
     Regenerate(POWER_ENERGY);
     Regenerate(POWER_FOCUS);
     Regenerate(POWER_MANA);
+    Regenerate(POWER_RAGE);
+    Regenerate(POWER_RUNIC_POWER);
 
     Regenerate(POWER_RAGE);
     //@tswow-begin
@@ -3909,7 +3911,7 @@ void Player::IncreaseResetTalentsCostAndCounters(uint32 lastResetTalentsCost)
 
 bool Player::ResetTalents(bool involuntarily /*= false*/)
 {
-    // @tswow-begin
+        // @tswow-begin
     FIRE(
         Player, OnTalentsResetEarly
         , TSPlayer(this)
@@ -11569,6 +11571,7 @@ InventoryResult Player::CanEquipItem(uint8 slot, uint16 &dest, Item* pItem, bool
                 , TSPlayer(const_cast<Player*>(this))
                 , slot
                 , swap
+                , not_loading
                 , TSMutableNumber<uint32>(&evtRes)
             );
             return InventoryResult(evtRes);
@@ -27312,6 +27315,8 @@ Pet* Player::SummonPet(uint32 entry, float x, float y, float z, float ang, PetTy
                 pet->SetName(new_name);
         }
 
+        pet->InitSummon();
+
         return nullptr;
     }
 
@@ -27403,6 +27408,8 @@ Pet* Player::SummonPet(uint32 entry, float x, float y, float z, float ang, PetTy
         pet->SetDuration(duration);
 
     //ObjectAccessor::UpdateObjectVisibility(pet);
+
+    pet->InitSummon();
 
     return pet;
 }

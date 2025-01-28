@@ -67,9 +67,7 @@ class TC_GAME_API Weather
 {
     public:
 
-        // @tswow-begin map parameter
         Weather(Map* map, uint32 zoneId, WeatherData const* weatherChances);
-        // @tswow-end
         ~Weather() { };
 
         bool Update(uint32 diff);
