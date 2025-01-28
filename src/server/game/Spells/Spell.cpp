@@ -73,6 +73,7 @@
 #include "TSGameObject.h"
 #include "TSWorldObject.h"
 // @tswow-end
+#include "AnticheatMgr.h"
 
 extern SpellEffectHandlerFn SpellEffectHandlers[TOTAL_SPELL_EFFECTS];
 
@@ -5831,6 +5832,11 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
                         return SPELL_FAILED_NOPATH;
 
                     m_preGeneratedPath->ShortenPathUntilDist(PositionToVector3(target), objSize); // move back
+                }
+                if (Player* player = m_caster->ToPlayer())
+                {
+                    // To prevent false positives in the Anticheat system
+                    sAnticheatMgr->SetAllowedMovement(player, true);
                 }
                 break;
             }

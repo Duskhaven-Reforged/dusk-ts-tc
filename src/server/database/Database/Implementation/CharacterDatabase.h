@@ -512,6 +512,8 @@ enum CharacterDatabaseStatements : uint32
     CHAR_DEL_JSON_DATA,
     // @tswow-end
 
+    CHAR_INS_ANTICHEAT_LUA_CHEATERS,
+    CHAR_SEL_ANTICHEAT_LUA_CHEATERS,
     MAX_CHARACTERDATABASE_STATEMENTS
 };
 
