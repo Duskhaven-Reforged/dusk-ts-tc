@@ -1700,6 +1700,8 @@ bool WorldObject::CanDetect(WorldObject const* obj, bool implicitDetect, bool ch
 bool WorldObject::CanDetectInvisibilityOf(WorldObject const* obj) const
 {
     uint32 mask = obj->m_invisibility.GetFlags() & m_invisibilityDetect.GetFlags();
+    // xinef: include invisible flags of caster in the mask, 2 invisible objects should be able to detect eachother
+    mask |= obj->m_invisibility.GetFlags() & m_invisibility.GetFlags();
 
     // Check for not detected types
     if (mask != obj->m_invisibility.GetFlags())
@@ -1709,8 +1711,34 @@ bool WorldObject::CanDetectInvisibilityOf(WorldObject const* obj) const
     // (it's at least true for spell: 66)
     // It seems like that only Units are affected by this check (couldn't see arena doors with preparation invisibility)
     if (obj->ToUnit())
-        if ((m_invisibility.GetFlags() & obj->m_invisibilityDetect.GetFlags()) != m_invisibility.GetFlags())
-            return false;
+    {
+        // Permanently invisible creatures should be able to engage non-invisible targets.
+        // ex. Skulking Witch (20882) / Greater Invisibility (16380)
+        bool isPermInvisibleCreature = false;
+        if (Creature const* baseObj = ToCreature())
+        {
+            auto auraEffects = baseObj->GetAuraEffectsByType(SPELL_AURA_MOD_INVISIBILITY);
+            for (auto const effect : auraEffects)
+            {
+                if (SpellInfo const* spell = effect->GetSpellInfo())
+                {
+                    if (spell->GetMaxDuration() == -1)
+                    {
+                        isPermInvisibleCreature = true;
+                    }
+                }
+            }
+        }
+
+        if (!isPermInvisibleCreature)
+        {
+            uint32 objMask = m_invisibility.GetFlags() & obj->m_invisibilityDetect.GetFlags();
+            // xinef: include invisible flags of caster in the mask, 2 invisible objects should be able to detect eachother
+            objMask |= m_invisibility.GetFlags() & obj->m_invisibility.GetFlags();
+            if (objMask != m_invisibility.GetFlags())
+                return false;
+        }
+    }
 
     for (uint32 i = 0; i < TOTAL_INVISIBILITY_TYPES; ++i)
     {
