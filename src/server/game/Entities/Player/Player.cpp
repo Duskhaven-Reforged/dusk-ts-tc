@@ -1246,16 +1246,13 @@ void Player::Update(uint32 p_time)
             uint32 newzone, newarea;
             GetZoneAndAreaId(newzone, newarea);
 
-            if (m_zoneUpdateId != newzone)
-                UpdateZone(newzone, newarea);                // also update area
-            else
+            uint32 newAreaId = GetAreaIdFromPosition();
+            if (!m_area || m_area->GetId() != newAreaId)
             {
-                // use area updates as well
-                // needed for free far all arenas for example
-                if (m_areaUpdateId != newarea)
-                    UpdateArea(newarea);
+                UpdateArea(newAreaId);
 
-                m_zoneUpdateTimer = ZONE_UPDATE_INTERVAL;
+                if (Unit* vehicle = GetVehicleBase())
+                    vehicle->SetArea(GetArea());
             }
         }
         else
@@ -1978,8 +1975,12 @@ void Player::RemoveFromWorld()
         ObjectGuid lootGuid = GetLootGUID();
         if (!lootGuid.IsEmpty())
             m_session->DoLootRelease(lootGuid);
-        sOutdoorPvPMgr->HandlePlayerLeaveZone(this, m_zoneUpdateId);
-        sBattlefieldMgr->HandlePlayerLeaveZone(this, m_zoneUpdateId);
+        
+        if (Area* zone = GetZone())
+        {
+            sOutdoorPvPMgr->HandlePlayerLeaveZone(this, zone);
+            sBattlefieldMgr->HandlePlayerLeaveZone(this, zone);
+        }
     }
 
     // Remove items from world before self - player must be found in Item::RemoveFromObjectUpdate
@@ -2412,7 +2413,7 @@ void Player::SetGameMaster(bool on)
             SetPvpFlag(UNIT_BYTE2_FLAG_FFA_PVP);
 
         // restore FFA PvP area state, remove not allowed for GM mounts
-        UpdateArea(m_areaUpdateId);
+        UpdateArea(GetAreaIdFromPosition());
 
         m_serverSideVisibilityDetect.SetValue(SERVERSIDE_VISIBILITY_GM, SEC_PLAYER);
     }
@@ -4647,10 +4648,8 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
     }
 
     // trigger update zone for alive state zone updates
-    uint32 newzone, newarea;
-    GetZoneAndAreaId(newzone, newarea);
-    UpdateZone(newzone, newarea);
-    sOutdoorPvPMgr->HandlePlayerResurrects(this, newzone);
+    UpdateArea(GetAreaIdFromPosition());
+    sOutdoorPvPMgr->HandlePlayerResurrects(this, GetZone());
 
     if (InBattleground())
     {
@@ -6412,9 +6411,7 @@ bool Player::UpdatePosition(float x, float y, float z, float orientation, bool t
     // Update player zone if needed
     if (m_needsZoneUpdate)
     {
-        uint32 newZone, newArea;
-        GetZoneAndAreaId(newZone, newArea);
-        UpdateZone(newZone, newArea);
+        UpdateArea(GetAreaIdFromPosition());
         m_needsZoneUpdate = false;
     }
 
@@ -7074,13 +7071,21 @@ uint32 Player::GetZoneIdFromDB(ObjectGuid guid)
     return zone;
 }
 
-void Player::UpdateArea(uint32 newArea)
+void Player::UpdateArea(uint32 newAreaId)
 {
+    Area* oldArea = m_area;
+
+    FIRE_ID(m_areaUpdateId, Zone, OnPlayerExit, TSPlayer(this));
     // FFA_PVP flags are area and not zone id dependent
     // so apply them accordingly
-    m_areaUpdateId = newArea;
+    m_areaUpdateId = newAreaId;
+    FIRE_ID(m_areaUpdateId, Zone, OnPlayerEnter, TSPlayer(this));
 
-    AreaTableEntry const* area = sAreaTableStore.LookupEntry(newArea);
+    m_area = sAreaMgr->GetArea(newAreaId);
+    UpdateZone(oldArea ? oldArea->GetZone(): nullptr);
+    m_zoneUpdateTimer = ZONE_UPDATE_INTERVAL;
+
+    AreaTableEntry const* area = sAreaTableStore.LookupEntry(newAreaId);
     bool oldFFAPvPArea = pvpInfo.IsInFFAPvPArea;
     pvpInfo.IsInFFAPvPArea = area && (area->Flags & AREA_FLAG_ARENA);
     UpdatePvPState(true);
@@ -7089,7 +7094,7 @@ void Player::UpdateArea(uint32 newArea)
     if (oldFFAPvPArea && !pvpInfo.IsInFFAPvPArea)
         ValidateAttackersAndOwnTarget();
 
-    UpdateAreaDependentAuras(newArea);
+    UpdateAreaDependentAuras(newAreaId);
 
     // previously this was in UpdateZone (but after UpdateArea) so nothing will break
     pvpInfo.IsInNoPvPArea = false;
@@ -7110,22 +7115,28 @@ void Player::UpdateArea(uint32 newArea)
         RemoveRestFlag(REST_FLAG_IN_FACTION_AREA);
 }
 
-void Player::UpdateZone(uint32 newZone, uint32 newArea)
+void Player::UpdateZone(Area* oldArea)
 {
     if (!IsInWorld())
         return;
 
-    uint32 const oldZone = m_zoneUpdateId;
-    m_zoneUpdateId = newZone;
+    Area* oldZone = oldArea ? oldArea->GetZone() : nullptr;
+    Area* newZone = GetZone();
+
     m_zoneUpdateTimer = ZONE_UPDATE_INTERVAL;
 
-    GetMap()->UpdatePlayerZoneStats(oldZone, newZone);
+    GetMap()->UpdatePlayerZoneStats(oldZone ? oldZone->GetId() : MAP_INVALID_ZONE,
+                                    newZone ? newZone->GetId() : MAP_INVALID_ZONE);
 
     // call leave script hooks immedately (before updating flags)
-    if (oldZone != newZone)
+    if (oldZone && oldZone != newZone)
     {
         sOutdoorPvPMgr->HandlePlayerLeaveZone(this, oldZone);
         sBattlefieldMgr->HandlePlayerLeaveZone(this, oldZone);
+
+        if (ZoneScript* oldZoneScript = GetZoneScript())
+            if (oldZoneScript->IsZoneScript())
+                oldZoneScript->OnPlayerExit(this);
     }
 
     // @dh-begin
@@ -7137,30 +7148,33 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
         SetGroupUpdateFlag(GROUP_UPDATE_FULL);
 
     // zone changed, so area changed as well, update it
-    UpdateArea(newArea);
+    // UpdateArea(newArea); We do this before this call
 
-    AreaTableEntry const* zone = sAreaTableStore.LookupEntry(newZone);
-    if (!zone)
+    AreaTableEntry const* newZoneEntry = newZone ? newZone->GetEntry() : nullptr;
+    if (!newZoneEntry)
         return;
 
     if (sWorld->getBoolConfig(CONFIG_WEATHER))
-        GetMap()->GetOrGenerateZoneDefaultWeather(newZone);
+        GetMap()->GetOrGenerateZoneDefaultWeather(newZone->GetId());
 
-    GetMap()->SendZoneDynamicInfo(newZone, this);
+    GetMap()->SendZoneDynamicInfo(newZone->GetId(), this);
 
     // in PvP, any not controlled zone (except zone->FactionGroupMask == 6, default case)
     // in PvE, only opposition team capital
-    switch (zone->FactionGroupMask)
+    switch (newZoneEntry->FactionGroupMask)
     {
         case AREATEAM_ALLY:
-            pvpInfo.IsInHostileArea = GetTeam() != ALLIANCE && (sWorld->IsPvPRealm() || zone->Flags & AREA_FLAG_CAPITAL);
+            pvpInfo.IsInHostileArea =
+                GetTeam() != ALLIANCE && (sWorld->IsPvPRealm() || newZoneEntry->Flags & AREA_FLAG_CAPITAL);
             break;
         case AREATEAM_HORDE:
-            pvpInfo.IsInHostileArea = GetTeam() != HORDE && (sWorld->IsPvPRealm() || zone->Flags & AREA_FLAG_CAPITAL);
+            pvpInfo.IsInHostileArea =
+                GetTeam() != HORDE && (sWorld->IsPvPRealm() || newZoneEntry->Flags & AREA_FLAG_CAPITAL);
             break;
         case AREATEAM_NONE:
             // overwrite for battlegrounds, maybe batter some zone flags but current known not 100% fit to this
-            pvpInfo.IsInHostileArea = sWorld->IsPvPRealm() || InBattleground() || zone->Flags & AREA_FLAG_WINTERGRASP;
+            pvpInfo.IsInHostileArea =
+                sWorld->IsPvPRealm() || InBattleground() || newZoneEntry->Flags & AREA_FLAG_WINTERGRASP;
             break;
         default:                                            // 6 in fact
             pvpInfo.IsInHostileArea = false;
@@ -7170,9 +7184,9 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
     // Treat players having a quest flagging for PvP as always in hostile area
     pvpInfo.IsHostile = pvpInfo.IsInHostileArea || HasPvPForcingQuest();
 
-    if (zone->Flags & AREA_FLAG_CAPITAL)                     // Is in a capital city
+    if (newZoneEntry->Flags & AREA_FLAG_CAPITAL) // Is in a capital city
     {
-        if (!pvpInfo.IsHostile || zone->IsSanctuary())
+        if (!pvpInfo.IsHostile || newZoneEntry->IsSanctuary())
             SetRestFlag(REST_FLAG_IN_CITY);
 
         pvpInfo.IsInNoPvPArea = true;
@@ -7185,30 +7199,32 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
     // remove items with area/map limitations (delete only for alive player to allow back in ghost mode)
     // if player resurrected at teleport this will be applied in resurrect code
     if (IsAlive())
-        DestroyZoneLimitedItem(true, newZone);
+        DestroyZoneLimitedItem(true, newZone->GetId());
 
     // check some item equip limitations (in result lost CanTitanGrip at talent reset, for example)
     AutoUnequipOffhandIfNeed();
 
     // recent client version not send leave/join channel packets for built-in local channels
-    UpdateLocalChannels(newZone);
+    UpdateLocalChannels(newZone->GetId());
 
-    UpdateZoneDependentAuras(newZone);
+    UpdateZoneDependentAuras(newZone->GetId());
 
     // call enter script hooks after everyting else has processed
-    sScriptMgr->OnPlayerUpdateZone(this, newZone, newArea);
+    sScriptMgr->OnPlayerUpdateZone(this, GetArea(), oldArea);
     if (oldZone != newZone)
     {
         sOutdoorPvPMgr->HandlePlayerEnterZone(this, newZone);
         sBattlefieldMgr->HandlePlayerEnterZone(this, newZone);
 
-        // @dh-begin
-        // TODO: Add fire for entering ZONE
-        // @dh-end
+        SetZoneScript();
 
-        SendInitWorldStates(newZone, newArea);              // only if really enters to new zone, not just area change, works strange...
+        if (ZoneScript* newZoneScript = GetZoneScript())
+            if (newZoneScript->IsZoneScript())
+                newZoneScript->OnPlayerEnter(this);
+
+        SendInitWorldStates();              // only if really enters to new zone, not just area change, works strange...
         if (Guild* guild = GetGuild())
-            guild->UpdateMemberData(this, GUILD_MEMBER_DATA_ZONEID, newZone);
+            guild->UpdateMemberData(this, GUILD_MEMBER_DATA_ZONEID, newZone->GetId());
     }
 }
 
@@ -8892,8 +8908,11 @@ void Player::SendUpdateWorldState(uint32 variable, uint32 value) const
 
 // TODO - InitWorldStates should NOT always send the same states
 //        Some should keep the same value between different zoneIds and areaIds on the same map
-void Player::SendInitWorldStates(uint32 zoneId, uint32 areaId)
+void Player::SendInitWorldStates()
 {
+    uint32 areaId = GetAreaId();
+    uint32 zoneId = GetZoneId();
+
     uint32 mapId = GetMapId();
     Battleground* battleground = GetBattleground();
     OutdoorPvP* outdoorPvP = sOutdoorPvPMgr->GetOutdoorPvPToZoneId(zoneId);
@@ -21289,64 +21308,6 @@ void Player::SendOnCancelExpectedVehicleRideAura() const
     SendDirectMessage(&data);
 }
 
-/// HATER: FORGE MESSAGING RECORD KEEPING
-
-void Player::SendForgeUIMsg(int topic, std::string message)
-{
-    SendForgeUIMsg(std::to_string(topic), message);
-}
-
-void Player::SendForgeUIMsg(ForgeTopic topic, std::string message)
-{
-    SendForgeUIMsg(std::to_string((int)topic), message);
-}
-
-void Player::SendForgeUIMsg(std::string topic, std::string message) {
-    if (message.length() == 0)
-        return;
-
-    if (2048 < message.length())
-    {
-        std::vector<std::string> msgParts = SplitString(message, 2048);
-        std::string sizeStr = std::to_string(msgParts.size());
-
-        for (std::size_t i = 0; i < msgParts.size(); ++i)
-        {
-            std::string msg = topic + "}" + std::to_string(i + 1) + "}" + sizeStr + "|" + msgParts[i];
-            msg = MSG_TYPE_FORGE + "\t" + msg;
-            Whisper(msg, LANG_ADDON, this);
-        }
-    }
-    else
-    {
-        message = topic + "|" + message;
-        message = MSG_TYPE_FORGE + "\t" + message;
-        Whisper(message, LANG_ADDON, this);
-    }
-}
-
-std::vector<std::string> Player::SplitString(const std::string& str, int splitLength)
-{
-    int NumSubstrings = str.length() / splitLength;
-    std::vector<std::string> ret;
-
-    for (auto i = 0; i < NumSubstrings; i++)
-    {
-        ret.push_back(str.substr(i * splitLength, splitLength));
-    }
-
-    // If there are leftover characters, create a shorter item at the end.
-    if (str.length() % splitLength != 0)
-    {
-        ret.push_back(str.substr(splitLength * NumSubstrings));
-    }
-
-
-    return ret;
-}
-
-///
-
 void Player::PetSpellInitialize()
 {
     Pet* pet = GetPet();
@@ -23230,9 +23191,7 @@ void Player::SendInitialPacketsAfterAddToMap()
     UpdateVisibilityForPlayer();
 
     // update zone
-    uint32 newzone, newarea;
-    GetZoneAndAreaId(newzone, newarea);
-    UpdateZone(newzone, newarea);                            // also call SendInitWorldStates();
+    UpdateArea(GetAreaIdFromPosition());                            // also call SendInitWorldStates();
 
     GetSession()->ResetTimeSync();
     GetSession()->SendTimeSync();

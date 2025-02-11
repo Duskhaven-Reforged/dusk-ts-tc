@@ -281,5 +281,9 @@ void KillRewarder::Reward()
 
             FIRE_ID(instance->instance->GetEntry()->ID, Instance, OnUpdateCriteria, TSInstance(_killer->GetMap(), instance), TSUnit(_victim));
         }
+
+        if (auto AreaId = victim->GetAreaId()) {
+            FIRE_ID(AreaId, Zone, OnCreatureDied, TSCreature(victim), TSPlayer(_killer));
+        }
     }
 }

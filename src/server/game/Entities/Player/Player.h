@@ -1084,16 +1084,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void Whisper(std::string_view text, Language language, Player* receiver, bool = false) override;
         void Whisper(uint32 textId, Player* target, bool isBossWhisper = false) override;
 
-        // hater: record keeping
-        ///     Sends a message to be recieved by the Forge IU
-        /// </summary>
-        /// <param name="topic">Type of message</param>
-        /// <param name="message">the message</param>
-        void SendForgeUIMsg(std::string topic, std::string message);
-        std::vector<std::string> SplitString(const std::string& str, int splitLength);
-        void SendForgeUIMsg(ForgeTopic topic, std::string message);
-        void SendForgeUIMsg(int topic, std::string message);
-
         /*********************************************************/
         /***                    STORAGE SYSTEM                 ***/
         /*********************************************************/
@@ -1590,8 +1580,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void UpdatePvPState(bool onlyFFA = false);
         void SetPvP(bool state) override;
         void UpdatePvP(bool state, bool override = false);
-        void UpdateZone(uint32 newZone, uint32 newArea);
         void UpdateArea(uint32 newArea);
+        void UpdateZone(Area* oldArea);
         void SetNeedsZoneUpdate(bool needsUpdate) { m_needsZoneUpdate = needsUpdate; }
 
         void UpdateZoneDependentAuras(uint32 zone_id);    // zones
@@ -2013,7 +2003,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetEquipmentSet(EquipmentSetInfo::EquipmentSetData const& eqset);
         void DeleteEquipmentSet(uint64 setGuid);
 
-        void SendInitWorldStates(uint32 zoneId, uint32 areaId);
+        void SendInitWorldStates();
         void SendUpdateWorldState(uint32 variable, uint32 value) const;
         void SendDirectMessage(WorldPacket const* data) const;
         void SendBGWeekendWorldStates() const;

@@ -117,22 +117,22 @@ void OutdoorPvPMgr::AddZone(uint32 zoneid, OutdoorPvP* handle)
     m_OutdoorPvPMap[zoneid] = handle;
 }
 
-void OutdoorPvPMgr::HandlePlayerEnterZone(Player* player, uint32 zoneid)
+void OutdoorPvPMgr::HandlePlayerEnterZone(Player* player, Area* zone)
 {
-    OutdoorPvPMap::iterator itr = m_OutdoorPvPMap.find(zoneid);
+    OutdoorPvPMap::iterator itr = m_OutdoorPvPMap.find(zone->GetId());
     if (itr == m_OutdoorPvPMap.end())
         return;
 
     if (itr->second->HasPlayer(player))
         return;
 
-    itr->second->HandlePlayerEnterZone(player, zoneid);
+    itr->second->HandlePlayerEnterZone(player, zone);
     TC_LOG_DEBUG("outdoorpvp", "Player {} entered outdoorpvp id {}", player->GetGUID().ToString(), itr->second->GetTypeId());
 }
 
-void OutdoorPvPMgr::HandlePlayerLeaveZone(Player* player, uint32 zoneid)
+void OutdoorPvPMgr::HandlePlayerLeaveZone(Player* player, Area* zone)
 {
-    OutdoorPvPMap::iterator itr = m_OutdoorPvPMap.find(zoneid);
+    OutdoorPvPMap::iterator itr = m_OutdoorPvPMap.find(zone->GetId());
     if (itr == m_OutdoorPvPMap.end())
         return;
 
@@ -140,7 +140,7 @@ void OutdoorPvPMgr::HandlePlayerLeaveZone(Player* player, uint32 zoneid)
     if (!itr->second->HasPlayer(player))
         return;
 
-    itr->second->HandlePlayerLeaveZone(player, zoneid);
+    itr->second->HandlePlayerLeaveZone(player, zone);
     TC_LOG_DEBUG("outdoorpvp", "Player {} left outdoorpvp id {}", player->GetGUID().ToString(), itr->second->GetTypeId());
 }
 
@@ -223,14 +223,17 @@ void OutdoorPvPMgr::HandleDropFlag(Player* player, uint32 spellId)
     }
 }
 
-void OutdoorPvPMgr::HandlePlayerResurrects(Player* player, uint32 zoneid)
+void OutdoorPvPMgr::HandlePlayerResurrects(Player* player, Area* zone)
 {
-    OutdoorPvPMap::iterator itr = m_OutdoorPvPMap.find(zoneid);
+    if (!zone)
+        return;
+
+    OutdoorPvPMap::iterator itr = m_OutdoorPvPMap.find(zone->GetId());
     if (itr == m_OutdoorPvPMap.end())
         return;
 
     if (itr->second->HasPlayer(player))
-        itr->second->HandlePlayerResurrects(player, zoneid);
+        itr->second->HandlePlayerResurrects(player, zone);
 }
 
 std::string OutdoorPvPMgr::GetDefenseMessage(uint32 zoneId, uint32 id, LocaleConstant locale) const

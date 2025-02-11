@@ -16,6 +16,7 @@
  */
 
 #include "ScriptMgr.h"
+#include "Area.h"
 #include "ChatCommand.h"
 #include "Config.h"
 #include "Creature.h"
@@ -42,6 +43,7 @@
 #include "Weather.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "ZoneScript.h"
 // @tswow-begin
 #include "TSMap.h"
 #include "TSEvents.h"
@@ -112,6 +114,11 @@ struct is_script_database_bound<TransportScript>
 template<>
 struct is_script_database_bound<AchievementCriteriaScript>
     : std::true_type { };
+
+template <>
+struct is_script_database_bound<ZoneScript> : std::true_type
+{
+};
 
 enum Spells
 {
@@ -2042,9 +2049,9 @@ void ScriptMgr::OnPlayerBindToInstance(Player* player, Difficulty difficulty, ui
     FOREACH_SCRIPT(PlayerScript)->OnBindToInstance(player, difficulty, mapid, permanent, extendState);
 }
 
-void ScriptMgr::OnPlayerUpdateZone(Player* player, uint32 newZone, uint32 newArea)
+void ScriptMgr::OnPlayerUpdateZone(Player* player, Area* newArea, Area* oldArea)
 {
-    FOREACH_SCRIPT(PlayerScript)->OnUpdateZone(player, newZone, newArea);
+    FOREACH_SCRIPT(PlayerScript)->OnUpdateZone(player, newArea, oldArea);
 }
 
 // @tswow-begin
@@ -2226,6 +2233,15 @@ void ScriptMgr::ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage)
 void ScriptMgr::ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage)
 {
     FOREACH_SCRIPT(UnitScript)->ModifySpellDamageTaken(target, attacker, damage);
+}
+
+ZoneScript* ScriptMgr::GetZoneScript(uint32 scriptId)
+{
+    if (!scriptId)
+        return nullptr;
+
+    GET_SCRIPT_RET(ZoneScript, scriptId, tmpscript, nullptr);
+    return tmpscript;
 }
 
 SpellScriptLoader::SpellScriptLoader(char const* name)
@@ -2784,7 +2800,7 @@ void PlayerScript::OnBindToInstance(Player* /*player*/, Difficulty /*difficulty*
 {
 }
 
-void PlayerScript::OnUpdateZone(Player* /*player*/, uint32 /*newZone*/, uint32 /*newArea*/)
+void PlayerScript::OnUpdateZone(Player* /*player*/, Area* /*newArea*/, Area* /*oldArea*/)
 {
 }
 
@@ -2912,6 +2928,12 @@ void GroupScript::OnDisband(Group* /*group*/)
 {
 }
 
+ZoneScript::ZoneScript(const char* name)
+    : ScriptObject(name), _scriptType(ZONE_SCRIPT_TYPE_ZONE)
+{
+    ScriptRegistry<ZoneScript>::Instance()->AddScript(this);
+}
+
 // Specialize for each script type class like so:
 template class TC_GAME_API ScriptRegistry<SpellScriptLoader>;
 template class TC_GAME_API ScriptRegistry<ServerScript>;
@@ -2940,3 +2962,4 @@ template class TC_GAME_API ScriptRegistry<GuildScript>;
 template class TC_GAME_API ScriptRegistry<GroupScript>;
 template class TC_GAME_API ScriptRegistry<UnitScript>;
 template class TC_GAME_API ScriptRegistry<AccountScript>;
+template class TC_GAME_API ScriptRegistry<ZoneScript>;

@@ -1797,6 +1797,9 @@ class TC_GAME_API ObjectMgr
             return &itr->second;
         }
 
+        void LoadZoneScriptNames();
+        uint32 GetScriptIdForZone(uint32 zoneId);
+
     private:
         // first free id for selected id type
         uint32 _auctionId;

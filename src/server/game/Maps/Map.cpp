@@ -1065,12 +1065,12 @@ void Map::ProcessRelocationNotifies(const uint32 diff)
 
 void Map::RemovePlayerFromMap(Player* player, bool remove)
 {
-    // Before leaving map, update zone/area for stats
-    player->UpdateZone(MAP_INVALID_ZONE, 0);
     // @tswow-begin
     FIRE_ID(GetId(),Map,OnPlayerLeave,TSMap(this),TSPlayer(player));
     player->m_tsWorldEntity.m_timers.remove_on_map_change();
     // @tswow-end
+
+    // Before leaving map, update zone/area for stats
     sScriptMgr->OnPlayerLeaveMap(this, player);
 
     player->CombatStop();

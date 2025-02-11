@@ -246,7 +246,7 @@ enum AchievementCategory
 
 enum AreaFlags
 {
-    AREA_FLAG_UNK0               = 0x00000001,                // Unknown
+    AREA_FLAG_SNOW               = 0x00000001,                // Unknown
     AREA_FLAG_UNK1               = 0x00000002,                // Razorfen Downs, Naxxramas and Acherus: The Ebon Hold (3.3.5a)
     AREA_FLAG_UNK2               = 0x00000004,                // Only used for areas on map 571 (development before)
     AREA_FLAG_SLAVE_CAPITAL      = 0x00000008,                // city and city subzones
@@ -274,7 +274,8 @@ enum AreaFlags
     AREA_FLAG_INSIDE             = 0x02000000,                // used for determinating spell related inside/outside questions in Map::IsOutdoors
     AREA_FLAG_OUTSIDE            = 0x04000000,                // used for determinating spell related inside/outside questions in Map::IsOutdoors
     AREA_FLAG_WINTERGRASP_2      = 0x08000000,                // Can Hearth And Resurrect From Area
-    AREA_FLAG_NO_FLY_ZONE        = 0x20000000                 // Marks zones where you cannot fly
+    AREA_FLAG_NO_FLY_ZONE        = 0x20000000,                // Marks zones where you cannot fly
+    AREA_FLAG_SUB_ZONE           = 0x40000000,
 };
 
 enum Difficulty : uint8

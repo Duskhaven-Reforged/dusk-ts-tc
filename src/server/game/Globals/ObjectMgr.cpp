@@ -19,6 +19,7 @@
 #include "AreaBoundary.h"
 // @tswow-end
 #include "ObjectMgr.h"
+#include "Area.h"
 #include "AchievementMgr.h"
 #include "ArenaTeamMgr.h"
 #include "Bag.h"

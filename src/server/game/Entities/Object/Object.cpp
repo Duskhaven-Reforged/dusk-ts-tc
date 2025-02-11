@@ -1069,6 +1069,22 @@ void WorldObject::UpdatePositionData()
     ProcessPositionDataChanged(data);
 }
 
+uint32 WorldObject::GetAreaId() const
+{
+    if (!GetArea())
+        return GetAreaIdFromPosition();
+
+    return GetArea()->GetId();
+}
+
+uint32 WorldObject::GetZoneId() const
+{
+    if (!GetZone())
+        return GetZoneIdFromPosition();
+
+    return GetZone()->GetId();
+}
+
 void WorldObject::ProcessPositionDataChanged(PositionFullTerrainStatus const& data)
 {
     m_zoneId = m_areaId = data.areaId;
@@ -1094,6 +1110,16 @@ void WorldObject::ProcessPositionDataChanged(PositionFullTerrainStatus const& da
     }
     m_liquidStatus = static_cast<ZLiquidStatus>(data_liquidStatus);
     // @tswow-end
+}
+
+uint32 WorldObject::GetAreaIdFromPosition() const
+{
+    return GetMap()->GetAreaId(GetPhaseMask(), m_positionX, m_positionY, m_positionZ);
+}
+
+uint32 WorldObject::GetZoneIdFromPosition() const
+{
+    return GetMap()->GetZoneId(GetPhaseMask(), m_positionX, m_positionY, m_positionZ);
 }
 
 void WorldObject::AddToWorld()
@@ -2044,6 +2070,7 @@ void Map::SummonCreatureGroup(uint8 group, std::list<TempSummon*>* list /*= null
 
 void WorldObject::SetZoneScript()
 {
+    m_zoneScript = nullptr;
     if (Map* map = FindMap())
     {
         if (InstanceMap* instanceMap = map->ToInstanceMap())
@@ -2052,8 +2079,10 @@ void WorldObject::SetZoneScript()
         {
             if (Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(GetZoneId()))
                 m_zoneScript = bf;
-            else
-                m_zoneScript = sOutdoorPvPMgr->GetZoneScript(GetZoneId());
+            else if (ZoneScript* out = sOutdoorPvPMgr->GetZoneScript(GetZoneId()))
+                m_zoneScript = out;
+            else if (Area* area = GetArea())
+                m_zoneScript = area->GetZoneScript();
         }
     }
 }

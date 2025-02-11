@@ -27,6 +27,7 @@
 #include <vector>
 
 class AccountMgr;
+class Area;
 class AuctionHouseObject;
 class Aura;
 class AuraScript;
@@ -63,6 +64,7 @@ class WorldPacket;
 class WorldSocket;
 class WorldObject;
 class WorldSession;
+class ZoneScript;
 
 struct AchievementCriteriaData;
 struct AreaTriggerEntry;
@@ -714,7 +716,7 @@ class TC_GAME_API PlayerScript : public ScriptObject
         virtual void OnBindToInstance(Player* player, Difficulty difficulty, uint32 mapId, bool permanent, uint8 extendState);
 
         // Called when a player switches to a new zone
-        virtual void OnUpdateZone(Player* player, uint32 newZone, uint32 newArea);
+        virtual void OnUpdateZone(Player* player, Area* newArea, Area* oldArea);
 
         // Called for player::update
         virtual void OnUpdate(Player* /*player*/, uint32 /*p_time*/) { }
@@ -1056,11 +1058,11 @@ class TC_GAME_API ScriptMgr
         void OnPlayerFailedDelete(ObjectGuid guid, uint32 accountId);
         void OnPlayerSave(Player* player);
         void OnPlayerBindToInstance(Player* player, Difficulty difficulty, uint32 mapid, bool permanent, uint8 extendState);
-        void OnPlayerUpdateZone(Player* player, uint32 newZone, uint32 newArea);
-// @tswow-begin
+        void OnPlayerUpdateZone(Player* player, Area* newArea, Area* oldArea);
+        // @tswow-begin
         void OnGossipSelect(Player* player, uint32 menu_id, uint32 sender, uint32 action);
         void OnGossipSelectCode(Player* player, uint32 menu_id, uint32 sender, uint32 action, const char* code);
-// @tswow-end
+        // @tswow-end
         void OnPlayerUpdate(Player* player, uint32 p_time);
         void OnQuestObjectiveProgress(Player* player, Quest const* quest, uint32 objectiveIndex, uint16 progress);
         void OnQuestStatusChange(Player* player, uint32 questId);
@@ -1106,6 +1108,10 @@ class TC_GAME_API ScriptMgr
         void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage);
         void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage);
         void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage);
+
+        
+    public: /* ZoneScript */
+        ZoneScript* GetZoneScript(uint32 scriptId);
 
     private:
         uint32 _scriptCount;

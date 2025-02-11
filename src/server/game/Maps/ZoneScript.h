@@ -19,18 +19,30 @@
 #define ZONE_SCRIPT_H_
 
 #include "Define.h"
+#include "Common.h"
 #include "ObjectGuid.h"
+#include "ScriptMgr.h"
 
+class Area;
 class Creature;
 class GameObject;
 class Unit;
 class WorldObject;
 struct CreatureData;
 
-class TC_GAME_API ZoneScript
+enum ZoneScriptType
+{
+    ZONE_SCRIPT_TYPE_ZONE,
+    ZONE_SCRIPT_TYPE_INSTANCE,
+    ZONE_SCRIPT_TYPE_BATTLEFIELD,
+    ZONE_SCRIPT_TYPE_OUTDOORPVP,
+};
+
+class TC_GAME_API ZoneScript : public ScriptObject
 {
     public:
-        ZoneScript() { }
+        ZoneScript() : ScriptObject(""), _scriptType(ZONE_SCRIPT_TYPE_ZONE) { }
+        ZoneScript(const char* name);
         virtual ~ZoneScript() { }
 
         virtual uint32 GetCreatureEntry(ObjectGuid::LowType /*guidLow*/, CreatureData const* data);
@@ -39,10 +51,17 @@ class TC_GAME_API ZoneScript
         virtual void OnCreatureCreate(Creature* ) { }
         virtual void OnCreatureRemove(Creature* ) { }
 
+        virtual void OnCreatureRespawn(Creature*) {}
+
         virtual void OnGameObjectCreate(GameObject* ) { }
         virtual void OnGameObjectRemove(GameObject* ) { }
 
         virtual void OnUnitDeath(Unit*) { }
+        virtual void OnPlayerDeath(Player*) { }
+
+        // Called when a player successfully enters or exit the zone.
+        virtual void OnPlayerEnter(Player* /*player*/) { }
+        virtual void OnPlayerExit(Player* /*player*/) { }
 
         //All-purpose data storage 64 bit
         virtual ObjectGuid GetGuidData(uint32 /*DataId*/) const { return ObjectGuid::Empty; }
@@ -56,6 +75,11 @@ class TC_GAME_API ZoneScript
         virtual void SetData(uint32 /*DataId*/, uint32 /*Value*/) { }
 
         virtual void ProcessEvent(WorldObject* /*obj*/, uint32 /*eventId*/) { }
+
+        bool IsZoneScript()     { return _scriptType == ZONE_SCRIPT_TYPE_ZONE; }
+        bool IsInstanceScript() { return _scriptType == ZONE_SCRIPT_TYPE_INSTANCE; }
+    protected:
+        ZoneScriptType _scriptType;
 };
 
 #endif

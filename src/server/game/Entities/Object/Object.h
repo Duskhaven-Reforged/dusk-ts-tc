@@ -18,6 +18,7 @@
 #ifndef _OBJECT_H
 #define _OBJECT_H
 
+#include "Area.h"
 #include "Common.h"
 #include "Duration.h"
 #include "EventProcessor.h"
@@ -361,8 +362,12 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         // @tswow-end
         static bool InSamePhase(WorldObject const* a, WorldObject const* b) { return a && a->InSamePhase(b); }
 
-        uint32 GetZoneId() const { return m_zoneId; }
-        uint32 GetAreaId() const { return m_areaId; }
+        uint32 GetZoneId() const;
+        uint32 GetAreaId() const;
+
+        uint32 GetAreaIdFromPosition() const;
+        uint32 GetZoneIdFromPosition() const;
+
         void GetZoneAndAreaId(uint32& zoneid, uint32& areaid) const { zoneid = m_zoneId, areaid = m_areaId; }
         bool IsInWorldPvpZone() const;
         bool IsOutdoors() const { return m_outdoors; }
@@ -440,6 +445,10 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         Map* GetMap() const { ASSERT(m_currMap); return m_currMap; }
         Map* FindMap() const { return m_currMap; }
         //used to check all object's GetMap() calls when object is not in world!
+
+        void SetArea(Area* area) { m_area = area; }
+        Area* GetArea() const { return m_area; }
+        Area* GetZone() const { return m_area ? m_area->GetZone(): nullptr; }
 
         void SetZoneScript();
         void ClearZoneScript();
@@ -579,6 +588,8 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         bool m_isFarVisible;
         Optional<float> m_visibilityDistanceOverride;
         bool const m_isStoredInWorldObjectGridContainer;
+
+        Area*       m_area;
         ZoneScript* m_zoneScript;
 
         // transports
