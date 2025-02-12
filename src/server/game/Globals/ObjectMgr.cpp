@@ -11190,6 +11190,36 @@ void ObjectMgr::LoadFactionChangeTitles()
     TC_LOG_INFO("server.loading", ">> Loaded {} faction change title pairs in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
+void ObjectMgr::LoadZoneScriptNames()
+{
+    uint32 oldMSTime   = getMSTime();
+    QueryResult result = WorldDatabase.Query("SELECT zoneId, scriptname FROM zone_scripts");
+
+    if (!result)
+    {
+        TC_LOG_ERROR("server.loading", ">> Loading 0 zone scripts");
+        return;
+    }
+
+    do
+    {
+        if (uint32 scriptId = GetScriptId((*result)[1].GetString()))
+            _scriptIdsByZoneStore[(*result)[0].GetUInt32()] = scriptId;
+
+    } while (result->NextRow());
+
+    TC_LOG_INFO("server.loading", ">> Loaded {} zone scriptnames in {} ms", _scriptIdsByZoneStore.size(), GetMSTimeDiffToNow(oldMSTime));
+}
+
+uint32 ObjectMgr::GetScriptIdForZone(uint32 zoneId)
+{
+    auto itr = _scriptIdsByZoneStore.find(zoneId);
+    if (itr != _scriptIdsByZoneStore.end())
+        return itr->second;
+
+    return 0;
+}
+
 GameObjectTemplate const* ObjectMgr::GetGameObjectTemplate(uint32 entry) const
 {
     return Trinity::Containers::MapGetValuePtr(_gameObjectTemplateStore, entry);

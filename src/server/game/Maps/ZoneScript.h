@@ -19,7 +19,6 @@
 #define ZONE_SCRIPT_H_
 
 #include "Define.h"
-#include "Common.h"
 #include "ObjectGuid.h"
 #include "ScriptMgr.h"
 
@@ -75,6 +74,8 @@ class TC_GAME_API ZoneScript : public ScriptObject
         virtual void SetData(uint32 /*DataId*/, uint32 /*Value*/) { }
 
         virtual void ProcessEvent(WorldObject* /*obj*/, uint32 /*eventId*/) { }
+
+        
 
         bool IsZoneScript()     { return _scriptType == ZONE_SCRIPT_TYPE_ZONE; }
         bool IsInstanceScript() { return _scriptType == ZONE_SCRIPT_TYPE_INSTANCE; }

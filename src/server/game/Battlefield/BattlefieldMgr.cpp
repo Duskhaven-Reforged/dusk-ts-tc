@@ -101,7 +101,7 @@ void BattlefieldMgr::HandlePlayerEnterZone(Player* player, Area* zone)
         return;
 
     bf->HandlePlayerEnterZone(player, zone);
-    TC_LOG_DEBUG("bg.battlefield", "%s entered battlefield id %u", player->GetGUID().ToString().c_str(), bf->GetTypeId());
+    TC_LOG_DEBUG("bg.battlefield", "{} entered battlefield id {}", player->GetGUID().ToString(), bf->GetTypeId());
 }
 
 void BattlefieldMgr::HandlePlayerLeaveZone(Player* player, Area* zone)
@@ -115,7 +115,7 @@ void BattlefieldMgr::HandlePlayerLeaveZone(Player* player, Area* zone)
         return;
 
     itr->second->HandlePlayerLeaveZone(player, zone);
-    TC_LOG_DEBUG("bg.battlefield", "Player %s left battlefield id %u", player->GetGUID().ToString().c_str(), itr->second->GetTypeId());
+    TC_LOG_DEBUG("bg.battlefield", "Player {} left battlefield id {}", player->GetGUID().ToString(), itr->second->GetTypeId());
 }
 
 Battlefield* BattlefieldMgr::GetBattlefieldToZoneId(uint32 zoneId)

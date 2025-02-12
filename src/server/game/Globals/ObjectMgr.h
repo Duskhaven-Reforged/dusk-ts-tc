@@ -1970,6 +1970,8 @@ class TC_GAME_API ObjectMgr
 
         PlayerTotemModelMap _playerTotemModel;
         VehicleSeatAddonContainer _vehicleSeatAddonStore;
+
+        std::unordered_map<uint32, uint32> _scriptIdsByZoneStore;
 };
 
 #define sObjectMgr ObjectMgr::instance()

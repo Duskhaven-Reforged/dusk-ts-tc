@@ -557,7 +557,7 @@ bool OutdoorPvPEP::Update(uint32 diff)
     return false;
 }
 
-void OutdoorPvPEP::HandlePlayerEnterZone(Player* player, uint32 zone)
+void OutdoorPvPEP::HandlePlayerEnterZone(Player* player, Area* zone)
 {
     // add buffs
     if (player->GetTeam() == ALLIANCE)
@@ -573,7 +573,7 @@ void OutdoorPvPEP::HandlePlayerEnterZone(Player* player, uint32 zone)
     OutdoorPvP::HandlePlayerEnterZone(player, zone);
 }
 
-void OutdoorPvPEP::HandlePlayerLeaveZone(Player* player, uint32 zone)
+void OutdoorPvPEP::HandlePlayerLeaveZone(Player* player, Area* zone)
 {
     // remove buffs
     if (player->GetTeam() == ALLIANCE)

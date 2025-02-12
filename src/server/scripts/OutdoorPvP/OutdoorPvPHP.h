@@ -74,8 +74,8 @@ class OutdoorPvPHP : public OutdoorPvP
 
         bool SetupOutdoorPvP() override;
 
-        void HandlePlayerEnterZone(Player* player, uint32 zone) override;
-        void HandlePlayerLeaveZone(Player* player, uint32 zone) override;
+        void HandlePlayerEnterZone(Player* player, Area* zone) override;
+        void HandlePlayerLeaveZone(Player* player, Area* zone) override;
 
         bool Update(uint32 diff) override;
         void FillInitialWorldStates(WorldPackets::WorldState::InitWorldStates& packet) override;

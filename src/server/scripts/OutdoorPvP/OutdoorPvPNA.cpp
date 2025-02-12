@@ -296,7 +296,7 @@ bool OutdoorPvPNA::SetupOutdoorPvP()
     return true;
 }
 
-void OutdoorPvPNA::HandlePlayerEnterZone(Player* player, uint32 zone)
+void OutdoorPvPNA::HandlePlayerEnterZone(Player* player, Area* zone)
 {
     // add buffs
     if (player->GetTeam() == m_obj->GetControllingFaction())
@@ -304,7 +304,7 @@ void OutdoorPvPNA::HandlePlayerEnterZone(Player* player, uint32 zone)
     OutdoorPvP::HandlePlayerEnterZone(player, zone);
 }
 
-void OutdoorPvPNA::HandlePlayerLeaveZone(Player* player, uint32 zone)
+void OutdoorPvPNA::HandlePlayerLeaveZone(Player* player, Area* zone)
 {
     // remove buffs
     player->RemoveAurasDueToSpell(NA_CAPTURE_BUFF);
