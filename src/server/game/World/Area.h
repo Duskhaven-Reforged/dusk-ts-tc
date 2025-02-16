@@ -6,12 +6,15 @@
 // @tswow-end
 #include "DBCStructure.h"
 #include "Position.h"
-#include "ZoneScript.h"
 
+class AreaScript;
 class Area;
-class ZoneScript;
+class Player;
+class Map;
 
 struct GameObjectTemplate;
+
+#define AREAUPDATE_INTERVAL 5000
 
 class TC_GAME_API AreaMgr
 {
@@ -20,14 +23,24 @@ public:
 
     Area* GetArea(uint32 areaId);
 
-private:
+    void Update(uint32 diff);
+
+    void HandlePlayerLeaveZone(Area* zone, Player* player);
+    void HandlePlayerEnterZone(Area* zone, Player* player);
+
+  private:
     std::map<uint32, Area*> m_areas;
+    uint32 updateTicker = 0;
 };
 
 #define sAreaMgr AreaMgr::instance()
 
 class TC_GAME_API Area
 {
+    // @tswow-begin
+    TSEntity m_tsEntity;
+    friend class TSArea;
+    // @tswow-end
 
 public:
     Area(AreaTableEntry const* areaTableEntry);
@@ -42,16 +55,20 @@ public:
     Area* GetZone() { return m_zone; }
     std::vector<Area*> GetTree();
 
-    ZoneScript* GetZoneScript();
+    Map* GetMap() { return m_map; }
+
+    AreaScript* GetAreaScript();
+
+    std::vector<Player*> GetPlayers();
 
 private:
     AreaTableEntry const* m_areaTableEntry;
-    ZoneScript* m_zoneScript;
-
-    std::unordered_map<uint8, std::unordered_map<size_t, std::vector<ObjectGuid::LowType>>> m_gatheringNodes;
+    AreaScript* m_areaScript;
 
     Area* m_parent;
     Area* m_zone;
+
+    Map* m_map;
 };
 
 #endif

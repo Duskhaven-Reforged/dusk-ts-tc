@@ -308,8 +308,8 @@ void Creature::AddToWorld()
         if (IsVehicle())
             GetVehicleKit()->Install();
 
-        if (GetZoneScript())
-            GetZoneScript()->OnCreatureCreate(this);
+        if (auto zs = GetZoneScript())
+            zs->OnCreatureCreate(this);
     }
 }
 
@@ -321,8 +321,8 @@ void Creature::RemoveFromWorld()
         FIRE_ID(GetCreatureTemplate()->events.id,Creature,OnRemove,TSCreature(this));
         FIRE_ID(GetMap()->GetId(),Map,OnCreatureRemove,TSMap(GetMap()),TSCreature(this));
         // @tswow-end
-        if (GetZoneScript())
-            GetZoneScript()->OnCreatureRemove(this);
+        if (auto zs = GetZoneScript())
+            zs->OnCreatureRemove(this);
 
         if (m_formation)
             sFormationMgr->RemoveCreatureFromGroup(m_formation, this);
@@ -804,7 +804,8 @@ void Creature::Update(uint32 diff)
                 time_t linkedRespawnTime = GetMap()->GetLinkedRespawnTime(dbtableHighGuid);
                 if (!linkedRespawnTime) {             // Can respawn
                     Respawn();
-                    FIRE_ID(GetAreaId(), Zone, OnCreatureRespawn, TSCreature(this));
+                    if (ZoneScript* zs = GetZoneScript())
+                        zs->OnCreatureRespawn(this);
                 }
                 else                                // the master is dead
                 {

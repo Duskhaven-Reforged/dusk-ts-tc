@@ -1658,6 +1658,9 @@ void GameObject::Use(Unit* user)
     uint32 spellId = 0;
     bool triggered = false;
 
+    if (ZoneScript* zs = GetZoneScript())
+        zs->OnGameObjectUsed(this, user);
+
     if (Player* playerUser = user->ToPlayer())
     {
         if (m_goInfo->CannotBeUsedUnderImmunity() && playerUser->HasUnitFlag(UNIT_FLAG_IMMUNE))

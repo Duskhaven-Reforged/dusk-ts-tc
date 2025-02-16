@@ -1,12 +1,36 @@
 #include "Area.h"
 #include "GameObject.h"
 #include "ObjectMgr.h"
-#include "ZoneScript.h"
+#include "MapManager.h"
+#include "AreaScript.h"
 
 AreaMgr* AreaMgr::instance()
 {
     static AreaMgr instance;
     return &instance;
+}
+
+void AreaMgr::Update(uint32 diff) {
+    updateTicker += diff;
+    if (updateTicker >= AREAUPDATE_INTERVAL) {
+        for (const auto& kvp : m_areas) {
+            Area* area = kvp.second;
+            if (AreaScript* script = area->GetAreaScript())
+                area->GetAreaScript()->Update(diff);
+        }
+        updateTicker = 0;
+    }
+}
+
+void AreaMgr::HandlePlayerLeaveZone(Area* zone, Player* player) {
+    if (auto as = zone->GetAreaScript())
+        as->OnPlayerLeave(player);
+}
+
+void AreaMgr::HandlePlayerEnterZone(Area* zone, Player* player)
+{
+    if (auto as = zone->GetAreaScript())
+        as->OnPlayerEnter(player);
 }
 
 Area* AreaMgr::GetArea(uint32 areaId)
@@ -30,14 +54,12 @@ Area* AreaMgr::GetArea(uint32 areaId)
 
 Area::Area(AreaTableEntry const* areaTableEntry) : m_areaTableEntry(areaTableEntry)
 {
-    m_zoneScript = sScriptMgr->GetZoneScript(sObjectMgr->GetScriptIdForZone(GetId()));
-
+    auto Continent = areaTableEntry->ContinentID;
+    m_areaScript = new AreaScript(this);
     // Calculate parent & zone at creation
     m_parent = sAreaMgr->GetArea(GetEntry()->ParentAreaID);
-
-    m_zone = m_parent ? m_parent: this;
-    while (m_zone && !m_zone->IsZone())
-        m_zone = sAreaMgr->GetArea(m_zone->GetEntry()->ParentAreaID);
+    m_zone   = this;
+    m_map    = sMapMgr->FindBaseNonInstanceMap(Continent);
 }
 
 std::vector<Area*> Area::GetTree()
@@ -53,13 +75,18 @@ std::vector<Area*> Area::GetTree()
     return areas;
 }
 
-ZoneScript* Area::GetZoneScript()
+AreaScript* Area::GetAreaScript()
 {
-    if (m_zoneScript)
-        return m_zoneScript;
+    if (m_areaScript)
+        return m_areaScript;
 
     if (Area* parent = GetParent())
-        return parent->GetZoneScript();
+        return parent->GetAreaScript();
 
     return nullptr;
+}
+
+std::vector<Player*> Area::GetPlayers()
+{
+    return GetAreaScript()->GetPlayers();
 }

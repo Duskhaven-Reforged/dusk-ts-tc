@@ -35,6 +35,7 @@ enum ZoneScriptType
     ZONE_SCRIPT_TYPE_INSTANCE,
     ZONE_SCRIPT_TYPE_BATTLEFIELD,
     ZONE_SCRIPT_TYPE_OUTDOORPVP,
+    ZONE_SCRIPT_TYPE_AREA,
 };
 
 class TC_GAME_API ZoneScript : public ScriptObject
@@ -49,13 +50,14 @@ class TC_GAME_API ZoneScript : public ScriptObject
 
         virtual void OnCreatureCreate(Creature* ) { }
         virtual void OnCreatureRemove(Creature* ) { }
-
-        virtual void OnCreatureRespawn(Creature*) {}
+        virtual void OnCreatureRespawn(Creature*) { }
 
         virtual void OnGameObjectCreate(GameObject* ) { }
-        virtual void OnGameObjectRemove(GameObject* ) { }
+        virtual void OnGameObjectRemove(GameObject*) {}
+        virtual void OnGameObjectUsed(GameObject* go, Unit* by) {}
 
-        virtual void OnUnitDeath(Unit*) { }
+        virtual void OnUnitDeath(Unit*) {}
+        virtual void OnUnitKilled(Unit*, Unit*) {}
         virtual void OnPlayerDeath(Player*) { }
 
         // Called when a player successfully enters or exit the zone.
@@ -74,8 +76,6 @@ class TC_GAME_API ZoneScript : public ScriptObject
         virtual void SetData(uint32 /*DataId*/, uint32 /*Value*/) { }
 
         virtual void ProcessEvent(WorldObject* /*obj*/, uint32 /*eventId*/) { }
-
-        
 
         bool IsZoneScript()     { return _scriptType == ZONE_SCRIPT_TYPE_ZONE; }
         bool IsInstanceScript() { return _scriptType == ZONE_SCRIPT_TYPE_INSTANCE; }

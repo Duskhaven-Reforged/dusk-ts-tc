@@ -5117,10 +5117,10 @@ void Player::RepopAtGraveyard()
 
 bool Player::CanJoinConstantChannelInZone(ChatChannelsEntry const* channel, AreaTableEntry const* zone) const
 {
-    if (channel->Flags & CHANNEL_DBC_FLAG_ZONE_DEP && zone->Flags & AREA_FLAG_ARENA_INSTANCE)
+    if (channel->Flags & CHANNEL_DBC_FLAG_ZONE_DEP && zone->Flags & AREA_FLAG_NO_CHAT_CHANNELS)
         return false;
 
-    if ((channel->Flags & CHANNEL_DBC_FLAG_CITY_ONLY) && (!(zone->Flags & AREA_FLAG_SLAVE_CAPITAL)))
+    if ((channel->Flags & CHANNEL_DBC_FLAG_CITY_ONLY) && (!(zone->Flags & AREA_FLAG_ALLOW_TRADE_CHANNEL)))
         return false;
 
     if ((channel->Flags & CHANNEL_DBC_FLAG_GUILD_REQ) && GetGuildId())
@@ -7074,12 +7074,9 @@ uint32 Player::GetZoneIdFromDB(ObjectGuid guid)
 void Player::UpdateArea(uint32 newAreaId)
 {
     Area* oldArea = m_area;
-
-    FIRE_ID(m_areaUpdateId, Zone, OnPlayerExit, TSPlayer(this));
     // FFA_PVP flags are area and not zone id dependent
     // so apply them accordingly
     m_areaUpdateId = newAreaId;
-    FIRE_ID(m_areaUpdateId, Zone, OnPlayerEnter, TSPlayer(this));
 
     m_area = sAreaMgr->GetArea(newAreaId);
     UpdateZone(oldArea ? oldArea->GetZone(): nullptr);
@@ -7087,7 +7084,7 @@ void Player::UpdateArea(uint32 newAreaId)
 
     AreaTableEntry const* area = sAreaTableStore.LookupEntry(newAreaId);
     bool oldFFAPvPArea = pvpInfo.IsInFFAPvPArea;
-    pvpInfo.IsInFFAPvPArea = area && (area->Flags & AREA_FLAG_ARENA);
+    pvpInfo.IsInFFAPvPArea = area && (area->Flags & AREA_FLAG_FREE_FOR_ALL_PVP);
     UpdatePvPState(true);
 
     // check if we were in ffa arena and we left
@@ -7108,7 +7105,7 @@ void Player::UpdateArea(uint32 newAreaId)
     else
         RemovePvpFlag(UNIT_BYTE2_FLAG_SANCTUARY);
 
-    uint32 const areaRestFlag = (GetTeam() == ALLIANCE) ? AREA_FLAG_REST_ZONE_ALLIANCE : AREA_FLAG_REST_ZONE_HORDE;
+    uint32 const areaRestFlag = (GetTeam() == ALLIANCE) ? AREA_FLAG_ALLIANCE_RESTING  : AREA_FLAG_HORDE_RESTING;
     if (area && area->Flags & areaRestFlag)
         SetRestFlag(REST_FLAG_IN_FACTION_AREA);
     else
@@ -7125,23 +7122,13 @@ void Player::UpdateZone(Area* oldArea)
 
     m_zoneUpdateTimer = ZONE_UPDATE_INTERVAL;
 
-    GetMap()->UpdatePlayerZoneStats(oldZone ? oldZone->GetId() : MAP_INVALID_ZONE,
-                                    newZone ? newZone->GetId() : MAP_INVALID_ZONE);
-
     // call leave script hooks immedately (before updating flags)
     if (oldZone && oldZone != newZone)
     {
         sOutdoorPvPMgr->HandlePlayerLeaveZone(this, oldZone);
         sBattlefieldMgr->HandlePlayerLeaveZone(this, oldZone);
-
-        if (ZoneScript* oldZoneScript = GetZoneScript())
-            if (oldZoneScript->IsZoneScript())
-                oldZoneScript->OnPlayerExit(this);
+        sAreaMgr->HandlePlayerLeaveZone(oldZone, this);
     }
-
-    // @dh-begin
-    // TODO: Add fire for leaving ZONE
-    // @dh-end
 
     // group update
     if (GetGroup())
@@ -7165,16 +7152,16 @@ void Player::UpdateZone(Area* oldArea)
     {
         case AREATEAM_ALLY:
             pvpInfo.IsInHostileArea =
-                GetTeam() != ALLIANCE && (sWorld->IsPvPRealm() || newZoneEntry->Flags & AREA_FLAG_CAPITAL);
+                GetTeam() != ALLIANCE && (sWorld->IsPvPRealm() || newZoneEntry->Flags & AREA_FLAG_LINKED_CHAT);
             break;
         case AREATEAM_HORDE:
             pvpInfo.IsInHostileArea =
-                GetTeam() != HORDE && (sWorld->IsPvPRealm() || newZoneEntry->Flags & AREA_FLAG_CAPITAL);
+                GetTeam() != HORDE && (sWorld->IsPvPRealm() || newZoneEntry->Flags & AREA_FLAG_LINKED_CHAT);
             break;
         case AREATEAM_NONE:
             // overwrite for battlegrounds, maybe batter some zone flags but current known not 100% fit to this
             pvpInfo.IsInHostileArea =
-                sWorld->IsPvPRealm() || InBattleground() || newZoneEntry->Flags & AREA_FLAG_WINTERGRASP;
+                sWorld->IsPvPRealm() || InBattleground() || newZoneEntry->Flags & AREA_FLAG_COMBAT_ZONE;
             break;
         default:                                            // 6 in fact
             pvpInfo.IsInHostileArea = false;
@@ -7184,7 +7171,7 @@ void Player::UpdateZone(Area* oldArea)
     // Treat players having a quest flagging for PvP as always in hostile area
     pvpInfo.IsHostile = pvpInfo.IsInHostileArea || HasPvPForcingQuest();
 
-    if (newZoneEntry->Flags & AREA_FLAG_CAPITAL) // Is in a capital city
+    if (newZoneEntry->Flags & AREA_FLAG_LINKED_CHAT) // Is in a capital city
     {
         if (!pvpInfo.IsHostile || newZoneEntry->IsSanctuary())
             SetRestFlag(REST_FLAG_IN_CITY);

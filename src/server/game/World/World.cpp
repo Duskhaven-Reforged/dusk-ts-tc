@@ -2690,6 +2690,12 @@ void World::Update(uint32 diff)
         sBattlefieldMgr->Update(diff);
     }
 
+    {
+        TC_METRIC_TIMER("world_update_time", TC_METRIC_TAG("type", "Update outdoor pvp"));
+        ZoneScopedNC("AreaMgr::Update", WORLD_UPDATE_COLOR)
+        sAreaMgr->Update(diff);
+    }
+
     ///- Delete all characters which have been deleted X days before
     if (m_timers[WUPDATE_DELETECHARS].Passed())
     {

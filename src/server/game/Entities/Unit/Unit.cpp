@@ -9334,10 +9334,6 @@ void Unit::setDeathState(DeathState s)
         SetPower(GetPowerType(), 0);
         SetEmoteState(EMOTE_ONESHOT_NONE);
 
-        // players in instance don't have ZoneScript, but they have InstanceScript
-        if (ZoneScript* zoneScript = GetZoneScript() ? GetZoneScript() : GetInstanceScript())
-            zoneScript->OnUnitDeath(this);
-
         // @dh-begin
         // TODO: Add fire for unit dying
         // @dh-end
@@ -12261,6 +12257,11 @@ bool Unit::InitTamedPet(Pet* pet, uint8 level, uint32 spell_id)
         {
             if (Player* killed = victim->ToPlayer())
                 sScriptMgr->OnPlayerKilledByCreature(killerCre, killed);
+        }
+
+        if (ZoneScript* zs = victim->GetZoneScript())
+        {
+            zs->OnUnitKilled(victim, attacker);
         }
     }
 }

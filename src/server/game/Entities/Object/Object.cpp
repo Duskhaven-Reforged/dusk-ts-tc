@@ -971,6 +971,8 @@ m_currMap(nullptr), m_InstanceId(0), m_phaseMask(PHASEMASK_NORMAL), m_notifyflag
 {
     m_serverSideVisibility.SetValue(SERVERSIDE_VISIBILITY_GHOST, GHOST_VISIBILITY_ALIVE | GHOST_VISIBILITY_GHOST);
     m_serverSideVisibilityDetect.SetValue(SERVERSIDE_VISIBILITY_GHOST, GHOST_VISIBILITY_ALIVE);
+
+    m_area = nullptr;
 }
 
 WorldObject::~WorldObject()
@@ -2082,7 +2084,7 @@ void WorldObject::SetZoneScript()
             else if (ZoneScript* out = sOutdoorPvPMgr->GetZoneScript(GetZoneId()))
                 m_zoneScript = out;
             else if (Area* area = GetArea())
-                m_zoneScript = area->GetZoneScript();
+                m_zoneScript = reinterpret_cast<ZoneScript*>(area->GetAreaScript());
         }
     }
 }

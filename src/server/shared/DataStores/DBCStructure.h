@@ -209,9 +209,9 @@ struct AreaTableEntry
 
     bool IsFlyable() const
     {
-        if (Flags & AREA_FLAG_OUTLAND)
+        if (Flags & AREA_FLAG_FLYING)
         {
-            if (!(Flags & AREA_FLAG_NO_FLY_ZONE))
+            if (!(Flags & AREA_FLAG_CANNOT_FLY))
                 return true;
         }
 

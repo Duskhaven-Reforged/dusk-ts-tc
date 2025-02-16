@@ -16,6 +16,7 @@
  */
 
 #include "Map.h"
+#include "AreaScript.h"
 #include "Battleground.h"
 #include "CellImpl.h"
 #include "Chat.h"
@@ -301,8 +302,6 @@ i_scriptLock(false), _respawnTimes(std::make_unique<RespawnListContainer>()), _r
             setNGrid(nullptr, idx, j);
         }
     }
-
-    _zonePlayerCountMap.clear();
 
     //lets initialize visibility distance for map
     Map::InitVisibilityDistance();
@@ -763,21 +762,6 @@ void Map::VisitNearbyCellsOf(WorldObject* obj, TypeContainerVisitor<Trinity::Obj
             Visit(cell, worldVisitor);
         }
     }
-}
-
-void Map::UpdatePlayerZoneStats(uint32 oldZone, uint32 newZone)
-{
-    // Nothing to do if no change
-    if (oldZone == newZone)
-        return;
-
-    if (oldZone != MAP_INVALID_ZONE)
-    {
-        uint32& oldZoneCount = _zonePlayerCountMap[oldZone];
-        ASSERT(oldZoneCount, "A player left zone %u (went to %u) - but there were no players in the zone!", oldZone, newZone);
-        --oldZoneCount;
-    }
-    ++_zonePlayerCountMap[newZone];
 }
 
 // @tswow-begin tracy
@@ -2871,7 +2855,7 @@ void Map::GetFullTerrainStatusForPosition(uint32 phaseMask, float x, float y, fl
         data.outdoors = true;
         data.areaId = gridAreaId;
         if (AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(data.areaId))
-            data.outdoors = (areaEntry->Flags & (AREA_FLAG_INSIDE | AREA_FLAG_OUTSIDE)) != AREA_FLAG_INSIDE;
+            data.outdoors = (areaEntry->Flags & (AREA_FLAG_FORCE_INDOORS  | AREA_FLAG_FORCE_OUTDOORS)) != AREA_FLAG_FORCE_INDOORS;
     }
 
     if (!data.areaId)
@@ -3419,12 +3403,14 @@ void Map::ApplyDynamicModeRespawnScaling(WorldObject const* obj, ObjectGuid::Low
     if (!(data->spawnGroupData->flags & SPAWNGROUP_FLAG_DYNAMIC_SPAWN_RATE))
         return;
 
-    auto it = _zonePlayerCountMap.find(obj->GetZoneId());
-    if (it == _zonePlayerCountMap.end())
-        return;
-    uint32 const playerCount = it->second;
+    uint32 playerCount = 0;
+    if (Area* zone = obj->GetArea())
+        if (AreaScript* script = zone->GetAreaScript())
+            playerCount = script->GetPlayerCount();
+
     if (!playerCount)
         return;
+
     double const adjustFactor = sWorld->getFloatConfig(type == SPAWN_TYPE_GAMEOBJECT ? CONFIG_RESPAWN_DYNAMICRATE_GAMEOBJECT : CONFIG_RESPAWN_DYNAMICRATE_CREATURE) / playerCount;
     if (adjustFactor >= 1.0) // nothing to do here
         return;
