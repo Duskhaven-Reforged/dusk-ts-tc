@@ -7079,7 +7079,7 @@ void Player::UpdateArea(uint32 newAreaId)
     m_areaUpdateId = newAreaId;
 
     m_area = sAreaMgr->GetArea(newAreaId);
-    UpdateZone(oldArea ? oldArea->GetZone(): nullptr);
+    UpdateZone(oldArea);
     m_zoneUpdateTimer = ZONE_UPDATE_INTERVAL;
 
     AreaTableEntry const* area = sAreaTableStore.LookupEntry(newAreaId);
@@ -7117,7 +7117,7 @@ void Player::UpdateZone(Area* oldArea)
     if (!IsInWorld())
         return;
 
-    Area* oldZone = oldArea ? oldArea->GetZone() : nullptr;
+    Area* oldZone = oldArea;
     Area* newZone = GetZone();
 
     m_zoneUpdateTimer = ZONE_UPDATE_INTERVAL;
