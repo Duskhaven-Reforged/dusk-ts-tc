@@ -10,6 +10,7 @@
 class AreaScript;
 class Area;
 class Player;
+class Creature;
 class Map;
 
 struct GameObjectTemplate;
@@ -60,6 +61,7 @@ public:
     AreaScript* GetAreaScript();
 
     std::vector<Player*> GetPlayers();
+    std::vector<Creature*> GetCreatures();
 
 private:
     AreaTableEntry const* m_areaTableEntry;

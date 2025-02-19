@@ -3331,7 +3331,12 @@ bool Unit::isInBackInMap(Unit const* target, float distance, float arc) const
 
 bool Unit::isInAccessiblePlaceFor(Creature const* c) const
 {
-    if (IsInWater())
+    ZLiquidStatus liquidStatus = GetLiquidStatus();
+
+    bool isInWater = (liquidStatus & MAP_LIQUID_STATUS_IN_CONTACT) != 0;
+
+    // In water or jumping in water
+    if (isInWater || (liquidStatus == LIQUID_MAP_ABOVE_WATER && (IsFalling() || (ToPlayer() && const_cast<Player*>(ToPlayer())->IsFalling()))))
         return c->CanEnterWater();
     else
         return c->CanWalk() || c->CanFly();
@@ -9193,21 +9198,12 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
             break;
     }
 
-    if (Creature* creature = ToCreature())
-    {
-        if (creature->HasUnitTypeMask(UNIT_MASK_MINION) && !creature->IsInCombat())
-        {
-            if (GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
-            {
-                Unit* followed = ASSERT_NOTNULL(dynamic_cast<AbstractFollower*>(GetMotionMaster()->GetCurrentMovementGenerator()))->GetTarget();
-                if (followed && followed->GetGUID() == GetOwnerGUID() && !followed->IsInCombat())
-                {
-                    float ownerSpeed = followed->GetSpeedRate(mtype);
-                    if (speed < ownerSpeed || creature->IsWithinDist3d(followed, 10.0f))
-                        speed = ownerSpeed;
-                    speed *= std::min(std::max(1.0f, 0.75f + (GetDistance(followed) - PET_FOLLOW_DIST) * 0.05f), 1.3f);
-                }
-            }
+    int32 healthSlow = 0;
+
+    if (Creature* creature = ToCreature()) {
+        uint32 immuneMask = creature->GetCreatureTemplate()->MechanicImmuneMask;
+        if (!IsPet() && !(IsControlledByPlayer() && IsVehicle()) && !(immuneMask & (1 << (MECHANIC_SNARE - 1))) && !(creature->IsDungeonBoss())) {
+            healthSlow = (int32) std::min(0.0f, (1.66f * (GetHealthPct() - 30.0f)));
         }
     }
 
@@ -9228,6 +9224,11 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
     }
 
     SetSpeedRate(mtype, speed);
+}
+
+float Unit::GetSpeedInMotion() const
+{
+    return (movespline->Finalized() ? GetSpeed(Movement::SelectSpeedType(GetUnitMovementFlags())) : movespline->Velocity());
 }
 
 float Unit::GetSpeed(UnitMoveType mtype) const
@@ -14141,10 +14142,16 @@ void Unit::_ExitVehicle(Position const* exitPosition)
     else
     {
         // Set exit position to vehicle position and use the current orientation
-        pos = vehicle->GetBase()->GetPosition();
+        // If the vehicle is on a transport, we either are passengers too now after m_vehicle->RemovePassenger
+        // or the transport is teleporting, and we are not a passenger.
+        if (vehicle->GetBase()->GetTransport() && GetTransport())
+            pos = vehicle->GetBase()->GetTransOffset();
+        else
+            pos = vehicle->GetBase()->GetPosition();
         pos.SetOrientation(GetOrientation());
 
         // Change exit position based on seat entry addon data
+        // Possible TODO? Might not mesh well with transport offsets?
         if (seatAddon)
         {
             if (seatAddon->ExitParameter == VehicleExitParameters::VehicleExitParamOffset)
@@ -14681,7 +14688,12 @@ void Unit::SetFacingTo(float ori, bool force)
         return;
 
     Movement::MoveSplineInit init(this);
-    init.MoveTo(GetPositionX(), GetPositionY(), GetPositionZ(), false);
+    // Do we even need MoveTo? Shauren says yes...
+    if (GetTransport())
+        init.MoveTo(GetTransOffsetX(), GetTransOffsetY(), GetTransOffsetZ(), false);
+    else
+        init.MoveTo(GetPositionX(), GetPositionY(), GetPositionZ(), false);
+    // For transports this is already disabled, keep for vehicles?
     if (HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) && GetTransGUID())
         init.DisableTransportPathTransformations(); // It makes no sense to target global orientation
     init.SetFacing(ori);
@@ -14698,7 +14710,11 @@ void Unit::SetFacingToObject(WorldObject const* object, bool force)
 
     /// @todo figure out under what conditions creature will move towards object instead of facing it where it currently is.
     Movement::MoveSplineInit init(this);
-    init.MoveTo(GetPositionX(), GetPositionY(), GetPositionZ(), false);
+     // Do we even need MoveTo? ...
+    if (GetTransport())
+        init.MoveTo(GetTransOffsetX(), GetTransOffsetY(), GetTransOffsetZ(), false);
+    else
+        init.MoveTo(GetPositionX(), GetPositionY(), GetPositionZ(), false);
     init.SetFacing(GetAbsoluteAngle(object));   // when on transport, GetAbsoluteAngle will still return global coordinates (and angle) that needs transforming
 
     //GetMotionMaster()->LaunchMoveSpline(std::move(init), EVENT_FACE, MOTION_PRIORITY_HIGHEST);

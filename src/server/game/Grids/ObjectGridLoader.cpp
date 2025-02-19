@@ -107,7 +107,15 @@ void LoadHelper(CellGuidSet const& guid_set, CellCoord &cell, GridRefManager<T> 
         if (!map->ShouldBeSpawnedOnGridLoad<T>(guid))
             continue;
 
-        T* obj = new T;
+        T* obj;
+        if constexpr (std::is_same_v<T, GameObject>)
+        {
+            GameObjectData const* data = sObjectMgr->GetGameObjectData(guid);
+            ASSERT(data);
+            obj = (T*)GameObject::CreateGameObject(data->id);
+        }
+        else
+        obj = new T;
         //TC_LOG_INFO("misc", "DEBUG: LoadHelper from table: {} for (guid: {}) Loading", table, guid);
         if (!obj->LoadFromDB(guid, map, false, false))
         {

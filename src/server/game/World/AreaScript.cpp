@@ -12,11 +12,13 @@
 AreaScript::AreaScript(Area* area) : area(area)
 {
 	m_activePlayers.clear();
+    m_creatures.clear();
 }
 
 AreaScript::~AreaScript()
 {
     m_activePlayers.clear();
+    m_creatures.clear();
 }
 
 void AreaScript::OnUnitKilled(Unit* who, Unit* by)
@@ -32,11 +34,13 @@ void AreaScript::OnUnitKilled(Unit* who, Unit* by)
 void AreaScript::OnCreatureCreate(Creature* creature)
 {
     FIRE_ID(area->GetId(), Area, OnCreatureCreate, TSArea(area), TSCreature(creature));
+    m_creatures.insert(creature->GetGUID());
 }
 
 void AreaScript::OnCreatureRemove(Creature* creature)
 {
     FIRE_ID(area->GetId(), Area, OnCreatureRemove, TSArea(area), TSCreature(creature));
+    m_creatures.erase(creature->GetGUID());
 }
 
 void AreaScript::OnGameObjectCreate(GameObject* go)
@@ -80,4 +84,5 @@ void AreaScript::OnPlayerLeave(Player* player)
 
 void AreaScript::OnCreatureRespawn(Creature* creature) {
     FIRE_ID(area->GetId(), Area, OnCreatureRespawn, TSArea(area), TSCreature(creature));
+    m_creatures.insert(creature->GetGUID());
 }

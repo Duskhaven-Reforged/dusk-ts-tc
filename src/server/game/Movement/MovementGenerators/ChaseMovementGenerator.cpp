@@ -26,7 +26,7 @@
 #include "Unit.h"
 #include "Util.h"
 #include "TSCreature.h"
-#include <boost/algorithm/clamp.hpp>
+#include "Transport.h"
 
 static bool HasLostTarget(Unit* owner, Unit* target)
 {
@@ -56,6 +56,39 @@ static bool PositionOkay(Unit* owner, Unit* target, Optional<float> minDistance,
     if (!owner->IsWithinLOSInMap(target))
         return false;
     return true;
+}
+
+static Position const PredictPosition(Unit* target)
+{
+    Position pos = target->GetPosition();
+
+     // 0.5 - it's time (0.5 sec) between starting movement opcode (e.g. MSG_MOVE_START_FORWARD) and MSG_MOVE_HEARTBEAT sent by client
+    float speed = target->GetSpeed(Movement::SelectSpeedType(target->GetUnitMovementFlags())) * 0.5f;
+    float orientation = target->GetOrientation();
+
+    if (target->m_movementInfo.HasMovementFlag(MOVEMENTFLAG_FORWARD))
+    {
+        pos.m_positionX += cos(orientation) * speed;
+        pos.m_positionY += std::sin(orientation) * speed;
+    }
+    else if (target->m_movementInfo.HasMovementFlag(MOVEMENTFLAG_BACKWARD))
+    {
+        pos.m_positionX -= cos(orientation) * speed;
+        pos.m_positionY -= std::sin(orientation) * speed;
+    }
+
+    if (target->m_movementInfo.HasMovementFlag(MOVEMENTFLAG_STRAFE_LEFT))
+    {
+        pos.m_positionX += cos(orientation + M_PI / 2.f) * speed;
+        pos.m_positionY += std::sin(orientation + M_PI / 2.f) * speed;
+    }
+    else if (target->m_movementInfo.HasMovementFlag(MOVEMENTFLAG_STRAFE_RIGHT))
+    {
+        pos.m_positionX += cos(orientation - M_PI / 2.f) * speed;
+        pos.m_positionY += std::sin(orientation - M_PI / 2.f) * speed;
+    }
+
+    return pos;
 }
 
 static void DoMovementInform(Unit* owner, Unit* target)
@@ -90,10 +123,6 @@ void ChaseMovementGenerator::Initialize(Unit* /*owner*/)
 
     _path = nullptr;
     _lastTargetPosition.reset();
-
-    if (Unit* const target = GetTarget())
-        if (Player* player = target->ToPlayer())
-        _chaseCreatureNumber = player->getAttackers().size();
 }
 
 void ChaseMovementGenerator::Reset(Unit* owner)
@@ -114,6 +143,15 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
     if (!target || !target->IsInWorld())
         return false;
 
+    if (owner->GetTransport() != target->GetTransport())
+    {
+        owner->StopMoving();
+        _lastTargetPosition.reset();
+        if (Creature* cOwner = owner->ToCreature())
+            cOwner->SetCannotReachTarget(false);
+        return true;
+    }
+
     // the owner might be unable to move (rooted or casting), or we have lost the target, pause movement
     if (owner->HasUnitState(UNIT_STATE_NOT_MOVE) || owner->IsMovementPreventedByCasting() || HasLostTarget(owner, target))
     {
@@ -124,13 +162,27 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
         return true;
     }
 
-    bool const mutualChase = IsMutualChase(owner, target);
+    bool forceDest =
+        //(cOwner && (cOwner->isWorldBoss() || cOwner->IsDungeonBoss())) || // force for all bosses, even not in instances
+        (target->GetTypeId() == TYPEID_PLAYER && target->ToPlayer()->IsGameMaster()) || // for .npc follow
+        (owner->CanFly())
+        ; // closes "bool forceDest", that way it is more appropriate, so we can comment out crap whenever we need to
+
+    bool mutualChase = IsMutualChase(owner, target);
+    bool const mutualTarget = target->GetVictim() == owner;
     float const hitboxSum = owner->GetCombatReach() + target->GetCombatReach();
     float const minRange = _range ? _range->MinRange + hitboxSum : CONTACT_DISTANCE;
     float const minTarget = (_range ? _range->MinTolerance : 0.0f) + hitboxSum;
     float const maxRange = _range ? _range->MaxRange + hitboxSum : owner->GetMeleeRange(target); // melee range already includes hitboxes
     float const maxTarget = _range ? _range->MaxTolerance + hitboxSum : CONTACT_DISTANCE + hitboxSum;
     Optional<ChaseAngle> angle = mutualChase ? Optional<ChaseAngle>() : _angle;
+
+    // Prevent almost infinite spinning of mutual targets.
+    if (angle && !mutualChase && _mutualChase && mutualTarget && minRange < maxRange)
+    {
+        angle = Optional<ChaseAngle>();
+        mutualChase = true;
+    }
 
     // periodically check if we're already in the expected range...
     _rangeCheckTimer.Update(diff);
@@ -145,52 +197,6 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
                 cOwner->SetCannotReachTarget(false);
             owner->StopMoving();
             owner->SetInFront(target);
-            // Mob fanning.
-            // I did my best.
-            // It works by allowing mobs to target a change angle that's slightly different depending on how many hostile creatures are following the player
-            // They always target the front, never behind
-            // There's a step added for every creature if there's more than one of them, seems something like PI / 20
-            // Also, it seems to have effect when the creatures finalize their chase movement
-            if (Player* player = target->ToPlayer())
-            {
-                if (owner->GetTypeId() != TYPEID_UNIT)
-                    return true;
-
-                if (owner->IsPet()) // Doesn't apply to pets
-                    return true;
-
-                float angle = 0.0f;
-
-                // We need an orientation value that we can use to determine the orientation of fanning mobs.
-                // The default following angle will do nicely.
-                float orientation = _angle->RelativeAngle;
-                uint32 numOfAttackers = player->getAttackers().size();
-                // We divide the amount of attackers by 2 so we can split them evenly on left and right side
-                uint32 halfNumOfChasers = numOfAttackers / 2;
-
-                if (_chaseCreatureNumber == 1) // First creature always follows from front
-                    angle = Position::NormalizeOrientation(owner->GetOrientation() - M_PI);
-                else if (_chaseCreatureNumber <= halfNumOfChasers) // Right side
-                    angle = boost::algorithm::clamp(Position::NormalizeOrientation(orientation - _chaseCreatureNumber * (M_PI / 20.0f)), Position::NormalizeOrientation(orientation + M_PI / 2.0f), Position::NormalizeOrientation(orientation - M_PI / 2.0f));
-                else // Left side
-                    angle = boost::algorithm::clamp(Position::NormalizeOrientation(orientation + (_chaseCreatureNumber - halfNumOfChasers) * (M_PI / 20.0f)), Position::NormalizeOrientation(orientation + M_PI / 2.0f), Position::NormalizeOrientation(orientation - M_PI / 2.0f));
-
-                float x, y, z;
-                target->GetNearPoint(owner, x, y, z, minTarget - hitboxSum, angle);
-
-                if (owner->IsHovering())
-                    owner->UpdateAllowedPositionZ(x, y, z);
-
-                _path = std::make_unique<PathGenerator>(owner);
-                bool success = _path->CalculatePath(x, y, z);
-
-                Movement::MoveSplineInit init(owner);
-                init.MovebyPath(_path->GetPath());
-                init.SetWalk(false);
-                init.SetFacing(target);
-                init.Launch();
-            }
-
             DoMovementInform(owner, target);
             return true;
         }
@@ -226,19 +232,30 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
             }
 
             // figure out which way we want to move
-            bool const moveToward = !owner->IsInDist(target, maxRange);
+            float x, y, z;
+            target->GetPosition(x, y, z);
+            bool withinRange = owner->IsInDist(target, maxRange);
+            bool withinLOS = owner->IsWithinLOS(x, y, z);
+            bool moveToward = !(withinRange && withinLOS);
 
             // make a new path if we have to...
             if (!_path || moveToward != _movingTowards)
                 _path = std::make_unique<PathGenerator>(owner);
 
-            float x, y, z;
+            // Predict chase destination to keep up with chase target
+            bool predictDestination = !mutualChase && target->isMoving();
+            if (predictDestination)
+            {
+                Position predicted = PredictPosition(target);
+                x = predicted.GetPositionX();
+                y = predicted.GetPositionY();
+                z = predicted.GetPositionZ();
+            }
+
             bool shortenPath;
             // if we want to move toward the target and there's no fixed angle...
             if (moveToward && !angle)
             {
-                // ...we'll pathfind to the center, then shorten the path
-                target->GetPosition(x, y, z);
                 shortenPath = true;
             }
             else
@@ -251,7 +268,7 @@ bool ChaseMovementGenerator::Update(Unit* owner, uint32 diff)
             if (owner->IsHovering())
                 owner->UpdateAllowedPositionZ(x, y, z);
 
-            bool success = _path->CalculatePath(x, y, z, owner->CanFly());
+            bool success = _path->CalculatePath(x, y, z, forceDest);
             if (!success || (_path->GetPathType() & (PATHFIND_NOPATH /* | PATHFIND_INCOMPLETE*/)))
             {
                 if (cOwner)

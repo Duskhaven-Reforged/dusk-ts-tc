@@ -20,16 +20,18 @@
 
 #include "Define.h"
 #include "DetourNavMesh.h"
-#include "DetourNavMeshQuery.h"
+#include "DetourFilters.h"
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <mutex>
 
 //  move map related classes
 namespace MMAP
 {
     typedef std::unordered_map<uint32, dtTileRef> MMapTileSet;
     typedef std::unordered_map<uint32, dtNavMeshQuery*> NavMeshQuerySet;
+    typedef std::unordered_map<std::thread::id, dtNavMeshQuery*> NavMeshGOQuerySet;
 
     // dummy struct to hold map's mmap data
     struct TC_COMMON_API MMapData
@@ -51,6 +53,21 @@ namespace MMAP
         MMapTileSet loadedTileRefs;        // maps [map grid coords] to [dtTile]
     };
 
+    struct MMapGOData
+    {
+        MMapGOData(dtNavMesh* mesh) : navMesh(mesh) {}
+        ~MMapGOData()
+        {
+            for (auto& navMeshQuerie : navMeshGOQueries)
+                dtFreeNavMeshQuery(navMeshQuerie.second);
+            if (navMesh)
+                dtFreeNavMesh(navMesh);
+        }
+        dtNavMesh* navMesh;
+        // we have to use single dtNavMeshQuery for every instance, since those are not thread safe
+        NavMeshGOQuerySet navMeshGOQueries;  // instanceId to query
+    };
+
     typedef std::unordered_map<uint32, MMapData*> MMapDataSet;
 
     // singleton class
@@ -64,13 +81,17 @@ namespace MMAP
             void InitializeThreadUnsafe(const std::vector<uint32>& mapIds);
             bool loadMap(std::string const& basePath, uint32 mapId, int32 x, int32 y);
             bool loadMapInstance(std::string const& basePath, uint32 mapId, uint32 instanceId);
+            void loadAllGameObjectModels(std::string const& basePath, std::vector<uint32> const& displayIds);
+            bool loadGameObject(std::string const& basePath, uint32 displayId);
             bool unloadMap(uint32 mapId, int32 x, int32 y);
             bool unloadMap(uint32 mapId);
             bool unloadMapInstance(uint32 mapId, uint32 instanceId);
 
             // the returned [dtNavMeshQuery const*] is NOT threadsafe
             dtNavMeshQuery const* GetNavMeshQuery(uint32 mapId, uint32 instanceId);
+            dtNavMeshQuery const* GetModelNavMeshQuery(uint32 displayId);
             dtNavMesh const* GetNavMesh(uint32 mapId);
+            dtNavMesh const* GetGONavMesh(uint32 displayId);
 
             uint32 getLoadedTilesCount() const { return loadedTiles; }
             uint32 getLoadedMapsCount() const { return uint32(loadedMMaps.size()); }
@@ -82,6 +103,9 @@ namespace MMAP
             MMapDataSet loadedMMaps;
             uint32 loadedTiles;
             bool thread_safe_environment;
+
+            std::unordered_map<uint32, MMapGOData*> m_loadedModels;
+            std::mutex m_modelsMutex;
     };
 }
 

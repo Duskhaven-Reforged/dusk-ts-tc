@@ -287,7 +287,7 @@ public:
             areaId, (areaEntry ? areaEntry->AreaName[handler->GetSessionDbcLocale()] : unknown),
             object->GetPhaseMask(),
             object->GetPositionX(), object->GetPositionY(), object->GetPositionZ(), object->GetOrientation());
-        if (Transport* transport = object->GetTransport())
+        if (GenericTransport* transport = object->GetTransport())
             handler->PSendSysMessage(LANG_TRANSPORT_POSITION,
                 transport->GetGOInfo()->moTransport.mapID, object->GetTransOffsetX(), object->GetTransOffsetY(), object->GetTransOffsetZ(), object->GetTransOffsetO(),
                 transport->GetEntry(), transport->GetName().c_str());

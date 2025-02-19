@@ -191,7 +191,9 @@ namespace Movement
     {
         args.splineId = splineIdGen.NewId();
         // Elevators also use MOVEMENTFLAG_ONTRANSPORT but we do not keep track of their position changes
-        args.TransformForTransport = unit->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) && unit->GetTransGUID();
+        // This might be obsolete... for actual transports we pass global coordinates
+        // GetTransGUID returns vehicle GUIDs too ... transform only for vehicles
+        args.TransformForTransport = unit->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) && unit->GetTransGUID() && !unit->GetTransport();
         // mix existing state into new
         args.flags.canswim = unit->CanSwim();
         args.walk = unit->HasUnitMovementFlag(MOVEMENTFLAG_WALKING);
@@ -227,9 +229,9 @@ namespace Movement
         {
             if (Unit* vehicle = unit->GetVehicleBase())
                 angle -= vehicle->GetOrientation();
-            else if (Transport* transport = unit->GetTransport())
-                angle -= transport->GetOrientation();
-        }
+        } // Handle Transport outside args.TransformForTransport
+        else if (GenericTransport* transport = unit->GetTransport())
+            angle -= transport->GetOrientation();
 
         args.facing.angle = G3D::wrap(angle, 0.f, (float)G3D::twoPi());
         args.flags.EnableFacingAngle();
@@ -242,6 +244,8 @@ namespace Movement
         std::transform(controls.begin(), controls.end(), args.path.begin(), TransportPathTransform(unit, args.TransformForTransport));
     }
 
+    // If generatePath == true, needs global coordinates
+    // else, needs transport offsets.
     void MoveSplineInit::MoveTo(float x, float y, float z, bool generatePath, bool forceDestination)
     {
         MoveTo(G3D::Vector3(x, y, z), generatePath, forceDestination);

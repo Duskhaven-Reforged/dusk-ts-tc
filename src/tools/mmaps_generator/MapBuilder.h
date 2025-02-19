@@ -172,6 +172,10 @@ namespace MMAP
             void buildMaps(std::set<uint32> mapID, std::set<std::pair<int,int>>);
             // @tswow-end
 
+            // builds all GO models needed for pathfinding
+            void buildGameObject(std::string modelName, uint32 displayId);
+            void buildTransports();
+
         private:
             // builds all mmap tiles for the specified map id (ignores skip settings)
             // @tswow-begin
@@ -193,6 +197,7 @@ namespace MMAP
             bool isContinentMap(uint32 mapID) const;
 
             rcConfig GetMapSpecificConfig(uint32 mapID, float bmin[3], float bmax[3], const TileConfig &tileConfig) const;
+            rcConfig getDefaultConfig() const;
 
             uint32 percentageDone(uint32 totalTiles, uint32 totalTilesDone) const;
             uint32 currentPercentageDone() const;

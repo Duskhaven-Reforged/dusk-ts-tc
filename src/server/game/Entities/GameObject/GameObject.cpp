@@ -159,6 +159,15 @@ GameObject::~GameObject()
     //    CleanupsBeforeDelete();
 }
 
+GameObject* GameObject::CreateGameObject(uint32 entry)
+{
+    GameObjectTemplate const* goinfo = sObjectMgr->GetGameObjectTemplate(entry);
+    if (goinfo && goinfo->type == GAMEOBJECT_TYPE_TRANSPORT) {
+        return new ElevatorTransport;
+    }
+    return new GameObject;
+}
+
 void GameObject::AIM_Destroy()
 {
     delete m_AI;
@@ -380,7 +389,7 @@ bool GameObject::Create(ObjectGuid::LowType guidlow, uint32 name_id, Map* map, u
             SetLevel(goinfo->transport.pause);
             SetGoState(goinfo->transport.startOpen ? GO_STATE_ACTIVE : GO_STATE_READY);
             SetGoAnimProgress(animprogress);
-            m_goValue.Transport.PathProgress = 0;
+                        m_goValue.Transport.PathProgress = goinfo->transport.startOpen ? goinfo->transport.pause : 0; // these start in the middle of their path
             m_goValue.Transport.AnimationInfo = sTransportMgr->GetTransportAnimInfo(goinfo->entry);
             m_goValue.Transport.CurrentSeg = 0;
             break;
@@ -518,41 +527,6 @@ void GameObject::Update(uint32 diff)
                             m_cooldownTime = GameTime::GetGameTimeMS() + goInfo->trap.startDelay * IN_MILLISECONDS;
 
                     SetLootState(GO_READY);
-                    break;
-                }
-                case GAMEOBJECT_TYPE_TRANSPORT:
-                {
-                    if (!m_goValue.Transport.AnimationInfo)
-                        break;
-
-                    if (GetGoState() == GO_STATE_READY)
-                    {
-                        m_goValue.Transport.PathProgress += diff;
-                        /* TODO: Fix movement in unloaded grid - currently GO will just disappear
-                        uint32 timer = m_goValue.Transport.PathProgress % m_goValue.Transport.AnimationInfo->TotalTime;
-                        TransportAnimationEntry const* node = m_goValue.Transport.AnimationInfo->GetAnimNode(timer);
-                        if (node && m_goValue.Transport.CurrentSeg != node->TimeSeg)
-                        {
-                            m_goValue.Transport.CurrentSeg = node->TimeSeg;
-
-                            G3D::Quat rotation;
-                            if (TransportRotationEntry const* rot = m_goValue.Transport.AnimationInfo->GetAnimRotation(timer))
-                                rotation = G3D::Quat(rot->X, rot->Y, rot->Z, rot->W);
-
-                            G3D::Vector3 pos = rotation.toRotationMatrix()
-                                             * G3D::Matrix3::fromEulerAnglesZYX(GetOrientation(), 0.0f, 0.0f)
-                                             * G3D::Vector3(node->X, node->Y, node->Z);
-
-                            pos += G3D::Vector3(GetStationaryX(), GetStationaryY(), GetStationaryZ());
-
-                            G3D::Vector3 src(GetPositionX(), GetPositionY(), GetPositionZ());
-
-                            TC_LOG_DEBUG("misc", "Src: {} Dest: {}", src.toString(), pos.toString());
-
-                            GetMap()->GameObjectRelocation(this, pos.x, pos.y, pos.z, GetOrientation());
-                        }
-                        */
-                    }
                     break;
                 }
                 case GAMEOBJECT_TYPE_FISHINGNODE:
@@ -2404,7 +2378,7 @@ void GameObject::SetLocalRotationAngles(float z_rot, float y_rot, float x_rot)
 QuaternionData GameObject::GetWorldRotation() const
 {
     QuaternionData localRotation = GetLocalRotation();
-    if (Transport* transport = GetTransport())
+    if (GenericTransport* transport = GetTransport())
     {
         QuaternionData worldRotation = transport->GetWorldRotation();
 

@@ -467,7 +467,18 @@ void TransportMgr::CreateInstanceTransports(Map* map)
         CreateTransport(*itr, 0, map);
 }
 
-TransportAnimationEntry const* TransportAnimation::GetAnimNode(uint32 time) const
+TransportAnimationEntry const* TransportAnimation::GetPrevAnimNode(uint32 time) const
+{
+    auto itr = Path.lower_bound(time);
+    if (itr != Path.end() && itr != Path.begin())
+    {
+        --itr;
+        return itr->second;
+    }
+    return nullptr;
+}
+
+TransportAnimationEntry const* TransportAnimation::GetNextAnimNode(uint32 time) const
 {
     auto itr = Path.lower_bound(time);
     if (itr != Path.end())
@@ -476,7 +487,18 @@ TransportAnimationEntry const* TransportAnimation::GetAnimNode(uint32 time) cons
     return nullptr;
 }
 
-TransportRotationEntry const* TransportAnimation::GetAnimRotation(uint32 time) const
+TransportRotationEntry const* TransportAnimation::GetPrevRotation(uint32 time) const
+{
+    auto itr = Rotations.lower_bound(time);
+    if (itr != Rotations.end() && itr != Rotations.begin())
+    {
+        --itr;
+        return itr->second;
+    }
+    return nullptr;
+}
+
+TransportRotationEntry const* TransportAnimation::GetNextRotation(uint32 time) const
 {
     auto itr = Rotations.lower_bound(time);
     if (itr != Rotations.end())

@@ -278,6 +278,10 @@ void WorldSession::HandleMovementOpcodes(WorldPacket& recvData)
     Unit* mover = client->GetActivelyMovedUnit();
     Player* plrMover = mover->ToPlayer();
 
+    if (plrMover && plrMover->GetEmoteState() != EMOTE_ONESHOT_NONE) {
+        plrMover->SetEmoteState(EMOTE_ONESHOT_NONE);
+    }
+
     // ignore, waiting processing in WorldSession::HandleMoveWorldportAckOpcode and WorldSession::HandleMoveTeleportAck
     if (plrMover && plrMover->IsBeingTeleported())
     {
@@ -320,13 +324,13 @@ void WorldSession::HandleMovementOpcodes(WorldPacket& recvData)
         {
             if (!plrMover->GetTransport())
             {
-                if (Transport* transport = plrMover->GetMap()->GetTransport(movementInfo.transport.guid))
+                if (GenericTransport* transport = plrMover->GetMap()->GetTransport(movementInfo.transport.guid))
                     transport->AddPassenger(plrMover);
             }
             else if (plrMover->GetTransport()->GetGUID() != movementInfo.transport.guid)
             {
                 plrMover->GetTransport()->RemovePassenger(plrMover);
-                if (Transport* transport = plrMover->GetMap()->GetTransport(movementInfo.transport.guid))
+                if (GenericTransport* transport = plrMover->GetMap()->GetTransport(movementInfo.transport.guid))
                     transport->AddPassenger(plrMover);
                 else
                     movementInfo.transport.Reset();

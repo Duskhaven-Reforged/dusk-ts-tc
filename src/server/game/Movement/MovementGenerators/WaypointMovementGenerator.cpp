@@ -315,7 +315,7 @@ void WaypointMovementGenerator<Creature>::StartMove(Creature* owner, bool relaun
                 owner->SetHomePosition(x, y, z, o);
             else
             {
-                if (Transport* trans = owner->GetTransport())
+                if (GenericTransport* trans = owner->GetTransport())
                 {
                     o -= trans->GetOrientation();
                     owner->SetTransportHomePosition(x, y, z, o);
@@ -359,13 +359,18 @@ void WaypointMovementGenerator<Creature>::StartMove(Creature* owner, bool relaun
 
     Movement::MoveSplineInit init(owner);
 
-    //! If creature is on transport, we assume waypoints set in DB are already transport offsets
-    if (transportPath)
-        init.DisableTransportPathTransformations();
+    float x = waypoint.x;
+    float y = waypoint.y;
+    float z = waypoint.z;
+    float o = owner->GetOrientation();
+
+    // We now pass global coordinates to MoveTo / pathfinder calculate()
+    if (GenericTransport* trans = owner->GetTransport())
+        trans->CalculatePassengerPosition(x, y, z, &o);
 
     //! Do not use formationDest here, MoveTo requires transport offsets due to DisableTransportPathTransformations() call
     //! but formationDest contains global coordinates
-    init.MoveTo(waypoint.x, waypoint.y, waypoint.z);
+    init.MoveTo(x, y, z);
 
     if (waypoint.orientation.has_value() && waypoint.delay > 0)
         init.SetFacing(*waypoint.orientation);

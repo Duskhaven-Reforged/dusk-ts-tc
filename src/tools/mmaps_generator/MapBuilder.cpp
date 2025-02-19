@@ -285,6 +285,310 @@ namespace MMAP
         m_tileBuilders.clear();
     }
 
+    void MapBuilder::buildGameObject(std::string modelName, uint32 displayId)
+    {
+        printf("Building GameObject model %s\n", modelName.c_str());
+        WorldModel m;
+        MeshData meshData;
+        if (!m.readFile("vmaps/" + modelName))
+        {
+            printf("* Unable to open file\n");
+            return;
+        }
+        // Load model data into navmesh
+        std::vector<GroupModel> groupModels;
+        m.getGroupModels(groupModels);
+        // all M2s need to have triangle indices reversed
+        bool isM2 = modelName.find(".m2") != modelName.npos || modelName.find(".M2") != modelName.npos;
+        for (std::vector<GroupModel>::iterator it = groupModels.begin(); it != groupModels.end(); ++it)
+        {
+            // transform data
+            std::vector<G3D::Vector3> tempVertices;
+            std::vector<MeshTriangle> tempTriangles;
+            WmoLiquid* liquid = nullptr;
+            (*it).getMeshData(tempVertices, tempTriangles, liquid);
+            int offset = meshData.solidVerts.size() / 3;
+            TerrainBuilder::copyVertices(tempVertices, meshData.solidVerts);
+            TerrainBuilder::copyIndices(tempTriangles, meshData.solidTris, offset, isM2);
+        }
+        // if there is no data, give up now
+        if (!meshData.solidVerts.size())
+        {
+            printf("* no solid vertices found\n");
+            return;
+        }
+        TerrainBuilder::cleanVertices(meshData.solidVerts, meshData.solidTris);
+        // gather all mesh data for final data check, and bounds calculation
+        G3D::Array<float> allVerts;
+        allVerts.append(meshData.solidVerts);
+        if (!allVerts.size())
+            return;
+        printf("* Model opened (%u vertices)\n", allVerts.size());
+        float* verts = meshData.solidVerts.getCArray();
+        int nverts = meshData.solidVerts.size() / 3;
+        int* tris = meshData.solidTris.getCArray();
+        int ntris = meshData.solidTris.size() / 3;
+        // get bounds of current tile
+        rcConfig config;
+        memset(&config, 0, sizeof(rcConfig));
+        config = getDefaultConfig();
+        config.detailSampleDist = config.cs * 6.0f;
+        config.minRegionArea = config.minRegionArea / 2;
+        // this sets the dimensions of the heightfield - should maybe happen before border padding
+        rcCalcBounds(verts, nverts, config.bmin, config.bmax);
+        rcCalcGridSize(config.bmin, config.bmax, config.cs, &config.width, &config.height);
+        Tile tile;
+        tile.solid = rcAllocHeightfield();
+        if (!tile.solid || !rcCreateHeightfield(m_rcContext, *tile.solid, config.width, config.height, config.bmin, config.bmax, config.cs, config.ch))
+        {
+            printf("* Failed building heightfield!            \n");
+            return;
+        }
+        // mark all walkable tiles, both liquids and solids
+        unsigned char* m_triareas = new unsigned char[ntris];
+        memset(m_triareas, NAV_AREA_GROUND, ntris * sizeof(unsigned char));
+        rcClearUnwalkableTriangles(m_rcContext, config.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas);
+        // mark almost unwalkable triangles with steep flag
+        //rcModAlmostUnwalkableTriangles(m_rcContext, 50.0f, verts, nverts, tris, ntris, m_triareas);
+        // try with NAV_AREA_GROUND and without
+        // no rcModAlmostUnwalkableTriangles in TC, take rcMarkWalkableTriangles from buildMoveMapTile
+        rcMarkWalkableTriangles(m_rcContext, config.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas, NAV_AREA_GROUND);
+        rcRasterizeTriangles(m_rcContext, verts, nverts, tris, m_triareas, ntris, *tile.solid, config.walkableClimb);
+        delete[] m_triareas;
+        rcFilterLowHangingWalkableObstacles(m_rcContext, config.walkableClimb, *tile.solid);
+        rcFilterLedgeSpans(m_rcContext, config.walkableHeight, config.walkableClimb, *tile.solid);
+        rcFilterWalkableLowHeightSpans(m_rcContext, config.walkableHeight, *tile.solid);
+        tile.chf = rcAllocCompactHeightfield();
+        if (!tile.chf || !rcBuildCompactHeightfield(m_rcContext, config.walkableHeight, config.walkableClimb, *tile.solid, *tile.chf))
+        {
+            printf("Failed compacting heightfield!            \n");
+            return;
+        }
+        // Erode the walkable area by agent radius.
+        if (!rcErodeWalkableArea(m_rcContext, config.walkableRadius, *tile.chf))
+        {
+            printf("Failed eroding heightfield!            \n");
+            return;
+        }
+        if (!rcMedianFilterWalkableArea(m_rcContext, *tile.chf))
+        {
+            printf("%s Failed filtering area!              \n");
+            return;
+        }
+        if (!rcBuildDistanceField(m_rcContext, *tile.chf))
+        {
+            printf("Failed building distance field!         \n");
+            return;
+        }
+        if (!rcBuildRegions(m_rcContext, *tile.chf, config.borderSize, config.minRegionArea, config.mergeRegionArea))
+        {
+            printf("Failed building regions!                \n");
+            return;
+        }
+        tile.cset = rcAllocContourSet();
+        if (!tile.cset || !rcBuildContours(m_rcContext, *tile.chf, config.maxSimplificationError, config.maxEdgeLen, *tile.cset))
+        {
+            printf("Failed building contours!               \n");
+            return;
+        }
+        // build polymesh
+        tile.pmesh = rcAllocPolyMesh();
+        if (!tile.pmesh || !rcBuildPolyMesh(m_rcContext, *tile.cset, config.maxVertsPerPoly, *tile.pmesh))
+        {
+            printf("Failed building polymesh!               \n");
+            return;
+        }
+        tile.dmesh = rcAllocPolyMeshDetail();
+        if (!tile.dmesh || !rcBuildPolyMeshDetail(m_rcContext, *tile.pmesh, *tile.chf, config.detailSampleDist, config.detailSampleMaxError, *tile.dmesh))
+        {
+            printf("Failed building polymesh detail!        \n");
+            return;
+        }
+        rcFreeHeightField(tile.solid);
+        tile.solid = nullptr;
+        rcFreeCompactHeightfield(tile.chf);
+        tile.chf = nullptr;
+        rcFreeContourSet(tile.cset);
+        tile.cset = nullptr;
+        IntermediateValues iv;
+        iv.polyMesh = tile.pmesh;
+        iv.polyMeshDetail = tile.dmesh;
+        for (int i = 0; i < iv.polyMesh->npolys; ++i)
+        {
+            if (uint8 area = iv.polyMesh->areas[i] & NAV_AREA_ALL_MASK)
+            {
+                if (area >= NAV_AREA_MIN_VALUE)
+                    iv.polyMesh->flags[i] = 1 << (NAV_AREA_MAX_VALUE - area);
+                else
+                    iv.polyMesh->flags[i] = NAV_GROUND;
+            }
+        }
+        // Will be deleted by IntermediateValues
+        tile.pmesh = nullptr;
+        tile.dmesh = nullptr;
+        // setup mesh parameters
+        dtNavMeshCreateParams params;
+        memset(&params, 0, sizeof(params));
+        params.verts = iv.polyMesh->verts;
+        params.vertCount = iv.polyMesh->nverts;
+        params.polys = iv.polyMesh->polys;
+        params.polyAreas = iv.polyMesh->areas;
+        params.polyFlags = iv.polyMesh->flags;
+        params.polyCount = iv.polyMesh->npolys;
+        params.nvp = iv.polyMesh->nvp;
+        params.detailMeshes = iv.polyMeshDetail->meshes;
+        params.detailVerts = iv.polyMeshDetail->verts;
+        params.detailVertsCount = iv.polyMeshDetail->nverts;
+        params.detailTris = iv.polyMeshDetail->tris;
+        params.detailTriCount = iv.polyMeshDetail->ntris;
+        params.walkableHeight = 0.2666666f * config.walkableHeight; // 0.2666666f is BASE_UNIT_DIM in cMangos
+        params.walkableRadius = 0.2666666f * config.walkableRadius;
+        params.walkableClimb = 0.2666666f * config.walkableClimb;
+        rcVcopy(params.bmin, iv.polyMesh->bmin);
+        rcVcopy(params.bmax, iv.polyMesh->bmax);
+        params.cs = config.cs;
+        params.ch = config.ch;
+        params.buildBvTree = true;
+        unsigned char* navData = nullptr;
+        int navDataSize = 0;
+        printf("* Building navmesh tile [%f %f %f to %f %f %f]\n",
+            params.bmin[0], params.bmin[1], params.bmin[2],
+            params.bmax[0], params.bmax[1], params.bmax[2]);
+        printf(" %u triangles (%u vertices)\n", params.polyCount, params.vertCount);
+        printf(" %u polygons (%u vertices)\n", params.detailTriCount, params.detailVertsCount);
+        if (params.nvp > DT_VERTS_PER_POLYGON)
+        {
+            printf("Invalid verts-per-polygon value!        \n");
+            return;
+        }
+        if (params.vertCount >= 0xffff)
+        {
+            printf("Too many vertices! (0x%8x)        \n", params.vertCount);
+            return;
+        }
+        if (!params.vertCount || !params.verts)
+        {
+            printf("No vertices to build tile!              \n");
+            return;
+        }
+        if (!params.polyCount || !params.polys)
+        {
+            // we have flat tiles with no actual geometry - don't build those, its useless
+            // keep in mind that we do output those into debug info
+            // drop tiles with only exact count - some tiles may have geometry while having less tiles
+            printf("No polygons to build on tile!              \n");
+            return;
+        }
+        if (!params.detailMeshes || !params.detailVerts || !params.detailTris)
+        {
+            printf("No detail mesh to build tile!           \n");
+            return;
+        }
+        if (!dtCreateNavMeshData(&params, &navData, &navDataSize))
+        {
+            printf("Failed building navmesh tile!           \n");
+            return;
+        }
+        char fileName[255];
+        sprintf(fileName, "mmaps/go%04u.mmtile", displayId);
+        FILE* file = fopen(fileName, "wb");
+        if (!file)
+        {
+            char message[1024];
+            sprintf(message, "Failed to open %s for writing!\n", fileName);
+            perror(message);
+            return;
+        }
+        printf("* Writing to file \"%s\" [size=%u]\n", fileName, navDataSize);
+        // write header
+        MmapTileHeader header;
+        header.usesLiquids = false;
+        header.size = uint32(navDataSize);
+        fwrite(&header, sizeof(MmapTileHeader), 1, file);
+        // write data
+        fwrite(navData, sizeof(unsigned char), navDataSize, file);
+        fclose(file);
+        if (m_debugOutput)
+        {
+            iv.generateObjFile(modelName, meshData);
+            // Write navmesh data
+            std::string fname = "meshes/" + modelName + ".nav";
+            FILE* file = fopen(fname.c_str(), "wb");
+            if (file)
+            {
+                fwrite(&navDataSize, sizeof(uint32), 1, file);
+                fwrite(navData, sizeof(unsigned char), navDataSize, file);
+                fclose(file);
+            }
+        }
+    }
+
+    void MapBuilder::buildTransports()
+    {
+        // List of MO Transport gameobjects
+        buildGameObject("Transportship.wmo.vmo", 3015);
+        buildGameObject("Transport_Zeppelin.wmo.vmo", 3031);
+        buildGameObject("Transportship_Ne.wmo.vmo", 7087);
+        // List of Transport gameobjects
+        buildGameObject("Elevatorcar.m2.vmo", 360);
+        buildGameObject("Undeadelevator.m2.vmo", 455);
+        // buildGameObject("Undeadelevatordoor.m2.vmo", 462); // no model on which to path
+        buildGameObject("Ironforgeelevator.m2.vmo", 561);
+        // buildGameObject("Ironforgeelevatordoor.m2.vmo", 562); // no model on which to path
+        buildGameObject("Gnomeelevatorcar01.m2.vmo", 807);
+        buildGameObject("Gnomeelevatorcar02.m2.vmo", 808);
+        buildGameObject("Gnomeelevatorcar03.m2.vmo", 827); // missing vmap - reusing 03
+        buildGameObject("Gnomeelevatorcar03.m2.vmo", 852);
+        buildGameObject("Gnomehutelevator.m2.vmo", 1587);
+        buildGameObject("Burningsteppselevator.m2.vmo", 2454);
+        buildGameObject("Subwaycar.m2.vmo", 3831);
+        // TBC+
+        buildGameObject("Ancdrae_Elevatorpiece.m2.vmo", 7026);
+        buildGameObject("Mushroombase_Elevator.m2.vmo", 7028);
+        buildGameObject("Cf_Elevatorplatform.m2.vmo", 7043);
+        buildGameObject("Cf_Elevatorplatform_Small.m2.vmo", 7060);
+        buildGameObject("Factoryelevator.m2.vmo", 7077);
+        buildGameObject("Ancdrae_Elevatorpiece_Netherstorm.m2.vmo", 7163);
+        // WOTLK+
+        buildGameObject("Blackcitadel.wmo.vmo", 6637);
+        buildGameObject("Transport_Icebreaker_Ship.wmo.vmo", 7446);
+        buildGameObject("Vr_Elevator_Gate.m2.vmo", 7451);
+        buildGameObject("Vr_Elevator_Lift.m2.vmo", 7452);
+        buildGameObject("Vr_Elevator_Gears.m2.vmo", 7491);
+        buildGameObject("Hf_Elevator_Gate.m2.vmo", 7519);
+        buildGameObject("Hf_Elevator_Lift_02.m2.vmo", 7520);
+        buildGameObject("Hf_Elevator_Lift.m2.vmo", 7521);
+        buildGameObject("Transport_Horde_Zeppelin.wmo.vmo", 7546);
+        buildGameObject("Transport_Pirate_Ship.wmo.vmo", 7570);
+        buildGameObject("Transport_Tuskarr_Ship.wmo.vmo", 7636);
+        buildGameObject("Vrykul_Gondola.m2.vmo", 7642);
+        buildGameObject("Logrun_Pumpelevator01.m2.vmo", 7648);
+        buildGameObject("Vrykul_Gondola_02.m2.vmo", 7767);
+        buildGameObject("Nexus_Elevator_Basestructure_01.m2.vmo", 7793);
+        buildGameObject("Id_Elevator.m2.vmo", 7794);
+        buildGameObject("Orc_Fortress_Elevator01.m2.vmo", 7797);
+        buildGameObject("Org_Arena_Pillar.m2.vmo", 7966);
+        buildGameObject("Org_Arena_Elevator.m2.vmo", 7973);
+        buildGameObject("Logrun_Pumpelevator02.m2.vmo", 8079);
+        buildGameObject("Logrun_Pumpelevator03.m2.vmo", 8080);
+        buildGameObject("Nd_Hordegunship.wmo.vmo", 8253);
+        buildGameObject("Nd_Alliancegunship.wmo.vmo", 8254);
+        buildGameObject("Org_Arena_Yellow_Elevator.m2.vmo", 8258);
+        buildGameObject("Org_Arena_Axe_Pillar.m2.vmo", 8259);
+        buildGameObject("Org_Arena_Lightning_Pillar.m2.vmo", 8260);
+        buildGameObject("Org_Arena_Ivory_Pillar.m2.vmo", 8261);
+        buildGameObject("Gundrak_Elevator_01.m2.vmo", 8277);
+        buildGameObject("Nd_Icebreaker_Ship_Bg_Transport.wmo.vmo", 8409);
+        buildGameObject("Nd_Ship_Ud_Bg_Transport.wmo.vmo", 8410);
+        buildGameObject("Ulduarraid_Gnomewing_Transport_Wmo.wmo.vmo", 8587);
+        buildGameObject("Nd_Hordegunship_Bg.wmo.vmo", 9001);
+        buildGameObject("Nd_Alliancegunship_Bg.wmo.vmo", 9002);
+        buildGameObject("Icecrown_Elevator.m2.vmo", 9136);
+        buildGameObject("Nd_Alliancegunship_Icecrown.wmo.vmo", 9150);
+        buildGameObject("Nd_Hordegunship_Icecrown.wmo.vmo", 9151);
+        buildGameObject("Icecrown_Elevator02.m2.vmo", 9248);
+    }
+
     /**************************************************************************/
     void MapBuilder::getGridBounds(uint32 mapID, uint32 &minX, uint32 &minY, uint32 &maxX, uint32 &maxY) const
     {
@@ -1150,6 +1454,52 @@ namespace MMAP
                 break;
         }
 
+        return config;
+    }
+
+    rcConfig MapBuilder::getDefaultConfig() const
+    {
+        rcConfig config;
+        memset(&config, 0, sizeof(rcConfig));
+    // Data from cMangos --> Unsure if it needs to be different in TC...
+    // return {
+    //         {"borderSize", 5},
+    //         {"detailSampleDist", BASE_UNIT_DIM * 16.0f}, // BASE_UNIT_DIM = 0.2666666f
+    //         {"detailSampleMaxError", BASE_UNIT_DIM},
+    //         {"maxEdgeLen", VERTEX_PER_TILE + 1},     // VERTEX_PER_TILE = 80
+    //         {"maxSimplificationError", 1.8f},
+    //         {"mergeRegionArea", 50},
+    //         {"minRegionArea", 60},
+    //         {"walkableClimb", 4},
+    //         {"walkableHeight", 6},
+    //         {"walkableRadius", 2},
+    //         {"walkableSlopeAngle", 60.0f},
+    //         {"liquidFlagMergeThreshold", 0.0f},
+    //     };
+        // cmangos defaults, from_json()
+        float baseUnitDim = 0.2666666f;
+        int vertexPerTile = 80;
+        config.tileSize = vertexPerTile;
+        config.maxVertsPerPoly = DT_VERTS_PER_POLYGON;
+        config.cs = baseUnitDim;
+        config.ch = baseUnitDim;
+        // Keeping these 2 slope angles the same reduces a lot the number of polys.
+        // 55 should be the minimum, maybe 70 is ok (keep in mind blink uses mmaps), 85 is too much for players
+        config.walkableSlopeAngle = 60;
+        config.walkableSlopeAngleNotSteep = 60;
+        config.tileSize = vertexPerTile;
+        config.walkableRadius = 2;
+        config.borderSize = 5;
+        config.maxEdgeLen = vertexPerTile + 1;        // anything bigger than tileSize
+        config.walkableHeight = 6;
+        // a value >= 3|6 allows npcs to walk over some fences
+        // a value >= 4|8 allows npcs to walk over all fences
+        config.walkableClimb = 4;
+        config.mergeRegionArea = rcSqr(50);
+        config.minRegionArea = rcSqr(60);
+        config.maxSimplificationError = 1.8f;           // eliminates most jagged edges (tiny polygons)
+        config.detailSampleDist = config.cs * 16;
+        config.detailSampleMaxError = config.ch * 1;
         return config;
     }
 

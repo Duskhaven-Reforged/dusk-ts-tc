@@ -28,8 +28,6 @@
 class PathGenerator;
 class Unit;
 
-#define FOLLOW_RANGE_TOLERANCE 1.0f
-
 class FollowMovementGenerator : public MovementGenerator, public AbstractFollower
 {
     public:
@@ -42,20 +40,22 @@ class FollowMovementGenerator : public MovementGenerator, public AbstractFollowe
         void Deactivate(Unit*) override;
         void Finalize(Unit*, bool, bool) override;
         MovementGeneratorType GetMovementGeneratorType() const override { return FOLLOW_MOTION_TYPE; }
-
         void UnitSpeedChanged() override { _lastTargetPosition.reset(); }
+        bool PositionOkay(Unit* target, bool isPlayerPet, bool& targetIsMoving, uint32 diff);
 
     private:
-        static constexpr uint32 CHECK_INTERVAL = 100;
-
         void UpdatePetSpeed(Unit* owner);
+
+    private:
+        std::unique_ptr<PathGenerator> _path;
+        TimeTracker _recheckPredictedDistanceTimer;
+        bool _recheckPredictedDistance;
+        
+        Optional<Position> _lastTargetPosition;
+        Optional<Position> _lastPredictedPosition;
 
         float const _range;
         ChaseAngle const _angle;
-
-        TimeTracker _checkTimer;
-        std::unique_ptr<PathGenerator> _path;
-        Optional<Position> _lastTargetPosition;
 };
 
 #endif

@@ -58,6 +58,7 @@ class MapInstanced;
 class Object;
 class Player;
 class TempSummon;
+class GenericTransport;
 class Transport;
 class Unit;
 class Weather;
@@ -541,7 +542,7 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
                     return nullptr;
             }
         }
-        Transport* GetTransport(ObjectGuid const& guid);
+        GenericTransport* GetTransport(ObjectGuid const& guid);
         DynamicObject* GetDynamicObject(ObjectGuid const& guid);
         Pet* GetPet(ObjectGuid const& guid);
 

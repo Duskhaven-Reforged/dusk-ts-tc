@@ -1150,7 +1150,7 @@ class TC_GAME_API ObjectMgr
         GameObjectTemplateContainer const& GetGameObjectTemplates() const { return _gameObjectTemplateStore; }
         uint32 LoadReferenceVendor(int32 vendor, int32 item_id, std::set<uint32>* skip_vendors);
 
-        void LoadGameObjectTemplate();
+        std::vector<uint32> LoadGameObjectTemplate();
         void LoadGameObjectTemplateAddons();
         void LoadGameObjectOverrides();
 

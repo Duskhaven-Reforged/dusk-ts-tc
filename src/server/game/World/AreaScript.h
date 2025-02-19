@@ -3,6 +3,7 @@
 
 #include "ZoneScript.h"
 #include "Common.h"
+#include "Map.h"
 #include "ObjectAccessor.h"
 #endif
 
@@ -43,7 +44,18 @@ class TC_GAME_API AreaScript : public ZoneScript
         return out;
     }
 
+    std::vector<Creature*> GetCreatures() {
+        std::vector<Creature*> out = {};
+        for (auto p : m_creatures)
+            if (Map* map = area->GetMap())
+                out.push_back(map->GetCreature(p));
+
+        return out;
+    }
+
   private:
     GuidSet m_activePlayers = {};
+    GuidSet m_creatures = {};
+
     Area* area;
 };

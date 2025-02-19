@@ -222,6 +222,70 @@ namespace MMAP
         return true;
     }
 
+    void MMapManager::loadAllGameObjectModels(std::string const& basePath, std::vector<uint32> const& displayIds)
+    {
+        for (uint32 displayId : displayIds)
+            loadGameObject(basePath, displayId);
+    }
+
+    bool MMapManager::loadGameObject(std::string const& basePath, uint32 displayId)
+    {
+        // we already have this map loaded?
+        if (m_loadedModels.find(displayId) != m_loadedModels.end())
+            return true;
+        // load and init dtNavMesh - read parameters from file
+        uint32 pathLen = basePath.length() + strlen("mmaps/go%04i.mmtile") + 1;
+        char* fileName = new char[pathLen];
+        snprintf(fileName, pathLen, (basePath + "mmaps/go%04i.mmtile").c_str(), displayId);
+        FILE* file = fopen(fileName, "rb");
+        if (!file)
+        {
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Error: Could not open mmap file {}", fileName);
+            delete[] fileName;
+            return false;
+        }
+        MmapTileHeader fileHeader;
+        fread(&fileHeader, sizeof(MmapTileHeader), 1, file);
+        if (fileHeader.mmapMagic != MMAP_MAGIC)
+        {
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Bad header in mmap {}", fileName);
+            fclose(file);
+            return false;
+        }
+        if (fileHeader.mmapVersion != MMAP_VERSION)
+        {
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: {} was built with generator v%i, expected v%i",
+                fileName, fileHeader.mmapVersion, MMAP_VERSION);
+            fclose(file);
+            return false;
+        }
+        unsigned char* data = (unsigned char*)dtAlloc(fileHeader.size, DT_ALLOC_PERM);
+        ASSERT(data);
+        size_t result = fread(data, fileHeader.size, 1, file);
+        if (!result)
+        {
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Bad header or data in mmap {}", fileName);
+            fclose(file);
+            return false;
+        }
+        fclose(file);
+        dtNavMesh* mesh = dtAllocNavMesh();
+        ASSERT(mesh);
+        dtStatus r = mesh->init(data, fileHeader.size, DT_TILE_FREE_DATA);
+        if (dtStatusFailed(r))
+        {
+            dtFreeNavMesh(mesh);
+            TC_LOG_ERROR("maps", "MMAP:loadGameObject: Failed to initialize dtNavMesh from file {}. Result 0x%x.", fileName, r);
+            delete[] fileName;
+            return false;
+        }
+        TC_LOG_INFO("maps", "MMAP:loadGameObject: Loaded file {} [size=%u]", fileName, fileHeader.size);
+        delete[] fileName;
+        MMapGOData* mmap_data = new MMapGOData(mesh);
+        m_loadedModels.insert(std::pair<uint32, MMapGOData*>(displayId, mmap_data));
+        return true;
+    }
+
     bool MMapManager::unloadMap(uint32 mapId, int32 x, int32 y)
     {
         // check if we have this map loaded
@@ -333,6 +397,13 @@ namespace MMAP
         return itr->second->navMesh;
     }
 
+    dtNavMesh const* MMapManager::GetGONavMesh(uint32 mapId)
+    {
+        if (m_loadedModels.find(mapId) == m_loadedModels.end())
+            return nullptr;
+        return m_loadedModels[mapId]->navMesh;
+    }
+
     dtNavMeshQuery const* MMapManager::GetNavMeshQuery(uint32 mapId, uint32 instanceId)
     {
         auto itr = GetMMapData(mapId);
@@ -344,5 +415,34 @@ namespace MMAP
             return nullptr;
 
         return queryItr->second;
+    }
+
+    dtNavMeshQuery const* MMapManager::GetModelNavMeshQuery(uint32 displayId)
+    {
+        if (m_loadedModels.find(displayId) == m_loadedModels.end())
+            return nullptr;
+        auto threadId = std::this_thread::get_id();
+        MMapGOData* mmap = m_loadedModels[displayId];
+        if (mmap->navMeshGOQueries.find(threadId) == mmap->navMeshGOQueries.end())
+        {
+            std::lock_guard<std::mutex> guard(m_modelsMutex);
+            if (mmap->navMeshGOQueries.find(threadId) == mmap->navMeshGOQueries.end())
+            {
+                // allocate mesh query
+                std::stringstream ss;
+                ss << threadId;
+                dtNavMeshQuery* query = dtAllocNavMeshQuery();
+                ASSERT(query);
+                if (dtStatusFailed(query->init(mmap->navMesh, 2048)))
+                {
+                    dtFreeNavMeshQuery(query);
+                    TC_LOG_ERROR("maps", "MMAP:GetNavMeshQuery: Failed to initialize dtNavMeshQuery for displayid %03u tid %s", displayId, ss.str().data());
+                    return nullptr;
+                }
+                TC_LOG_DEBUG("maps", "MMAP:GetNavMeshQuery: created dtNavMeshQuery for displayid %03u tid %s", displayId, ss.str().data());
+                mmap->navMeshGOQueries.insert(std::pair<std::thread::id, dtNavMeshQuery*>(threadId, query));
+            }
+        }
+        return mmap->navMeshGOQueries[threadId];
     }
 }

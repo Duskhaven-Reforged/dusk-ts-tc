@@ -32,6 +32,7 @@
 #include "TemporarySummon.h"
 #include "Unit.h"
 #include "Util.h"
+#include "Transport.h"
 // @tswow-begin
 #include "TSUnit.h"
 #include "TSCreature.h"
@@ -560,7 +561,7 @@ Vehicle* Vehicle::RemovePassenger(Unit* unit)
             unit->m_movementInfo.transport.Reset();
         }
         else
-            unit->m_movementInfo.transport = _me->m_movementInfo.transport;
+            _me->GetTransport()->AddPassenger(unit);
     }
 
     // only for flyable vehicles
@@ -591,6 +592,33 @@ Vehicle* Vehicle::RemovePassenger(Unit* unit)
 
     unit->SetVehicle(nullptr);
     return this;
+}
+
+// TODO Find a better way to teleport passengers whose vehicle is on a transport
+// They get teleported with the ship, but not exactly on it; they ignore texture for like
+// 0.5 sec so depending on where they are they can fall through the transport or get stuck on it
+// with good positioning they can safely teleport...
+// better to exit vehicle to be sure
+void Vehicle::TeleportPassengers(uint32 mapId, float x, float y, float z, float o)
+{
+    std::vector<Player*> players;
+    for (SeatMap::const_iterator itr = Seats.begin(); itr != Seats.end(); ++itr)
+        if (Unit* passenger = ObjectAccessor::GetUnit(*GetBase(), itr->second.Passenger.Guid))
+            if (passenger->IsPlayer())
+                players.push_back((Player*)passenger);
+    for (auto player : players)
+    {
+        if (!player->IsAlive() && !player->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST))
+            player->ResurrectPlayer(1.0);
+        player->ExitVehicle(); // Tries to call AddPassenger(player) for transport, but transport is not in world
+        //player->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
+        // Maybe don't trigger movement spline? Doesn't seem to work either...
+        // RemovePassenger(player);
+        // player->SetControlled(false, UNIT_STATE_ROOT);      // SMSG_MOVE_FORCE_UNROOT, ~MOVEMENTFLAG_ROOT
+        // player->AddUnitState(UNIT_STATE_MOVE);
+        // player->SetFallInformation(0, player->GetPositionZ());
+        player->TeleportTo(mapId, x, y, z, o, TELE_TO_NOT_LEAVE_TRANSPORT);
+    }
 }
 
 /**
@@ -862,6 +890,9 @@ bool VehicleJoinEvent::Execute(uint64, uint32)
         Abort(0);
         return true;
     }
+
+    if (GenericTransport* transport = Passenger->GetTransport())
+        transport->RemovePassenger(Passenger);
 
     //It's possible that multiple vehicle join
     //events are executed in the same update

@@ -30,14 +30,19 @@
 #include "Totem.h"
 #include "UpdateData.h"
 #include "Vehicle.h"
+#include "TSProfile.h"
 #include <G3D/Vector3.h>
+#include <G3D/Quat.h>
+#include "Pet.h"
+#include "GameTime.h"
 
-Transport::Transport() : GameObject(),
+Transport::Transport() : GenericTransport(),
     _transportInfo(nullptr), _isMoving(true), _pendingStop(false),
     _triggeredArrivalEvent(false), _triggeredDepartureEvent(false),
-    _passengerTeleportItr(_passengers.begin()), _delayedAddModel(false), _delayedTeleport(false)
+    _delayedAddModel(false), _delayedTeleport(false)
 {
     m_updateFlag = UPDATEFLAG_TRANSPORT | UPDATEFLAG_LOWGUID | UPDATEFLAG_STATIONARY_POSITION | UPDATEFLAG_ROTATION;
+    _passengerTeleportItr = _passengers.begin();
 }
 
 Transport::~Transport()
@@ -240,13 +245,15 @@ void Transport::Update(uint32 diff)
 
 void Transport::DelayedUpdate(uint32 /*diff*/)
 {
+    ZoneScopedNC("Transport::DelayedUpdate", WORLD_UPDATE_COLOR)
+
     if (GetKeyFrames().size() <= 1)
         return;
 
     DelayedTeleportTransport();
 }
 
-void Transport::AddPassenger(WorldObject* passenger)
+void GenericTransport::AddPassenger(WorldObject* passenger)
 {
     if (!IsInWorld())
         return;
@@ -259,11 +266,16 @@ void Transport::AddPassenger(WorldObject* passenger)
         TC_LOG_DEBUG("entities.transport", "Object {} boarded transport {}.", passenger->GetName(), GetName());
 
         if (Player* plr = passenger->ToPlayer())
+        {
             sScriptMgr->OnAddPassenger(this, plr);
+
+        if (Pet* pet = plr->GetPet())
+            AddFollowerToTransport(plr, pet);
+        }
     }
 }
 
-void Transport::RemovePassenger(WorldObject* passenger)
+void GenericTransport::RemovePassenger(WorldObject* passenger)
 {
     bool erased = false;
     if (_passengerTeleportItr != _passengers.end())
@@ -281,7 +293,7 @@ void Transport::RemovePassenger(WorldObject* passenger)
     else
         erased = _passengers.erase(passenger) > 0;
 
-    if (erased || _staticPassengers.erase(passenger)) // static passenger can remove itself in case of grid unload
+    if (erased  || _staticPassengers.erase(passenger)) // static passenger can remove itself in case of grid unload
     {
         passenger->SetTransport(nullptr);
         passenger->m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
@@ -292,7 +304,35 @@ void Transport::RemovePassenger(WorldObject* passenger)
         {
             sScriptMgr->OnRemovePassenger(this, plr);
             plr->SetFallInformation(0, plr->GetPositionZ());
+
+            if (Pet* pet = plr->GetPet())
+                RemoveFollowerFromTransport(plr, pet);
         }
+    }
+}
+
+void GenericTransport::AddFollowerToTransport(Unit* passenger, Unit* follower)
+{
+    AddPassenger(follower);
+    follower->m_movementInfo.transport.pos.Relocate(passenger->GetTransOffset());
+    if (follower->IsCreature())
+        follower->NearTeleportTo(passenger->GetPosition());
+    else
+    {
+        follower->Relocate(passenger->GetPosition());
+        follower->SendMovementFlagUpdate();
+    }
+}
+
+void GenericTransport::RemoveFollowerFromTransport(Unit* passenger, Unit* follower)
+{
+    RemovePassenger(follower);
+    if (follower->IsCreature())
+        follower->NearTeleportTo(passenger->GetPosition());
+    else
+    {
+        follower->Relocate(passenger->GetPosition());
+        follower->SendMovementFlagUpdate();
     }
 }
 
@@ -430,7 +470,7 @@ TempSummon* Transport::SummonPassenger(uint32 entry, Position const& pos, TempSu
                         mask = UNIT_MASK_MINION;
                         break;
                     default:
-                        if (properties->Flags & 512) // Mirror Image, Summon Gargoyle
+                        if (properties->Flags & SUMMON_PROP_FLAG_JOIN_SUMMONER_SPAWN_GROUP) // Mirror Image, Summon Gargoyle
                             mask = UNIT_MASK_GUARDIAN;
                         break;
                 }
@@ -505,7 +545,7 @@ TempSummon* Transport::SummonPassenger(uint32 entry, Position const& pos, TempSu
     return summon;
 }
 
-void Transport::UpdatePosition(float x, float y, float z, float o)
+void GenericTransport::UpdatePosition(float x, float y, float z, float o)
 {
     bool newActive = GetMap()->IsGridLoaded(x, y);
     Cell oldCell(GetPositionX(), GetPositionY());
@@ -671,6 +711,11 @@ void Transport::DelayedTeleportTransport()
         obj->m_movementInfo.transport.pos.GetPosition(destX, destY, destZ, destO);
         TransportBase::CalculatePassengerPosition(destX, destY, destZ, &destO, x, y, z, o);
 
+        // TODO Needs a more robust way to teleport vehicle passengers.
+        if (Unit* unit = obj->ToUnit())
+            if (unit->GetVehicleKit())
+                unit->GetVehicleKit()->TeleportPassengers(_nextFrame->Node->ContinentID, destX, destY, destZ, destO);
+
         switch (obj->GetTypeId())
         {
             case TYPEID_PLAYER:
@@ -680,6 +725,9 @@ void Transport::DelayedTeleportTransport()
             case TYPEID_DYNAMICOBJECT:
                 obj->AddObjectToRemoveList();
                 break;
+            case TYPEID_UNIT:
+                if (obj->IsCreature() && !static_cast<Creature*>(obj)->IsPet())
+                    obj->AddObjectToRemoveList();
             default:
                 RemovePassenger(obj);
                 break;
@@ -690,7 +738,124 @@ void Transport::DelayedTeleportTransport()
     GetMap()->AddToMap<Transport>(this);
 }
 
-void Transport::UpdatePassengerPositions(PassengerSet& passengers)
+// bool ElevatorTransport::Create(uint32 dbGuid, uint32 guidlow, uint32 name_id, Map* map, Position const& pos, float ang, const QuaternionData& rotation, uint32 animprogress, GOState go_state)
+// {
+//     if (GenericTransport::Create(dbGuid, guidlow, name_id, map, pos, rotation, animprogress, go_state))
+//     {
+//         m_pathProgress = 0;
+//         m_animationInfo = sTransportMgr.GetTransportAnimInfo(GetGOInfo()->id);
+//         m_currentSeg = 0;
+//         return true;
+//     }
+//     return false;
+// }
+
+void ElevatorTransport::Update(const uint32 /*diff*/)
+{
+    if (!m_goValue.Transport.AnimationInfo)
+        return;
+
+    if (!m_stopped)
+    {
+        uint32 timeSinceLastStop = (GameTime::GetGameTimeMS() - m_movementStarted) % m_goValue.Transport.AnimationInfo->TotalTime;
+        if (!GetGOInfo()->transport.pause)
+            m_goValue.Transport.PathProgress = timeSinceLastStop;
+        else
+        {
+            // Think this part is related to Lady Deathwhisper elevator? unsure
+            if (timeSinceLastStop >= GetGOInfo()->transport.pause) // stopped and needs to be reenabled by script
+            {
+                m_stopped = true;
+                timeSinceLastStop = GetGOInfo()->transport.pause;
+
+                // if (AI())
+                //     AI()->JustReachedStopPoint();
+            }
+            m_goValue.Transport.PathProgress = ((m_goValue.Transport.PathProgress / GetGOInfo()->transport.pause) * GetGOInfo()->transport.pause + timeSinceLastStop) % m_goValue.Transport.AnimationInfo->TotalTime;
+        }
+        TransportAnimationEntry const* nodeNext = m_goValue.Transport.AnimationInfo->GetNextAnimNode(m_goValue.Transport.PathProgress);
+        TransportAnimationEntry const* nodePrev = m_goValue.Transport.AnimationInfo->GetPrevAnimNode(m_goValue.Transport.PathProgress);
+        if (nodeNext && nodePrev)
+        {
+                m_goValue.Transport.CurrentSeg = nodePrev->TimeIndex;
+
+            G3D::Vector3 posPrev = G3D::Vector3(nodePrev->Pos.X, nodePrev->Pos.Y, nodePrev->Pos.Z);
+            G3D::Vector3 posNext = G3D::Vector3(nodeNext->Pos.X, nodeNext->Pos.Y, nodeNext->Pos.Z);
+            G3D::Vector3 currentPos;
+            if (posPrev == posNext)
+                currentPos = posPrev;
+            else
+            {
+                float nodeProgress = float(m_goValue.Transport.PathProgress - nodePrev->TimeIndex) / float(nodeNext->TimeIndex - nodePrev->TimeIndex);
+
+                currentPos = posPrev.lerp(posNext, nodeProgress);
+            }
+
+            TransportRotationEntry const* rotPrev = m_goValue.Transport.AnimationInfo->GetPrevRotation(m_goValue.Transport.PathProgress);
+            if (rotPrev)
+            {
+                G3D::Quat rotation;
+                TransportRotationEntry const* rotNext = m_goValue.Transport.AnimationInfo->GetNextRotation(m_goValue.Transport.PathProgress);
+                if (rotPrev == rotNext)
+                    rotation = G3D::Quat(rotPrev->X, rotPrev->Y, rotPrev->Z, rotPrev->W);
+                else
+                {
+                    G3D::Quat quatPrev(rotPrev->X, rotPrev->Y, rotPrev->Z, rotPrev->W);
+                    G3D::Quat quatNext(rotNext->X, rotNext->Y, rotNext->Z, rotNext->W);
+
+                    float nodeProgress = float(m_goValue.Transport.PathProgress - rotPrev->TimeIndex) / float(rotNext->TimeIndex - rotPrev->TimeIndex);
+
+                    rotation = quatPrev.slerp(quatNext, nodeProgress);
+                }
+
+                SetOrientation(std::asin(rotation.z) * 2);
+
+                SetLocalRotation(rotation.x, rotation.y, rotation.z, rotation.w);
+            }
+
+            G3D::Quat transportPathRotation(GetFloatValue(GAMEOBJECT_PARENTROTATION + 0), GetFloatValue(GAMEOBJECT_PARENTROTATION + 1), GetFloatValue(GAMEOBJECT_PARENTROTATION + 2), GetFloatValue(GAMEOBJECT_PARENTROTATION + 3));
+            currentPos = currentPos * transportPathRotation;
+
+            currentPos += G3D::Vector3(m_stationaryPosition.GetPositionX(), m_stationaryPosition.GetPositionY(), m_stationaryPosition.GetPositionZ());
+
+            GetMap()->GameObjectRelocation(this, currentPos.x, currentPos.y, currentPos.z, GetOrientation());
+            // SummonCreature(1, currentPos.x, currentPos.y, currentPos.z, GetOrientation(), TEMPSPAWN_TIMED_DESPAWN, 5000);
+            UpdateModelPosition();
+            UpdatePassengerPositions(GetPassengers());
+
+            // Ulduar stuff
+            // if (!m_eventTriggered && (GetGOInfo()->transport.pause1EventID || GetGOInfo()->transport.pause2EventID))
+            // {
+            //     uint32 eventId = 0;
+            //     switch (GetGOInfo()->id)
+            //     {
+            //         case 194675: // Ulduar Tram
+            //         {
+            //             if (nodePrev->id == 179512)
+            //                 eventId = GetGOInfo()->transport.pause1EventID;
+            //             else if (nodePrev->id == 179620)
+            //                 eventId = GetGOInfo()->transport.pause2EventID;
+            //             break;
+            //         }
+            //         default:
+            //             break;
+            //     }
+            //     if (eventId)
+            //     {
+            //         m_eventTriggered = true;
+            //         StartEvents_Event(GetMap(), eventId, this, this, true);
+            //     }
+            // }
+        }
+
+        if (GetGOInfo()->transport.pause)
+            SetUInt16Value(GAMEOBJECT_DYNAMIC, 1, m_goValue.Transport.PathProgress);
+    }
+
+    // if (AI())
+    //     AI()->UpdateAI(diff);
+}
+void GenericTransport::UpdatePassengerPositions(PassengerSet& passengers)
 {
     for (PassengerSet::iterator itr = passengers.begin(); itr != passengers.end(); ++itr)
     {

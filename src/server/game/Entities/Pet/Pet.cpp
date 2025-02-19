@@ -38,6 +38,7 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 #include "ZoneScript.h"
+#include "Transport.h"
 
 #define PET_XP_FACTOR 0.05f
 
@@ -430,6 +431,10 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
 
         // must be after SetMinion (owner guid check)
         LoadTemplateImmunities();
+
+        if (GenericTransport* transport = owner->GetTransport())
+            transport->AddFollowerToTransport(owner, this);
+
         m_loading = false;
     });
 

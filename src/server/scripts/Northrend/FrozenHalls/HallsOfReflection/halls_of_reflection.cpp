@@ -1146,8 +1146,9 @@ class npc_jaina_or_sylvanas_escape_hor : public CreatureScript
                             me->RemoveAurasDueToSpell(SPELL_HARVEST_SOUL);
                             if (_instance->GetData(DATA_TEAM_IN_INSTANCE) == ALLIANCE)
                                 Talk(SAY_JAINA_ESCAPE_9);
-                            if (Transport* gunship = ObjectAccessor::GetTransport(*me, _instance->GetGuidData(DATA_GUNSHIP)))
-                                gunship->EnableMovement(true);
+                            if (GenericTransport* go = ObjectAccessor::GetTransport(*me, _instance->GetGuidData(DATA_GUNSHIP)))
+                                if (Transport* gunship = go->ToTransport())
+                                    gunship->EnableMovement(true);
                             _instance->SetBossState(DATA_THE_LICH_KING_ESCAPE, DONE);
                             break;
                         case EVENT_ESCAPE_17:
@@ -1218,8 +1219,9 @@ class npc_the_lich_king_escape_hor : public CreatureScript
                             if (Creature* target = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_ESCAPE_LEADER)))
                                 DoCast(target, SPELL_HARVEST_SOUL);
 
-                            if (Transport* gunship = ObjectAccessor::GetTransport(*me, _instance->GetGuidData(DATA_GUNSHIP)))
-                                gunship->EnableMovement(true);
+                            if (GenericTransport* go = ObjectAccessor::GetTransport(*me, _instance->GetGuidData(DATA_GUNSHIP)))
+                                if (Transport* gunship = go->ToTransport())
+                                    gunship->EnableMovement(true);
                             break;
                         default:
                             break;

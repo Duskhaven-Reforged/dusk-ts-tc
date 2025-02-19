@@ -646,8 +646,9 @@ class instance_halls_of_reflection : public InstanceMapScript
                         if (GetBossState(DATA_THE_LICH_KING_ESCAPE) == DONE)
                             break;
 
-                        if (Transport* gunship = instance->GetTransport(GunshipGUID))
-                            gunship->EnableMovement(false);
+                        if (GenericTransport* go = instance->GetTransport(GunshipGUID))
+                            if (Transport *gunship = go->ToTransport())
+                                gunship->EnableMovement(false);
 
                         if (Creature* jainaOrSylvanas = instance->GetCreature(JainaOrSylvanasEscapeGUID))
                             jainaOrSylvanas->AI()->DoAction(ACTION_GUNSHIP_ARRIVAL);
@@ -664,8 +665,9 @@ class instance_halls_of_reflection : public InstanceMapScript
                         }
                         break;
                     case EVENT_GUNSHIP_ARRIVAL_2:
-                        if (Transport* gunship = instance->GetTransport(GunshipGUID))
-                            gunship->EnableMovement(false);
+                        if (GenericTransport* go = instance->GetTransport(GunshipGUID))
+                            if (Transport *gunship = go->ToTransport())
+                                gunship->EnableMovement(false);
 
                         for (ObjectGuid guid : GunshipStairGUIDs)
                             if (GameObject* stairs = instance->GetGameObject(guid))

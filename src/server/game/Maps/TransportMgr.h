@@ -94,8 +94,10 @@ struct TC_GAME_API TransportAnimation
     TransportPathRotationContainer Rotations;
     uint32 TotalTime;
 
-    TransportAnimationEntry const* GetAnimNode(uint32 time) const;
-    TransportRotationEntry const* GetAnimRotation(uint32 time) const;
+    TransportAnimationEntry const* GetPrevAnimNode(uint32 time) const;
+    TransportAnimationEntry const* GetNextAnimNode(uint32 time) const;
+    TransportRotationEntry const* GetPrevRotation(uint32 time) const;
+    TransportRotationEntry const* GetNextRotation(uint32 time) const;
 };
 
 typedef std::map<uint32, TransportAnimation> TransportAnimationContainer;

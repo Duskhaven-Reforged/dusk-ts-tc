@@ -1848,7 +1848,7 @@ void ScriptMgr::OnDynamicObjectUpdate(DynamicObject* dynobj, uint32 diff)
         itr->second->OnUpdate(dynobj, diff);
 }
 
-void ScriptMgr::OnAddPassenger(Transport* transport, Player* player)
+void ScriptMgr::OnAddPassenger(GenericTransport* transport, Player* player)
 {
     ASSERT(transport);
     ASSERT(player);
@@ -1866,7 +1866,7 @@ void ScriptMgr::OnAddCreaturePassenger(Transport* transport, Creature* creature)
     tmpscript->OnAddCreaturePassenger(transport, creature);
 }
 
-void ScriptMgr::OnRemovePassenger(Transport* transport, Player* player)
+void ScriptMgr::OnRemovePassenger(GenericTransport* transport, Player* player)
 {
     ASSERT(transport);
     ASSERT(player);
@@ -2656,7 +2656,7 @@ TransportScript::TransportScript(char const* name)
     ScriptRegistry<TransportScript>::Instance()->AddScript(this);
 }
 
-void TransportScript::OnAddPassenger(Transport* /*transport*/, Player* /*player*/)
+void TransportScript::OnAddPassenger(GenericTransport* /*transport*/, Player* /*player*/)
 {
 }
 
@@ -2664,7 +2664,7 @@ void TransportScript::OnAddCreaturePassenger(Transport* /*transport*/, Creature*
 {
 }
 
-void TransportScript::OnRemovePassenger(Transport* /*transport*/, Player* /*player*/)
+void TransportScript::OnRemovePassenger(GenericTransport* /*transport*/, Player* /*player*/)
 {
 }
 

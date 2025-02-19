@@ -124,8 +124,9 @@ public:
         Player* chr = handler->GetSession()->GetPlayer();
         Map* map = chr->GetMap();
 
-        if (Transport* trans = chr->GetTransport())
+        if (chr->GetTransport() && chr->GetTransport()->ToTransport())
         {
+            Transport* trans = chr->GetTransport()->ToTransport();
             ObjectGuid::LowType guid = sObjectMgr->GenerateCreatureSpawnId();
             CreatureData& data = sObjectMgr->NewOrExistCreatureData(guid);
             data.spawnId = guid;

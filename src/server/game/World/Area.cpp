@@ -90,3 +90,8 @@ std::vector<Player*> Area::GetPlayers()
 {
     return GetAreaScript()->GetPlayers();
 }
+
+std::vector<Creature*> Area::GetCreatures()
+{
+    return GetAreaScript()->GetCreatures();
+}

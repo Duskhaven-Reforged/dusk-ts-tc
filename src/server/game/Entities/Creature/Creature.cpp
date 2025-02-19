@@ -1172,6 +1172,9 @@ bool Creature::Create(ObjectGuid::LowType guidlow, Map* map, uint32 phaseMask, u
 
     m_area = sAreaMgr->GetArea(GetAreaIdFromPosition());
 
+    // Bind Creature to this area
+    
+
     // Allow players to see those units while dead, do it here (mayby altered by addon auras)
     if (cinfo->type_flags & CREATURE_TYPE_FLAG_VISIBLE_TO_GHOSTS)
         m_serverSideVisibility.SetValue(SERVERSIDE_VISIBILITY_GHOST, GHOST_VISIBILITY_ALIVE | GHOST_VISIBILITY_GHOST);

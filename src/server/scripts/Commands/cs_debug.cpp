@@ -1349,16 +1349,19 @@ public:
 
     static bool HandleDebugTransportCommand(ChatHandler* handler, std::string operation)
     {
-        Transport* transport = handler->GetPlayer()->GetTransport();
+        GenericTransport* transport = handler->GetPlayer()->GetTransport();
         if (!transport)
+            return false;
+
+        if (!transport->ToTransport())
             return false;
 
         bool start = false;
         if (StringEqualI(operation, "stop"))
-            transport->EnableMovement(false);
+            transport->ToTransport()->EnableMovement(false);
         else if (StringEqualI(operation, "start"))
         {
-            transport->EnableMovement(true);
+            transport->ToTransport()->EnableMovement(true);
             start = true;
         }
         else

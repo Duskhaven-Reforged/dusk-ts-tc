@@ -57,7 +57,7 @@ namespace Movement
         float initialOrientation;
         bool walk;
         bool HasVelocity;
-        bool TransformForTransport;
+        bool TransformForTransport; // Used only for vehicles now
 
         /** Returns true to show that the arguments were configured correctly and MoveSpline initialization will succeed. */
         bool Validate(Unit* unit) const;

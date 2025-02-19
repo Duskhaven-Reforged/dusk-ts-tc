@@ -455,7 +455,11 @@ int main(int argc, char** argv)
     if (file)
         builder.buildMeshFromFile(file);
     // @tswow-begin
-    else builder.buildMaps(generated_maps, generated_tiles);
+    else
+    {
+        builder.buildMaps(generated_maps, generated_tiles);
+        builder.buildTransports();
+    }
     // @tswow-end
 
     if (!silent)

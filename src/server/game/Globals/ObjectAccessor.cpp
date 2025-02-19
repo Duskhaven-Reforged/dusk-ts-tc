@@ -174,7 +174,7 @@ GameObject* ObjectAccessor::GetGameObject(WorldObject const& u, ObjectGuid const
     return u.GetMap()->GetGameObject(guid);
 }
 
-Transport* ObjectAccessor::GetTransport(WorldObject const& u, ObjectGuid const& guid)
+GenericTransport* ObjectAccessor::GetTransport(WorldObject const& u, ObjectGuid const& guid)
 {
     return u.GetMap()->GetTransport(guid);
 }

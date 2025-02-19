@@ -780,7 +780,7 @@ class npc_gunship : public CreatureScript
                     if (Transport* otherTransport = HashMapHolder<Transport>::Find(instance->GetGuidData(DATA_ICECROWN_GUNSHIP_BATTLE)))
                         otherTransport->EnableMovement(true);
 
-                    me->GetTransport()->EnableMovement(true);
+                    me->GetTransport()->ToTransport()->EnableMovement(true);
 
                     if (Creature* ship = me->FindNearestCreature(_teamInInstance == HORDE ? NPC_ORGRIMS_HAMMER : NPC_THE_SKYBREAKER, 200.0f))
                     {
@@ -851,7 +851,7 @@ struct npc_high_overlord_saurfang_igb : public ScriptedAI
         _instance(creature->GetInstanceScript())
     {
         _controller.ResetSlots(HORDE);
-        _controller.SetTransport(creature->GetTransport());
+        _controller.SetTransport(creature->GetTransport() ? creature->GetTransport()->ToTransport() : nullptr);
         me->SetRegenerateHealth(false);
         me->m_CombatDistance = 70.0f;
         _firstMageCooldown = GameTime::Now() + 60s;
@@ -963,7 +963,7 @@ struct npc_high_overlord_saurfang_igb : public ScriptedAI
     bool OnGossipSelect(Player* /*player*/, uint32 /*menuId*/, uint32 /*gossipListId*/) override
     {
         me->RemoveNpcFlag(UNIT_NPC_FLAG_GOSSIP);
-        me->GetTransport()->EnableMovement(true);
+        me->GetTransport()->ToTransport()->EnableMovement(true);
         _events.SetPhase(PHASE_INTRO);
         _events.ScheduleEvent(EVENT_INTRO_H_1, 5s, 0, PHASE_INTRO);
         _events.ScheduleEvent(EVENT_INTRO_H_2, 16s, 0, PHASE_INTRO);
@@ -1031,8 +1031,9 @@ struct npc_high_overlord_saurfang_igb : public ScriptedAI
                     _controller.SummonCreatures(SLOT_MAGE_1, SLOT_MAGE_2);
                     _controller.SummonCreatures(SLOT_MARINE_1, Is25ManRaid() ? SLOT_MARINE_4 : SLOT_MARINE_2);
                     _controller.SummonCreatures(SLOT_SERGEANT_1, Is25ManRaid() ? SLOT_SERGEANT_2 : SLOT_SERGEANT_1);
-                    if (Transport* orgrimsHammer = me->GetTransport())
-                        orgrimsHammer->SummonPassenger(NPC_TELEPORT_PORTAL, OrgrimsHammerTeleportPortal, TEMPSUMMON_TIMED_DESPAWN, nullptr, 21000);
+                    if (me->GetTransport())
+                        if (Transport* orgrimsHammer = me->GetTransport()->ToTransport())
+                            orgrimsHammer->SummonPassenger(NPC_TELEPORT_PORTAL, OrgrimsHammerTeleportPortal, TEMPSUMMON_TIMED_DESPAWN, nullptr, 21000);
 
                     if (Transport* skybreaker = HashMapHolder<Transport>::Find(_instance->GetGuidData(DATA_ICECROWN_GUNSHIP_BATTLE)))
                         skybreaker->SummonPassenger(NPC_TELEPORT_EXIT, SkybreakerTeleportExit, TEMPSUMMON_TIMED_DESPAWN, nullptr, 23000);
@@ -1106,7 +1107,7 @@ struct npc_muradin_bronzebeard_igb : public ScriptedAI
         _instance(creature->GetInstanceScript())
     {
         _controller.ResetSlots(ALLIANCE);
-        _controller.SetTransport(creature->GetTransport());
+        _controller.SetTransport(creature->GetTransport() ? creature->GetTransport()->ToTransport() : nullptr);
         me->SetRegenerateHealth(false);
         me->m_CombatDistance = 70.0f;
         _firstMageCooldown = GameTime::Now() + 60s;
@@ -1218,7 +1219,7 @@ struct npc_muradin_bronzebeard_igb : public ScriptedAI
     bool OnGossipSelect(Player* /*player*/, uint32 /*menuId*/, uint32 /*gossipListId*/) override
     {
         me->RemoveNpcFlag(UNIT_NPC_FLAG_GOSSIP);
-        me->GetTransport()->EnableMovement(true);
+        me->GetTransport()->ToTransport()->EnableMovement(true);
         _events.SetPhase(PHASE_INTRO);
         _events.ScheduleEvent(EVENT_INTRO_A_1, 5s);
         _events.ScheduleEvent(EVENT_INTRO_A_2, 10s, 0, PHASE_INTRO);
@@ -1290,8 +1291,9 @@ struct npc_muradin_bronzebeard_igb : public ScriptedAI
                     _controller.SummonCreatures(SLOT_MAGE_1, SLOT_MAGE_2);
                     _controller.SummonCreatures(SLOT_MARINE_1, Is25ManRaid() ? SLOT_MARINE_4 : SLOT_MARINE_2);
                     _controller.SummonCreatures(SLOT_SERGEANT_1, Is25ManRaid() ? SLOT_SERGEANT_2 : SLOT_SERGEANT_1);
-                    if (Transport* skybreaker = me->GetTransport())
-                        skybreaker->SummonPassenger(NPC_TELEPORT_PORTAL, SkybreakerTeleportPortal, TEMPSUMMON_TIMED_DESPAWN, nullptr, 21000);
+                    if (me->GetTransport())
+                        if (Transport* skybreaker = me->GetTransport()->ToTransport())
+                            skybreaker->SummonPassenger(NPC_TELEPORT_PORTAL, SkybreakerTeleportPortal, TEMPSUMMON_TIMED_DESPAWN, nullptr, 21000);
 
                     if (Transport* orgrimsHammer = HashMapHolder<Transport>::Find(_instance->GetGuidData(DATA_ICECROWN_GUNSHIP_BATTLE)))
                         orgrimsHammer->SummonPassenger(NPC_TELEPORT_EXIT, OrgrimsHammerTeleportExit, TEMPSUMMON_TIMED_DESPAWN, nullptr, 23000);
@@ -1416,7 +1418,7 @@ struct npc_gunship_boarding_addAI : public gunship_npc_AI
             float x, y, z, o;
             otherTransportPos.GetPosition(x, y, z, o);
 
-            Transport* myTransport = me->GetTransport();
+            GenericTransport* myTransport = me->GetTransport();
             if (!myTransport)
                 return;
 
@@ -2022,7 +2024,7 @@ class spell_igb_burning_pitch_selector : public SpellScript
 
         targets.remove_if([team](WorldObject* target) -> bool
         {
-            if (Transport* transport = target->GetTransport())
+            if (GenericTransport* transport = target->GetTransport())
                 return transport->GetEntry() != uint32(team == HORDE ? GO_ORGRIMS_HAMMER_H : GO_THE_SKYBREAKER_A);
             return true;
         });

@@ -2998,7 +2998,7 @@ void Map::SendInitSelf(Player* player)
     UpdateData data;
 
     // attach to player data current transport data
-    if (Transport* transport = player->GetTransport())
+    if (GenericTransport* transport = player->GetTransport())
     {
         transport->BuildCreateUpdateBlockForPlayer(&data, player);
     }
@@ -3018,8 +3018,8 @@ void Map::SendInitSelf(Player* player)
     data.Clear();
 
     // build other passengers at transport also (they always visible and marked as visible and will not send at visibility update at add to map
-    if (Transport* transport = player->GetTransport())
-        for (Transport::PassengerSet::const_iterator itr = transport->GetPassengers().begin(); itr != transport->GetPassengers().end(); ++itr)
+    if (GenericTransport* transport = player->GetTransport())
+        for (GenericTransport::PassengerSet::const_iterator itr = transport->GetPassengers().begin(); itr != transport->GetPassengers().end(); ++itr)
             if (player != (*itr) && player->HaveAtClient(*itr))
                 (*itr)->BuildCreateUpdateBlockForPlayer(&data, player);
 
@@ -3314,10 +3314,13 @@ void Map::DoRespawn(SpawnObjectType type, ObjectGuid::LowType spawnId, uint32 gr
         }
         case SPAWN_TYPE_GAMEOBJECT:
         {
-            GameObject* obj = new GameObject();
-            if (!obj->LoadFromDB(spawnId, this, true))
-                delete obj;
-            break;
+            if (GameObjectData const* data = sObjectMgr->GetGameObjectData(spawnId))
+            {
+                GameObject* obj = GameObject::CreateGameObject(data->id);
+                if (!obj->LoadFromDB(spawnId, this, true))
+                    delete obj;
+                break;
+            }
         }
         default:
             ABORT_MSG("Invalid spawn type %u (spawnid %u) on map %u", uint32(type), spawnId, GetId());
@@ -3508,12 +3511,15 @@ bool Map::SpawnGroupSpawn(uint32 groupId, bool ignoreRespawn, bool force, std::v
             }
             case SPAWN_TYPE_GAMEOBJECT:
             {
-                GameObject* gameobject = new GameObject();
-                if (!gameobject->LoadFromDB(data->spawnId, this, true))
-                    delete gameobject;
-                else if (spawnedObjects)
-                    spawnedObjects->push_back(gameobject);
-                break;
+                if (GameObjectData const* godata = sObjectMgr->GetGameObjectData(data->spawnId))
+                {
+                    GameObject* gameobject = GameObject::CreateGameObject(godata->id);
+                    if (!gameobject->LoadFromDB(data->spawnId, this, true))
+                        delete gameobject;
+                    else if (spawnedObjects)
+                        spawnedObjects->push_back(gameobject);
+                    break;
+                }
             }
             default:
                 ABORT_MSG("Invalid spawn type %u with spawnId %u", uint32(data->type), data->spawnId);
@@ -4550,13 +4556,27 @@ Pet* Map::GetPet(ObjectGuid const& guid)
     return _objectsStore.Find<Pet>(guid);
 }
 
-Transport* Map::GetTransport(ObjectGuid const& guid)
+GenericTransport* Map::GetTransport(ObjectGuid const& guid)
 {
-    if (!guid.IsMOTransport())
-        return nullptr;
+    // if (!guid.IsMOTransport())
+    //     return nullptr;
 
-    GameObject* go = GetGameObject(guid);
-    return go ? go->ToTransport() : nullptr;
+    // GameObject* go = GetGameObject(guid);
+    // return go ? go->ToTransport() : nullptr;
+
+    // elevators also cause the client to send MOVEFLAG_ONTRANSPORT - just unmount if the guid can be found in the transport list
+    for (auto& transport : _transports)
+    {
+        if (transport->GetGUID() == guid)
+        {
+            return transport;
+        }
+    }
+    if (guid.GetEntry())
+        if (GameObject* go = GetGameObject(guid))
+            if (go->IsTransport())
+                return static_cast<GenericTransport*>(go);
+    return nullptr;
 }
 
 DynamicObject* Map::GetDynamicObject(ObjectGuid const& guid)
