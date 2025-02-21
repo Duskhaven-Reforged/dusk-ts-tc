@@ -13222,6 +13222,15 @@ float Unit::MeleeSpellMissChance(Unit const* victim, WeaponAttackType attType, i
     }
     // @tswow-end
 
+    // @dusk-begin
+    FIRE(
+          Unit,OnCalcMissChanceAgainst
+        , TSUnit(const_cast<Unit*>(this))
+        , TSUnit(const_cast<Unit*>(victim))
+        , TSMutableNumber<float>(&missChance)
+    );
+    // @dusk-end
+
     return std::max(missChance, 0.f);
 }
 
