@@ -4843,14 +4843,24 @@ void Map::RemoveOldCorpses()
 
 void Map::SendZoneDynamicInfo(uint32 zoneId, Player* player) const
 {
+    uint32 override_weather_zone_id = GetWeatherZoneParent(zoneId);
+    if (override_weather_zone_id != zoneId)
+        SendZoneWeather(zoneId, player);
+
     auto itr = _zoneDynamicInfo.find(zoneId);
-    if (itr == _zoneDynamicInfo.end())
+    if (itr == _zoneDynamicInfo.end()) {
+        // reset the weather if zone has no weather data.
+        // but don't do it if weather has an override
+        if (override_weather_zone_id == zoneId)
+            Weather::SendFineWeatherUpdateToPlayer(player);
         return;
+    }
 
     if (uint32 music = itr->second.MusicId)
         player->SendDirectMessage(WorldPackets::Misc::PlayMusic(music).Write());
 
-    SendZoneWeather(itr->second, player);
+    if (override_weather_zone_id == zoneId)
+        SendZoneWeather(itr->second, player);
 
     for (ZoneDynamicInfo::LightOverride const& lightOverride : itr->second.LightOverrides)
     {
@@ -4862,8 +4872,35 @@ void Map::SendZoneDynamicInfo(uint32 zoneId, Player* player) const
     }
 }
 
+uint32 Map::GetWeatherZoneParent(uint32 zoneId) const
+{
+    // hardcode some zones to get their weather data from another, like stormwind from elwynn.
+    switch (zoneId)
+    {
+    case 1519: // stormwind
+        zoneId = 12; // elwynn
+        break;
+    // durotar doesn't have weather?
+    // case 1637: // orgrimmar
+    //     zoneId = 14; // durotar
+    //     break;
+    case 1638: // thunder bluff
+        zoneId = 215; // mulgore
+        break;
+    case 1657: // darnassus
+        zoneId = 141; // teldrassil
+        break;
+    default:
+        break;
+    }
+    return zoneId;
+}
+
 void Map::SendZoneWeather(uint32 zoneId, Player* player) const
 {
+    // override weather for specific zones
+    zoneId = GetWeatherZoneParent(zoneId);
+    
     auto itr = _zoneDynamicInfo.find(zoneId);
     if (itr == _zoneDynamicInfo.end())
         return;
