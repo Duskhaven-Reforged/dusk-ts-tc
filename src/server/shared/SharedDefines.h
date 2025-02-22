@@ -3108,7 +3108,7 @@ enum SkillType
     SKILL_PET_EXOTIC_SPIRIT_BEAST  = 788
 };
 
-#define MAX_SKILL_TYPE               789
+#define MAX_SKILL_TYPE               1000
 
 constexpr SkillType SkillByLockType(LockType locktype)
 {
