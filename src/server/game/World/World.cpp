@@ -2395,7 +2395,7 @@ void World::SetInitialWorldSettings()
         sMapMgr->DoForAllMaps([](Map* map)
         {
             auto MapId = map->GetId();
-            if (!map->Instanceable() && (MapId == 0 || MapId == 1 || MapId == 530 || MapId == 369))
+            if (!map->Instanceable() && (MapId == 0 || MapId == 1 || MapId == 369))
             {
                 TC_LOG_INFO("server.loading", "Pre-loading base map data for map {}", map->GetId());
                 map->LoadAllCells();
