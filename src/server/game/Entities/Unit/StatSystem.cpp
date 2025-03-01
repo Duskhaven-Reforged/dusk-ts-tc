@@ -436,15 +436,12 @@ void Player::UpdateArmor()
 float Player::GetHealthBonusFromStamina()
 {
     float stamina = GetStat(STAT_STAMINA);
-    float baseStam = std::min(20.0f, stamina);
-    float moreStam = stamina - baseStam;
     // @tswow-begin
-    float health = baseStam + (moreStam*10.0f);
+    float health = 20.0f + (stamina*10.0f);
     FIRE(Player,OnCalcStaminaHealthBonus
         , TSPlayer(this)
         , TSMutableNumber<float>(&health)
-        , baseStam
-        , moreStam
+        , stamina
     );
     return health;
     // @tswow-end
