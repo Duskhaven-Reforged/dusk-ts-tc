@@ -14502,16 +14502,17 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId /*= 0*/, bool 
                     break;
                 case GOSSIP_OPTION_TRAINER:
                 {
+                    canTalk = false;
                     // @tswow-begin (Using Rochet2/Multitrainer)
-                    Trainer::Trainer const* trainer = sObjectMgr->GetTrainer(itr->second.ActionMenuID ? itr->second.ActionMenuID : creature->GetEntry());
-                    // @tswow-end
-                    if (!trainer || !trainer->IsTrainerValidForPlayer(this))
-                    {
-                        // suppressing error, we don't really care
-                        // TC_LOG_ERROR("sql.sql", "GOSSIP_OPTION_TRAINER:: Player {} {} requested wrong gossip menu: {} at Creature: {} (Entry: {})",
-                        //     GetName(), GetGUID().ToString(), menu->GetGossipMenu().GetMenuId(), creature->GetName(), creature->GetEntry());
-                        canTalk = false;
-                    }
+                    // Trainer::Trainer const* trainer = sObjectMgr->GetTrainer(itr->second.ActionMenuID ? itr->second.ActionMenuID : creature->GetEntry());
+                    // // @tswow-end
+                    // if (!trainer || !trainer->IsTrainerValidForPlayer(this))
+                    // {
+                    //     // suppressing error, we don't really care
+                    //     // TC_LOG_ERROR("sql.sql", "GOSSIP_OPTION_TRAINER:: Player {} {} requested wrong gossip menu: {} at Creature: {} (Entry: {})",
+                    //     //     GetName(), GetGUID().ToString(), menu->GetGossipMenu().GetMenuId(), creature->GetName(), creature->GetEntry());
+                    //     canTalk = false;
+                    // }
                     [[fallthrough]];
                 }
                 case GOSSIP_OPTION_GOSSIP:
