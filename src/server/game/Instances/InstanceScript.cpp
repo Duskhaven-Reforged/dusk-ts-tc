@@ -550,6 +550,7 @@ void InstanceScript::Load(char const* data)
     if (ReadSaveDataHeaders(loadStream))
     {
         ReadSaveDataBossStates(loadStream);
+        ReadSaveDataSpawnLoc(loadStream);
         ReadSaveDataMore(loadStream);
     }
     else
@@ -601,6 +602,11 @@ void InstanceScript::ReadSaveDataBossStates(std::istringstream& data)
     UpdateSpawnGroups();
 }
 
+void InstanceScript::ReadSaveDataSpawnLoc(std::istringstream& data)
+{
+    data >> spawnPoint;
+}
+
 std::string InstanceScript::GetSaveData()
 {
     OUT_SAVE_INST_DATA;
@@ -609,6 +615,7 @@ std::string InstanceScript::GetSaveData()
 
     WriteSaveDataHeaders(saveStream);
     WriteSaveDataBossStates(saveStream);
+    WriteSaveDataSpawnLoc(saveStream);
     WriteSaveDataMore(saveStream);
 
     OUT_SAVE_INST_DATA_COMPLETE;
@@ -620,6 +627,11 @@ void InstanceScript::WriteSaveDataHeaders(std::ostringstream& data)
 {
     for (char header : headers)
         data << header << ' ';
+}
+
+void InstanceScript::WriteSaveDataSpawnLoc(std::ostringstream& data)
+{
+    data << spawnPoint << ' ';
 }
 
 void InstanceScript::WriteSaveDataBossStates(std::ostringstream& data)

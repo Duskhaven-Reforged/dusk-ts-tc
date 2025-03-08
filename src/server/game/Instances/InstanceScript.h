@@ -335,12 +335,21 @@ class TC_GAME_API InstanceScript : public ZoneScript
         // Instance Load and Save
         bool ReadSaveDataHeaders(std::istringstream& data);
         void ReadSaveDataBossStates(std::istringstream& data);
+        void ReadSaveDataSpawnLoc(std::istringstream& data);
         virtual void ReadSaveDataMore(std::istringstream& /*data*/) { }
         void WriteSaveDataHeaders(std::ostringstream& data);
+        void WriteSaveDataSpawnLoc(std::ostringstream& data);
         void WriteSaveDataBossStates(std::ostringstream& data);
         virtual void WriteSaveDataMore(std::ostringstream& /*data*/) { }
 
         bool _SkipCheckRequiredBosses(Player const* player = nullptr) const;
+
+        uint8 GetSpawnLoc() {
+            return spawnPoint;
+        }
+        void SetSpawnLoc(uint8 Loc) {
+            spawnPoint = Loc;
+        }
     private:
         static void LoadObjectData(ObjectData const* creatureData, ObjectInfoMap& objectInfo);
         void UpdateEncounterState(EncounterCreditType type, uint32 creditEntry, Unit* source);
@@ -359,6 +368,7 @@ class TC_GAME_API InstanceScript : public ZoneScript
         std::vector<AreaBoundary*> _customBoundaries;
         InstanceBossCreatures const* _bossCreatures;
         uint32 m_activeCriteria = 0;
+        uint8 spawnPoint = 0;
         // @tswow-end
 
     #ifdef TRINITY_API_USE_DYNAMIC_LINKING
