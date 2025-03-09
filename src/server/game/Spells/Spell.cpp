@@ -6606,8 +6606,13 @@ SpellCastResult Spell::CheckMovement() const
     if (getState() == SPELL_STATE_PREPARING)
     {
         if (m_casttime > 0)
+        {
+            if (m_casttime <= 250 && Spell::GetSpellInfo()->AttributesExCu & SPELL_ATTR1_CU_LOW_CAST_TIME_DONT_INTERRUPT)
+                return SPELL_CAST_OK;
+
             if (m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT)
                 return SPELL_FAILED_MOVING;
+        }
     }
     else if (getState() == SPELL_STATE_CASTING) {
         bool IsAble = m_spellInfo->IsMoveAllowedChannel();
