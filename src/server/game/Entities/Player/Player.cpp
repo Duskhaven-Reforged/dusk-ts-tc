@@ -14505,11 +14505,8 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId /*= 0*/, bool 
                     canTalk = false;
                     // @tswow-begin (Using Rochet2/Multitrainer)
                     Trainer::Trainer const* trainer = sObjectMgr->GetTrainer(itr->second.ActionMenuID ? itr->second.ActionMenuID : creature->GetEntry());
-                    if (trainer) {
-                        auto type = trainer->GetTrainerType();
-                        if (type == Trainer::Type::Mount)
-                            canTalk = true;
-                    }
+                    if (trainer)
+                        canTalk = trainer->GetTrainerType() == Trainer::Type::Mount;
                     // // @tswow-end
                     // if (!trainer || !trainer->IsTrainerValidForPlayer(this))
                     // {
