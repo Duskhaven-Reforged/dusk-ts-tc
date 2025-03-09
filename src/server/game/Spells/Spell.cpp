@@ -3665,6 +3665,9 @@ void Spell::_cast(bool skipCheck)
     {
         FIRE_ID(caster->GetCreatureTemplate()->events.id,Creature,OnSpellCastFinished,TSCreature(caster),GetSpellInfo(),SPELL_FINISHED_SUCCESSFUL_CAST);
     }
+    if (Unit* caster = m_originalCaster->ToUnit()) {
+        FIRE_ID(m_spellInfo->events.id, Spell, OnSpellCastFinished, TSSpell(this), TSUnit(caster), SPELL_FINISHED_SUCCESSFUL_CAST);
+    }
     // @tswow-end
 
     // Call CreatureAI hook OnSpellCast
@@ -3976,7 +3979,6 @@ void Spell::update(uint32 difftime)
                 {
                     FIRE_ID(caster->GetCreatureTemplate()->events.id,Creature,OnSpellCastFinished,TSCreature(caster),TSSpellInfo(m_spellInfo),SPELL_FINISHED_CHANNELING_COMPLETE);
                 }
-
                 if (Unit* caster = m_originalCaster->ToUnit()) {
                     FIRE_ID(m_spellInfo->events.id, Spell, OnSpellCastFinished, TSSpell(this), TSUnit(caster), SPELL_FINISHED_CHANNELING_COMPLETE);
                 }
