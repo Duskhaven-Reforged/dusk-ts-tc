@@ -293,7 +293,14 @@ void GenericTransport::RemovePassenger(WorldObject* passenger)
     else
         erased = _passengers.erase(passenger) > 0;
 
-    if (erased  || _staticPassengers.erase(passenger)) // static passenger can remove itself in case of grid unload
+    auto FoundStatic = _staticPassengers.find(passenger);
+    auto StaticErased = false;
+    if (FoundStatic != _staticPassengers.end()) {
+        _staticPassengers.erase(FoundStatic);
+        StaticErased = true;
+    }
+
+    if (erased || StaticErased) // static passenger can remove itself in case of grid unload
     {
         passenger->SetTransport(nullptr);
         passenger->m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
