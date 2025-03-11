@@ -79,6 +79,7 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "AreaScript.h"
 #include <cmath>
 // @tswow-begin
 #include "TSProfile.h"
@@ -12260,10 +12261,10 @@ bool Unit::InitTamedPet(Pet* pet, uint8 level, uint32 spell_id)
                 sScriptMgr->OnPlayerKilledByCreature(killerCre, killed);
         }
 
-        if (ZoneScript* zs = victim->GetZoneScript())
-        {
-            zs->OnUnitKilled(victim, attacker);
-        }
+        if (Area* area = attacker->GetArea())
+            if (AreaScript* as = area->GetAreaScript())
+                as->OnUnitKilled(victim, attacker);
+        
     }
 }
 
