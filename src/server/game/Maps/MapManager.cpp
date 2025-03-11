@@ -200,13 +200,15 @@ Map::EnterState MapManager::PlayerCannotEnter(uint32 mapid, Player* player, bool
         if (group)
             bindOwner = group->GetLeaderGUID() ? group->GetLeader() : player;
 
-        uint32 instanceIdToCheck = 0;
-        if (InstanceSave* save = bindOwner->GetInstanceSave(mapid, entry->IsRaid()))
-            instanceIdToCheck = save->GetInstanceId();
+        if (bindOwner) {
+            uint32 instanceIdToCheck = 0;
+            if (InstanceSave* save = bindOwner->GetInstanceSave(mapid, entry->IsRaid()))
+                instanceIdToCheck = save->GetInstanceId();
 
-        // instanceId can never be 0 - will not be found
-        if (!player->GetSession()->UpdateAndCheckInstanceCount(instanceIdToCheck) && !player->isDead())
-            return Map::CANNOT_ENTER_TOO_MANY_INSTANCES;
+            // instanceId can never be 0 - will not be found
+            if (!player->GetSession()->UpdateAndCheckInstanceCount(instanceIdToCheck) && !player->isDead())
+                return Map::CANNOT_ENTER_TOO_MANY_INSTANCES;
+        }
     }
 
     //Other requirements

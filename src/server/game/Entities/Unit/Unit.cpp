@@ -12260,7 +12260,7 @@ bool Unit::InitTamedPet(Pet* pet, uint8 level, uint32 spell_id)
                 sScriptMgr->OnPlayerKilledByCreature(killerCre, killed);
         }
 
-        if (ZoneScript* zs = victim->GetZoneScript())
+        if (ZoneScript* zs = attacker->GetZoneScript())
         {
             zs->OnUnitKilled(victim, attacker);
         }
