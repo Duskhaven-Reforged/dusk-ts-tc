@@ -24787,6 +24787,8 @@ void Player::ProcessTerrainStatusUpdate(ZLiquidStatus oldLiquidStatus, Optional<
         bool FlaggedFatigue = false;
         if (Area* area = GetArea()) {
             FlaggedFatigue = area->GetEntry()->Flags & AREA_FLAG_FATIGUE; 
+        } else { // area doesn't have coreside data
+            FlaggedFatigue = true;
         }
 
         // Fatigue bar state (if not on flight path or transport)
