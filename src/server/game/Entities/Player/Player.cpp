@@ -24784,8 +24784,13 @@ void Player::ProcessTerrainStatusUpdate(ZLiquidStatus oldLiquidStatus, Optional<
                 m_MirrorTimerFlags &= ~UNDERWATER_INWATER;
         }
 
+        bool FlaggedFatigue = false;
+        if (Area* area = GetArea()) {
+            FlaggedFatigue = area->GetEntry()->Flags & AREA_FLAG_FATIGUE; 
+        }
+
         // Fatigue bar state (if not on flight path or transport)
-        if ((newLiquidData->type_flags & MAP_LIQUID_TYPE_DARK_WATER) && !IsInFlight() && !GetTransport())
+        if (((newLiquidData->type_flags & MAP_LIQUID_TYPE_DARK_WATER) || FlaggedFatigue) && !IsInFlight() && !GetTransport())
             m_MirrorTimerFlags |= UNDERWATER_INDARKWATER;
         else
             m_MirrorTimerFlags &= ~UNDERWATER_INDARKWATER;
