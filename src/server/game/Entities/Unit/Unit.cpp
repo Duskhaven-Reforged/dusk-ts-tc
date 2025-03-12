@@ -2772,11 +2772,10 @@ float Unit::GetUnitDodgeChance(WeaponAttackType attType, Unit const* victim) con
     {
         if (!victim->IsTotem())
         {
-            chance = 3.0f;
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
 
-            if (levelDiff > 0)
-                levelBonus = 1.5f * levelDiff;
+            if (levelDiff > 3)
+                levelBonus = 10.0f * levelDiff;
         }
     }
 
@@ -2818,11 +2817,10 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
     {
         if (!victim->IsTotem() && !(victim->ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_PARRY))
         {
-            chance = 6.0f;
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
 
             if (levelDiff > 0)
-                levelBonus = 1.5f * levelDiff;
+                levelBonus = 10.0f * levelDiff;
         }
     }
 
@@ -2838,7 +2836,7 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
 
 float Unit::GetUnitMissChance() const
 {
-    float miss_chance = 5.0f;
+    float miss_chance = 0.0f;
 
     // @tswow-begin
     FIRE(
@@ -2875,7 +2873,7 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT);
 
             if (levelDiff > 0)
-                levelBonus = 1.5f * levelDiff;
+                levelBonus = 10.0f * levelDiff;
         }
     }
 
@@ -2884,8 +2882,8 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
 }
 
 float Unit::GetUnitCriticalChanceDone(WeaponAttackType attackType) const
-{
-    float chance = 0.f;
+{  
+    float chance = 0.0f;
     if (GetTypeId() == TYPEID_PLAYER)
     {
         switch (attackType)
@@ -2901,12 +2899,12 @@ float Unit::GetUnitCriticalChanceDone(WeaponAttackType attackType) const
                 break;
                 // Just for good manner
             default:
-                chance = 0.0f;
                 break;
         }
     }
     else
     {
+
         if (!(ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_CRIT))
         {
             chance = 5.0f;
@@ -2921,6 +2919,12 @@ float Unit::GetUnitCriticalChanceDone(WeaponAttackType attackType) const
 float Unit::GetUnitCriticalChanceTaken(Unit const* attacker, WeaponAttackType attackType, float critDone) const
 {
     float chance = critDone;
+
+    if (attacker->GetTypeId() != TYPEID_PLAYER) {
+        int32 const levelDiff = attacker->GetLevelForTarget(this) - GetLevelForTarget(this);
+        if (levelDiff > 3)
+            chance += 5.f * levelDiff;
+    }
 
     // flat aura mods
     if (attackType == RANGED_ATTACK)

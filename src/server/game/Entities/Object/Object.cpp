@@ -2547,7 +2547,7 @@ float WorldObject::MeleeSpellMissChance(Unit const* /*victim*/, WeaponAttackType
     return 0.0f;
 }
 
-SpellMissInfo WorldObject::MeleeSpellHitResult(Unit* /*victim*/, SpellInfo const* /*spellInfo*/) const
+SpellMissInfo WorldObject::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo) const
 {
     return SPELL_MISS_NONE;
 }
@@ -2573,20 +2573,30 @@ SpellMissInfo WorldObject::MagicSpellHitResult(Unit* victim, SpellInfo const* sp
     // Base hit chance from attacker and victim levels
     int32 modHitChance = 100;
     if (levelBasedHitDiff >= 0) {
-        if (victim->GetTypeId() != TYPEID_PLAYER)
-        {
-            modHitChance = 94 - 3 * std::min(levelBasedHitDiff, 3);
-            levelBasedHitDiff -= 3;
-        }
-        else
-        {
-            modHitChance = 96 - std::min(levelBasedHitDiff, 2);
-            levelBasedHitDiff -= 2;
-        }
-        if (levelBasedHitDiff > 0)
-            modHitChance -= lchance * std::min(levelBasedHitDiff, 7);
+        if (levelBasedHitDiff > 3)
+            modHitChance -= (levelBasedHitDiff * lchance);
     } else
-        modHitChance = 97 - levelBasedHitDiff;
+        modHitChance -= levelBasedHitDiff;
+
+    // if (levelBasedHitDiff >= 0) {
+    //     // For every leveldiff above 3 for creatures lose 9%
+
+    //     if (victim->GetTypeId() != TYPEID_PLAYER)
+    //     {
+    //         modHitChance = 94 - 3 * std::min(levelBasedHitDiff, 3);
+    //         levelBasedHitDiff -= 3;
+    //     }
+    //     else
+    //     {
+    //         // for every leveldiff for players, lose 7%
+    //         modHitChance = 96 - std::min(levelBasedHitDiff, 2);
+    //         levelBasedHitDiff -= 2;
+    //     }
+
+    //     if (levelBasedHitDiff > 0)
+    //         modHitChance -= lchance * levelBasedHitDiff;
+    // } else
+    //     modHitChance = 97 - levelBasedHitDiff;
 
     // Spellmod from SPELLMOD_RESIST_MISS_CHANCE
     if (Player* modOwner = GetSpellModOwner())
