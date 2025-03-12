@@ -2819,7 +2819,7 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
         {
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
 
-            if (levelDiff > 0)
+            if (levelDiff > 3)
                 levelBonus = 10.0f * levelDiff;
         }
     }
