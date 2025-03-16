@@ -724,8 +724,6 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
 
 /*static*/ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage const* cleanDamage, DamageEffectType damagetype, SpellSchoolMask damageSchoolMask, SpellInfo const* spellProto, bool durabilityLoss)
 {
-    uint32 rage_damage = damage + (cleanDamage ? cleanDamage->absorbed_damage : 0);
-
     if (UnitAI* victimAI = victim->GetAI())
         victimAI->DamageTaken(attacker, damage, damagetype, spellProto);
 
@@ -811,40 +809,15 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
     bool rageRewarded = false;
 
     // Rage from Damage made (only from direct weapon damage)
-    if (attacker && cleanDamage && damagetype == DIRECT_DAMAGE && attacker != victim && attacker->GetPowerType() == POWER_RAGE)
+    if (attacker && cleanDamage && (cleanDamage->attackType == BASE_ATTACK || cleanDamage->attackType == OFF_ATTACK) && damagetype == DIRECT_DAMAGE && attacker != victim && attacker->GetPowerType() == POWER_RAGE)
     {
-        uint32 weaponSpeedHitFactor;
-
-        switch (cleanDamage->attackType)
-        {
-            case BASE_ATTACK:
-            case OFF_ATTACK:
-            {
-                weaponSpeedHitFactor = uint32(attacker->GetAttackTime(cleanDamage->attackType) / 1000.0f * (cleanDamage->attackType == BASE_ATTACK ? 3.5f : 1.75f));
-                if (cleanDamage->hitOutCome == MELEE_HIT_CRIT)
-                    weaponSpeedHitFactor *= 2;
-
-                FIRE(Unit, OnRageGainedViaAttack, TSUnit(attacker), TSUnit(victim), TSMutableNumber<uint32>(&rage_damage));
-                attacker->RewardRage(rage_damage, weaponSpeedHitFactor, true);
-                break;
-            }
-            case RANGED_ATTACK:
-                break;
-            default:
-                break;
-        }
+        uint32 rage = 0;
+        FIRE(Unit, OnRageGainedViaAttack, TSUnit(attacker), TSUnit(victim), TSNumber<uint8>(cleanDamage->attackType), TSMutableNumber<uint32>(&rage));
+        attacker->RewardRage(rage);
     }
 
     if (!damage)
-    {
-        // Rage from absorbed damage
-        if (cleanDamage && cleanDamage->absorbed_damage && victim->GetPowerType() == POWER_RAGE) {
-            FIRE(Unit, OnRageGainedViaAttack, TSUnit(attacker), TSUnit(victim), TSMutableNumber<uint32>(&rage_damage));
-            victim->RewardRage(cleanDamage->absorbed_damage, 0, false);
-        }
-
         return 0;
-    }
 
     uint32 health = victim->GetHealth();
 
@@ -949,13 +922,6 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
                 EquipmentSlots slot = EquipmentSlots(urand(0, EQUIPMENT_SLOT_END-1));
                 victim->ToPlayer()->DurabilityPointLossForEquipSlot(slot);
             }
-        }
-
-        // Rage from damage received
-        if (attacker != victim && victim->GetPowerType() == POWER_RAGE)
-        {
-            rage_damage = damage + (cleanDamage ? cleanDamage->absorbed_damage : 0);
-            victim->RewardRage(rage_damage, 0, false);
         }
 
         if (attacker && attacker->GetTypeId() == TYPEID_PLAYER)
@@ -2634,7 +2600,7 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     // Ranged attacks can only miss, resist and deflect and get blocked
     if (attType == RANGED_ATTACK)
     {
-        canParry = false;
+        // canParry = false;
         canDodge = false;
 
         // only if in front
@@ -2774,7 +2740,7 @@ float Unit::GetUnitDodgeChance(WeaponAttackType attType, Unit const* victim) con
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
 
             if (levelDiff > 3)
-                levelBonus = 10.0f * levelDiff;
+                levelBonus = 5.0f * levelDiff;
         }
     }
 
@@ -2818,8 +2784,10 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
         {
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
 
-            if (levelDiff > 3)
-                levelBonus = 10.0f * levelDiff;
+            if (levelDiff > 3) {
+                float rangeMod = attType == RANGED_ATTACK ? 2.0 : 1.0;
+                levelBonus = 5.0f * levelDiff * rangeMod;
+            }
         }
     }
 
@@ -2871,7 +2839,7 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
             chance = 3.0f;
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT);
 
-            if (levelDiff > 0)
+            if (levelDiff > 3)
                 levelBonus = 10.0f * levelDiff;
         }
     }
@@ -8567,7 +8535,6 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
     }
 
     float tmpDamage = float(int32(pdamage) + DoneFlatBenefit) * DoneTotalMod;
-
     // bonus result can be negative
     return uint32(std::max(tmpDamage, 0.0f));
 }
@@ -14487,32 +14454,11 @@ PlayerMovementPendingChange::PlayerMovementPendingChange()
     time = GameTime::GetGameTimeMS();
 }
 
-void Unit::RewardRage(uint32 damage, uint32 weaponSpeedHitFactor, bool attacker)
+void Unit::RewardRage(uint32 baseRage)
 {
-    float addRage;
+    float addRage = baseRage;
 
-    float rageconversion = ((0.0091107836f * GetLevel() * GetLevel()) + 3.225598133f * GetLevel()) + 4.2652911f;
-
-    // Unknown if correct, but lineary adjust rage conversion above level 70
-    if (GetLevel() > 70)
-        rageconversion += 13.27f * (GetLevel() - 70);
-
-    if (attacker)
-    {
-        addRage = (damage / rageconversion * 7.5f + weaponSpeedHitFactor) / 2;
-
-        // talent who gave more rage on attack
-        AddPct(addRage, GetTotalAuraModifier(SPELL_AURA_MOD_RAGE_FROM_DAMAGE_DEALT));
-    }
-    else
-    {
-        addRage = damage / rageconversion * 2.5f;
-
-        // Berserker Rage effect
-        if (HasAura(18499))
-            addRage *= 2.0f;
-    }
-
+    AddPct(addRage, GetTotalAuraModifier(SPELL_AURA_MOD_RAGE_FROM_DAMAGE_DEALT));
     addRage *= sWorld->getRate(RATE_POWER_RAGE_INCOME);
 
     ModifyPower(POWER_RAGE, uint32(addRage * 10));

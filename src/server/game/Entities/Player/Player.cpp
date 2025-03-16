@@ -5415,12 +5415,6 @@ float Player::GetMeleeCritFromAgility() const
 
 void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing) const
 {
-    // @tswow-end
-    FIRE(Player,OnCalcDodgeFromAgility
-        ,TSPlayer(const_cast<Player*>(this))
-        ,TSMutableNumber<float>(&diminishing)
-    );
-    nondiminishing = 0.f;
 }
 
 float Player::GetSpellCritFromIntellect() const
@@ -5436,7 +5430,14 @@ float Player::GetSpellCritFromIntellect() const
 
 float Player::GetRatingMultiplier(CombatRating cr) const
 {
-    return 1;
+    uint8 level = GetLevel();
+
+    if (level > GT_MAX_LEVEL)
+        level = GT_MAX_LEVEL;
+
+    GtCombatRatingsEntry const* Rating = sGtCombatRatingsStore.LookupEntry(cr * GT_MAX_LEVEL + level - 1);
+
+    return 1 / Rating->Data;
 }
 
 float Player::GetRatingBonusValue(CombatRating cr) const

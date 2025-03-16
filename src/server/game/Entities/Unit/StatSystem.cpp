@@ -239,12 +239,13 @@ bool Player::UpdateStats(Stats stat)
     {
         case STAT_STRENGTH:
             UpdateShieldBlockValue();
-            UpdateRating(CR_PARRY);
+            UpdateParryPercentage();
             break;
         case STAT_AGILITY:
             UpdateArmor();
             UpdateAllCritPercentages();
             UpdateDodgePercentage();
+            UpdateParryPercentage();
             break;
         case STAT_STAMINA:
             UpdateMaxHealth();
@@ -252,6 +253,7 @@ bool Player::UpdateStats(Stats stat)
         case STAT_INTELLECT:
             UpdateMaxPower(POWER_MANA);
             UpdateAllSpellCritChances();
+            UpdateDodgePercentage();
             UpdateArmor();                                  //SPELL_AURA_MOD_RESISTANCE_OF_INTELLECT_PERCENT, only armor currently
             break;
         case STAT_SPIRIT:
@@ -927,7 +929,7 @@ void Player::UpdateParryPercentage()
     uint32 pclass = GetClass() - 1;
     if (CanParry() && parry_cap[pclass] > 0.0f)
     {
-        float nondiminishing  = 5.0f;
+        float nondiminishing = 5.0f;
         // Parry from rating
         float diminishing = GetRatingBonusValue(CR_PARRY);
         FIRE(Player,OnCalcParryFromStr
@@ -942,6 +944,7 @@ void Player::UpdateParryPercentage()
 
         if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
              value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_PARRY) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_PARRY) : value;
+
 
         value = value < 0.0f ? 0.0f : value;
 
@@ -961,8 +964,15 @@ void Player::UpdateParryPercentage()
 
 void Player::UpdateDodgePercentage()
 {
-    float diminishing = 0.0f, nondiminishing = 0.0f;
+    float nondiminishing = 5.0f;
+    float diminishing = GetRatingBonusValue(CR_DODGE);
     GetDodgeFromAgility(diminishing, nondiminishing);
+
+    FIRE(Player,OnCalcDodgeFromAgility
+        ,TSPlayer(const_cast<Player*>(this))
+        ,TSMutableNumber<float>(&diminishing)
+    );
+
     // Dodge from SPELL_AURA_MOD_DODGE_PERCENT aura
     nondiminishing += GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
 
