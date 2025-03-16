@@ -1302,6 +1302,15 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
         );
         // @tswow-end
 
+        // Aleist3r: spell aura school damage vs caster needs to be added here as well, otherwise it works only for
+        //spells
+        AuraEffectList const& mDamageDoneVersusCaster =
+        GetAuraEffectsByType(SPELL_AURA_MOD_SCHOOL_MASK_DAMAGE_VS_CASTER); for (AuraEffectList::const_iterator i =
+        mDamageDoneVersusCaster.begin(); i != mDamageDoneVersusCaster.end(); ++i)
+        if ((*i)->GetCasterGUID() == GetVictim()->GetGUID() && ((*i)->GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL)) {
+            AddPct(damage, (*i)->GetAmount());
+        }
+
         damage = MeleeDamageBonusDone(damageInfo->Target, damage, damageInfo->AttackType, nullptr, schoolMask);
         damage = damageInfo->Target->MeleeDamageBonusTaken(this, damage, damageInfo->AttackType, nullptr, schoolMask);
 
@@ -2459,16 +2468,6 @@ uint32 Unit::CalculateDamage(WeaponAttackType attType, bool normalized, bool add
 
     minDamage = std::max(0.f, minDamage);
     maxDamage = std::max(0.f, maxDamage);
-
-    // Aleist3r: spell aura school damage vs caster needs to be added here as well, otherwise it works only for spells
-    AuraEffectList const& mDamageDoneVersusCaster = GetAuraEffectsByType(SPELL_AURA_MOD_SCHOOL_MASK_DAMAGE_VS_CASTER);
-    for (AuraEffectList::const_iterator i = mDamageDoneVersusCaster.begin(); i != mDamageDoneVersusCaster.end(); ++i)
-        if ((*i)->GetCasterGUID() == GetVictim()->GetGUID() && ((*i)->GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL))
-        {
-            AddPct(minDamage, (*i)->GetAmount());
-            AddPct(maxDamage, (*i)->GetAmount());
-        }
-
 
     if (minDamage > maxDamage)
         std::swap(minDamage, maxDamage);
@@ -11328,23 +11327,23 @@ void Unit::SendComboPoints()
     //     data << uint8(m_comboPoints);
     //     playerMe->SendDirectMessage(&data);
     // }
-    Player* movingMe = GetCharmerOrSelfPlayer();
-    ObjectGuid ownerGuid = GetCharmerOrOwnerGUID();
-    Player* owner = nullptr;
-    if (ownerGuid.IsPlayer())
-        owner = ObjectAccessor::GetPlayer(*this, ownerGuid);
-    if (movingMe || owner)
-    {
-        WorldPacket data;
-        data.Initialize(SMSG_PET_UPDATE_COMBO_POINTS, GetPackGUID().size() + packGUID.size() + 1);
-        data << GetPackGUID();
-        data << packGUID;
-        data << uint8(m_comboPoints);
-        if (movingMe)
-            movingMe->SendDirectMessage(&data);
-        if (owner && owner != movingMe)
-            owner->SendDirectMessage(&data);
-    }
+    //Player* movingMe = GetCharmerOrSelfPlayer();
+    //ObjectGuid ownerGuid = GetCharmerOrOwnerGUID();
+    //Player* owner = nullptr;
+    //if (ownerGuid.IsPlayer())
+    //    owner = ObjectAccessor::GetPlayer(*this, ownerGuid);
+    //if (movingMe || owner)
+    //{
+    //    WorldPacket data;
+    //    data.Initialize(SMSG_PET_UPDATE_COMBO_POINTS, GetPackGUID().size() + packGUID.size() + 1);
+    //    data << GetPackGUID();
+    //    data << packGUID;
+    //    data << uint8(m_comboPoints);
+    //    if (movingMe)
+    //        movingMe->SendDirectMessage(&data);
+    //    if (owner && owner != movingMe)
+    //        owner->SendDirectMessage(&data);
+    //}
 }
 
 void Unit::ClearComboPointHolders()
