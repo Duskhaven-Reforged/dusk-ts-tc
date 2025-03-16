@@ -327,7 +327,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //260 SPELL_AURA_SCREEN_EFFECT (miscvalue = id in ScreenEffect.dbc) not required any code
     &AuraEffect::HandlePhase,                                     //261 SPELL_AURA_PHASE
     &AuraEffect::HandleNoImmediateEffect,                         //262 SPELL_AURA_ABILITY_IGNORE_AURASTATE implemented in Spell::CheckCast
-    &AuraEffect::HandleAuraAllowOnlyAbility,                      //263 SPELL_AURA_ALLOW_ONLY_ABILITY player can use only abilities set in SpellClassMask
+    &AuraEffect::HandleNoImmediateEffect,                         //263 SPELL_AURA_DISABLE_CASTING_EXCEPT_ABILITIES player can use only abilities set in SpellClassMask
     &AuraEffect::HandleNoImmediateEffect,                         //264 Aleist3r: changed to SPELL_AURA_IMMUNE_TO_DISARM
     &AuraEffect::HandleNoImmediateEffect,                         //265 unused (3.2.0)
     &AuraEffect::HandleNoImmediateEffect,                         //266 unused (3.2.0)
@@ -2689,27 +2689,6 @@ void AuraEffect::HandleAuraModPacifyAndSilence(AuraApplication const* aurApp, ui
     }
     HandleAuraModPacify(aurApp, mode, apply);
     HandleAuraModSilence(aurApp, mode, apply);
-}
-
-void AuraEffect::HandleAuraAllowOnlyAbility(AuraApplication const* aurApp, uint8 mode, bool apply) const
-{
-    if (!(mode & AURA_EFFECT_HANDLE_SEND_FOR_CLIENT_MASK))
-        return;
-
-    Unit* target = aurApp->GetTarget();
-
-    if (target->GetTypeId() == TYPEID_PLAYER)
-    {
-        if (apply)
-            target->SetFlag(PLAYER_FLAGS, PLAYER_ALLOW_ONLY_ABILITY);
-        else
-        {
-            // do not remove unit flag if there are more than this auraEffect of that kind on unit on unit
-            if (target->HasAuraType(SPELL_AURA_ALLOW_ONLY_ABILITY))
-                return;
-            target->RemoveFlag(PLAYER_FLAGS, PLAYER_ALLOW_ONLY_ABILITY);
-        }
-    }
 }
 
 /****************************/

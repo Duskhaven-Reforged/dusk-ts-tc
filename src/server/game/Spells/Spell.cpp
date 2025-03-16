@@ -5334,14 +5334,19 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
     // check cooldowns to prevent cheating
     if (!m_spellInfo->IsPassive())
     {
-        if (m_caster->GetTypeId() == TYPEID_PLAYER)
+        if (Player const* playerCaster = m_caster->ToPlayer())
         {
             //can cast triggered (by aura only?) spells while have this flag
-            if (!(_triggeredCastFlags & TRIGGERED_IGNORE_CASTER_AURASTATE) && m_caster->ToPlayer()->HasFlag(PLAYER_FLAGS, PLAYER_ALLOW_ONLY_ABILITY))
-                return SPELL_FAILED_SPELL_IN_PROGRESS;
+            if (!(_triggeredCastFlags & TRIGGERED_IGNORE_CASTER_AURASTATE)) {
+                if (playerCaster->HasAuraType(SPELL_AURA_ALLOW_ONLY_ABILITY) &&
+                    !m_spellInfo->HasAttribute(SPELL_ATTR0_REQ_AMMO)
+                    && !m_spellInfo->HasEffect(SPELL_EFFECT_ATTACK)
+                    && !playerCaster->HasAuraTypeWithFamilyFlags(  SPELL_AURA_ALLOW_ONLY_ABILITY, sChrClassesStore.AssertEntry(playerCaster->GetClass())->SpellClassSet, m_spellInfo->SpellFamilyFlags))
+                    return SPELL_FAILED_SPELL_IN_PROGRESS;
+            }
 
             // check if we are using a potion in combat for the 2nd+ time. Cooldown is added only after caster gets out of combat
-            if (!IsIgnoringCooldowns() && m_caster->ToPlayer()->GetLastPotionId() && m_CastItem && (m_CastItem->IsPotion() || m_spellInfo->IsCooldownStartedOnEvent()))
+            if (!IsIgnoringCooldowns() && playerCaster->GetLastPotionId() && m_CastItem && (m_CastItem->IsPotion() || m_spellInfo->IsCooldownStartedOnEvent()))
                 return SPELL_FAILED_NOT_READY;
         }
 

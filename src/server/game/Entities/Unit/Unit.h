@@ -1846,7 +1846,7 @@ class TC_GAME_API Unit : public WorldObject
         bool HasPendingMovementChange(MovementChangeType changeType) const;
         void PurgeAndApplyPendingMovementChanges(bool informObservers = true);
 
-        void RewardRage(uint32 damage, uint32 weaponSpeedHitFactor, bool attacker);
+        void RewardRage(uint32 damage);
 
         virtual float GetFollowAngle() const { return static_cast<float>(M_PI/2); }
 
