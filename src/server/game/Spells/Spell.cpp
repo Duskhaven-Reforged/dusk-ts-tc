@@ -8476,13 +8476,6 @@ void Spell::PrepareTriggersExecutedOnHit()
     }
 }
 
-// Global cooldowns management
-enum GCDLimits
-{
-    MIN_GCD = 1000,
-    MAX_GCD = 1500
-};
-
 bool CanHaveGlobalCooldown(WorldObject const* caster)
 {
     // Only players or controlled units have global cooldown
@@ -8508,9 +8501,15 @@ void Spell::TriggerGlobalCooldown()
     if (!m_spellInfo->StartRecoveryCategory)
         return;
 
+    auto Category = m_spellInfo->StartRecoveryCategory;
+    FIRE_ID(m_spellInfo->events.id, Spell, OnCheckGCDCategory, TSSpell(this), TSMutableNumber<uint32>(&Category));
+
     if (m_caster->GetTypeId() == TYPEID_PLAYER)
         if (m_caster->ToPlayer()->GetCommandStatus(CHEAT_COOLDOWN))
             return;
+
+    int32 MinGCD = 750;
+    int32 MaxGCD = 1500;
 
     // Global cooldown can't leave range 1..1.5 secs
     int32 gcd = m_spellInfo->StartRecoveryTime;
@@ -8519,13 +8518,15 @@ void Spell::TriggerGlobalCooldown()
     if (Player* modOwner = m_caster->GetSpellModOwner())
         modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_GLOBAL_COOLDOWN, gcd, this);
 
+    bool isMeleeOrRangedSpell = m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MELEE ||
+        m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_RANGED ||
+        m_spellInfo->HasAttribute(SPELL_ATTR0_REQ_AMMO) ||
+        m_spellInfo->HasAttribute(SPELL_ATTR0_ABILITY);
+
     // Apply haste rating
-    if (m_spellInfo->StartRecoveryCategory == 133 && m_spellInfo->StartRecoveryTime == 1500 &&
-        m_spellInfo->DmgClass != SPELL_DAMAGE_CLASS_MELEE && m_spellInfo->DmgClass != SPELL_DAMAGE_CLASS_RANGED &&
-        !m_spellInfo->HasAttribute(SPELL_ATTR0_REQ_AMMO) && !m_spellInfo->HasAttribute(SPELL_ATTR0_ABILITY))
-    {
+    if (gcd > MinGCD && (Category == 133 && !isMeleeOrRangedSpell)) {
         gcd = int32(float(gcd) * m_caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
-        RoundToInterval<int32>(gcd, MIN_GCD, MAX_GCD);
+        RoundToInterval<int32>(gcd, MinGCD, MaxGCD);
     }
 
     if (gcd)

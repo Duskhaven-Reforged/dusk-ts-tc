@@ -483,6 +483,7 @@ void Player::UpdateMaxHealth()
     );
     // @tswow-end
     SetMaxHealth((uint32)value);
+    UpdateArmor();
 }
 
 void Player::UpdateMaxPower(Powers power)
