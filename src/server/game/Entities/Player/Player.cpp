@@ -5401,13 +5401,6 @@ uint32 Player::GetShieldBlockValue() const
 float Player::GetMeleeCritFromAgility() const
 {
     float crit = 0.0f;
-
-    FIRE(Player,OnCalcAgilityCritBonus
-        ,TSPlayer(const_cast<Player*>(this))
-        ,TSMutableNumber<float>(&crit)
-        ,GetStat(STAT_AGILITY)
-    );
-
     return crit;
 }
 
@@ -5420,11 +5413,6 @@ void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing) cons
 float Player::GetSpellCritFromIntellect() const
 {
     float crit = 0.f;
-    FIRE(Player,OnCalcIntellectCritBonus
-        ,TSPlayer(const_cast<Player*>(this))
-        ,TSMutableNumber<float>(&crit)
-    );
-
     return crit;
 }
 

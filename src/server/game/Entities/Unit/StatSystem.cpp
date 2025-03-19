@@ -845,8 +845,6 @@ void Player::UpdateCritPercentage(WeaponAttackType attType)
 
     // flat = bonus from crit auras, pct = bonus from agility, combat rating = mods from items
     float value = GetBaseModValue(modGroup, FLAT_MOD);
-    value += GetMeleeCritFromAgility();
-    value += GetSpellCritFromIntellect();
     // @tswow-begin
     FIRE(
         Player,OnUpdateCrit
@@ -866,8 +864,7 @@ void Player::UpdateCritPercentage(WeaponAttackType attType)
 
 void Player::UpdateAllCritPercentages()
 {
-    float value = GetMeleeCritFromAgility();
-    value += GetSpellCritFromIntellect();
+    float value = 5.0f;
 
     SetBaseModPctValue(CRIT_PERCENTAGE, value);
     SetBaseModPctValue(OFFHAND_CRIT_PERCENTAGE, value);
@@ -967,7 +964,6 @@ void Player::UpdateDodgePercentage()
 {
     float nondiminishing = 5.0f;
     float diminishing = GetRatingBonusValue(CR_DODGE);
-    GetDodgeFromAgility(diminishing, nondiminishing);
 
     FIRE(Player,OnCalcDodgeFromAgility
         ,TSPlayer(const_cast<Player*>(this))
@@ -1003,10 +999,7 @@ void Player::UpdateSpellCritChance(uint32 school)
         return;
     }
     // For others recalculate it from:
-    float crit = 0.0f;
-    // Crit from Intellect
-    crit += GetSpellCritFromIntellect();
-    crit += GetMeleeCritFromAgility();
+    float crit = 5.0f;
     // Increase crit from SPELL_AURA_MOD_SPELL_CRIT_CHANCE
     crit += GetTotalAuraModifier(SPELL_AURA_MOD_SPELL_CRIT_CHANCE);
     // Increase crit from SPELL_AURA_MOD_CRIT_PCT
