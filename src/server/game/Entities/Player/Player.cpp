@@ -5522,31 +5522,23 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
         });
     // @dh-end
 
-    // explicit affected values
-    float const multiplier = GetRatingMultiplier(combatRating);
-    float const oldVal = (oldRating + m_bonusRatingValue[combatRating]) * multiplier;
-    float newVal = (m_baseRatingValue[combatRating] + m_bonusRatingValue[combatRating]) * multiplier;
+    float const mult = GetRatingMultiplier(combatRating);
+    float const oldVal = oldRating * mult;
+    float newVal = m_baseRatingValue[combatRating] * mult;
 
     switch (combatRating)
     {
         case CR_HASTE: {
-            float NewHaste = 0.f;
-            float OldHaste = 0.f;
-            float BonusHaste = 0.f;
-            FIRE(Player, OnUpdateHasteRating, TSPlayer(this), m_baseRatingValue[CR_HASTE], &BonusHaste, oldRating, &NewHaste, &OldHaste);
-            m_bonusRatingValue[CR_HASTE] += BonusHaste;
+            ApplyAttackTimePercentMod(BASE_ATTACK, oldVal, false);
+            ApplyAttackTimePercentMod(OFF_ATTACK, oldVal, false);
+            ApplyAttackTimePercentMod(BASE_ATTACK, newVal, true);
+            ApplyAttackTimePercentMod(OFF_ATTACK, newVal, true);
 
-            ApplyAttackTimePercentMod(BASE_ATTACK, OldHaste, false);
-            ApplyAttackTimePercentMod(BASE_ATTACK, NewHaste, true);
+            ApplyAttackTimePercentMod(RANGED_ATTACK, oldVal, false);
+            ApplyAttackTimePercentMod(RANGED_ATTACK, newVal, true);
 
-            ApplyAttackTimePercentMod(OFF_ATTACK, OldHaste, false);
-            ApplyAttackTimePercentMod(OFF_ATTACK, NewHaste, true);
-
-            ApplyAttackTimePercentMod(RANGED_ATTACK, OldHaste, false);
-            ApplyAttackTimePercentMod(RANGED_ATTACK, NewHaste, true);
-
-            ApplyCastTimePercentMod(OldHaste, false);
-            ApplyCastTimePercentMod(NewHaste, true);
+            ApplyCastTimePercentMod(oldVal, false);
+            ApplyCastTimePercentMod(newVal, true);
             } break;
         case CR_HASTE_RANGED:
         case CR_HASTE_SPELL:
