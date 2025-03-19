@@ -844,7 +844,7 @@ void Player::UpdateCritPercentage(WeaponAttackType attType)
     }
 
     // flat = bonus from crit auras, pct = bonus from agility, combat rating = mods from items
-    float value = GetBaseModValue(modGroup, FLAT_MOD);
+    float value = GetBaseModValue(modGroup, FLAT_MOD) + GetBaseModValue(modGroup, PCT_MOD) + GetRatingBonusValue(cr);
     // @tswow-begin
     FIRE(
         Player,OnUpdateCrit
@@ -1006,6 +1006,8 @@ void Player::UpdateSpellCritChance(uint32 school)
     crit += GetTotalAuraModifier(SPELL_AURA_MOD_CRIT_PCT);
     // Increase crit by school from SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL
     crit += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL, 1<<school);
+    // Increase crit from spell crit ratings
+    crit += GetRatingBonusValue(CR_CRIT_SPELL);
 
     // @tswow-begin
     FIRE(
@@ -1100,17 +1102,17 @@ void Player::UpdateExpertise(WeaponAttackType attack)
     );
     // @tswow-end
 
-    switch (attack)
-    {
-        case BASE_ATTACK:
-            SetUInt32Value(PLAYER_EXPERTISE, expertise);
-            break;
-        case OFF_ATTACK:
-            SetUInt32Value(PLAYER_OFFHAND_EXPERTISE, expertise);
-            break;
-        default:
-            break;
-    }
+    // switch (attack)
+    // {
+    //     case BASE_ATTACK:
+    //         SetUInt32Value(PLAYER_EXPERTISE, expertise);
+    //         break;
+    //     case OFF_ATTACK:
+    //         SetUInt32Value(PLAYER_OFFHAND_EXPERTISE, expertise);
+    //         break;
+    //     default:
+    //         break;
+    // }
 }
 
 void Player::ApplyManaRegenBonus(int32 amount, bool apply)

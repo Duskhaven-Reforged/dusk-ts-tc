@@ -5435,13 +5435,13 @@ float Player::GetRatingBonusValue(CombatRating cr) const
 
 float Player::GetExpertiseDodgeOrParryReduction(WeaponAttackType attType) const
 {
-    float baseExpertise = 7.5f;
+    float baseExpertise = 12.0f;
     switch (attType)
     {
         case BASE_ATTACK:
-            return baseExpertise + GetUInt32Value(PLAYER_EXPERTISE) / 4.0f;
+            // return baseExpertise; // + GetUInt32Value(PLAYER_EXPERTISE) / 4.0f;
         case OFF_ATTACK:
-            return baseExpertise + GetUInt32Value(PLAYER_OFFHAND_EXPERTISE) / 4.0f;
+            return baseExpertise; // + GetUInt32Value(PLAYER_OFFHAND_EXPERTISE) / 4.0f;
         default:
             break;
     }
@@ -5513,15 +5513,6 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
             return false;
         });
 
-    // apply bonus from SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT
-    m_bonusRatingValue[combatRating] += GetTotalAuraModifier(SPELL_AURA_MOD_STAT_FROM_MAX_HEALTH_PCT, [combatRating](AuraEffect const* aurEff) -> bool
-        {
-            if (aurEff->GetMiscValue() == 1 && aurEff->GetMiscValueB() & (1 << combatRating))
-                return true;
-            return false;
-        });
-    // @dh-end
-
     float const mult = GetRatingMultiplier(combatRating);
     float const oldVal = oldRating * mult;
     float newVal = m_baseRatingValue[combatRating] * mult;
@@ -5542,22 +5533,6 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
             } break;
         case CR_HASTE_RANGED:
         case CR_HASTE_SPELL:
-            break;
-        case CR_SPEED:
-            FIRE(Player, OnUpdateSpeedRating, TSPlayer(this), TSNumber<float>(newVal));
-            break;
-        case CR_LIFESTEAL:
-            FIRE(Player, OnUpdateLeechRating, TSPlayer(this), TSNumber<float>(newVal));
-            break;
-        case CR_AVOIDANCE:
-            FIRE(Player, OnUpdateAvoidanceRating, TSPlayer(this), TSNumber<float>(newVal));
-            break;
-        case CR_MASTERY:
-            FIRE(Player, OnUpdateMasteryRating, TSPlayer(this), TSNumber<float>(newVal));
-            break;
-        case CR_THORNS:
-            FIRE(Player, OnUpdateThornsRating, TSPlayer(this), TSNumber<float>(newVal));
-            break;
         default:
             break;
     }
@@ -5583,6 +5558,7 @@ void Player::UpdateRating(CombatRating cr)
             UpdateDodgePercentage();
             UpdateParryPercentage();
             UpdateBlockPercentage();
+            SetUInt32Value(PLAYER_MASTERY, amount);
             break;
         case CR_DODGE:
             UpdateDodgePercentage();
@@ -14212,10 +14188,10 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                             ApplyRatingMod(CR_HASTE, enchant_amount, apply);
                             TC_LOG_DEBUG("entities.player.items", "+ {} HASTE", enchant_amount);
                             break;
-                        //case ITEM_MOD_EXPERTISE_RATING:
-                        //    ApplyRatingMod(CR_EXPERTISE, enchant_amount, apply);
-                        //    TC_LOG_DEBUG("entities.player.items", "+ {} EXPERTISE", enchant_amount);
-                        //    break;
+                        case ITEM_MOD_MASTERY:
+                           ApplyRatingMod(CR_MASTERY, enchant_amount, apply);
+                           TC_LOG_DEBUG("entities.player.items", "+ {} MASTER", enchant_amount);
+                           break;
                         case ITEM_MOD_ATTACK_POWER:
                             HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER, TOTAL_VALUE, float(enchant_amount), apply);
                             HandleStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, TOTAL_VALUE, float(enchant_amount), apply);
