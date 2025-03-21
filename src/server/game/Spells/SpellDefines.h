@@ -107,7 +107,7 @@ enum SpellModOp : uint8
     SPELLMOD_EFFECT2                    = 12,
     SPELLMOD_IGNORE_ARMOR               = 13,
     SPELLMOD_COST                       = 14,
-    SPELLMOD_CRIT_DAMAGE_BONUS          = 15,
+    SPELLMOD_CRIT_SEVERITY              = 15,
     SPELLMOD_RESIST_MISS_CHANCE         = 16,
     SPELLMOD_JUMP_TARGETS               = 17,
     SPELLMOD_CHANCE_OF_SUCCESS          = 18,

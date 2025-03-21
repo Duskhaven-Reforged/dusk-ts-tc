@@ -4974,9 +4974,9 @@ void SpellMgr::LoadSpellInfoCorrections()
                         spellInfo->Speed = SPEED_CHARGE;
                     break;
                 case SPELL_EFFECT_APPLY_AURA:
-                    // special aura updates each 30 seconds
+                    // special aura updates each 3 seconds
                     if (spellEffectInfo.ApplyAuraName == SPELL_AURA_MOD_ATTACK_POWER_OF_ARMOR)
-                        spellEffectInfo.Amplitude = 30 * IN_MILLISECONDS;
+                        spellEffectInfo.Amplitude = 3 * IN_MILLISECONDS;
                     break;
                 default:
                     break;
