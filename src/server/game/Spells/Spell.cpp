@@ -5341,8 +5341,10 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
                 if (playerCaster->HasAuraType(SPELL_AURA_ALLOW_ONLY_ABILITY) &&
                     !m_spellInfo->HasAttribute(SPELL_ATTR0_REQ_AMMO)
                     && !m_spellInfo->HasEffect(SPELL_EFFECT_ATTACK)
-                    && !playerCaster->HasAuraTypeWithFamilyFlags(  SPELL_AURA_ALLOW_ONLY_ABILITY, sChrClassesStore.AssertEntry(playerCaster->GetClass())->SpellClassSet, m_spellInfo->SpellFamilyFlags))
+                    && !playerCaster->HasAuraTypeWithFamilyFlags(  SPELL_AURA_ALLOW_ONLY_ABILITY, sChrClassesStore.AssertEntry(playerCaster->GetClass())->SpellClassSet, m_spellInfo->SpellFamilyFlags)) {
+                    TC_LOG_INFO("server.worldserver", "Now only ability flag.");
                     return SPELL_FAILED_SPELL_IN_PROGRESS;
+                }
             }
 
             // check if we are using a potion in combat for the 2nd+ time. Cooldown is added only after caster gets out of combat

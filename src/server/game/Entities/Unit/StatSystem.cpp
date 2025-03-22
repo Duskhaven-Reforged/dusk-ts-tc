@@ -752,12 +752,11 @@ void Player::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bo
     // check if player is druid and in cat or bear forms
     if (IsInFeralForm())
     {
-        uint8 lvl = GetLevel();
-        if (lvl > 60)
-            lvl = 60;
-
-        weaponMinDamage = lvl * 0.85f * attackPowerMod;
-        weaponMaxDamage = lvl * 1.25f * attackPowerMod;
+        SpellShapeshiftFormEntry const* shape = sSpellShapeshiftFormStore.LookupEntry(GetShapeshiftForm());
+        if (shape && shape->CombatRoundTime) {
+            weaponMinDamage = weaponMinDamage * shape->CombatRoundTime / 1000.0f / attackPowerMod;
+            weaponMaxDamage = weaponMaxDamage * shape->CombatRoundTime / 1000.0f / attackPowerMod;
+        }
     }
     else if (!CanUseAttackType(attType)) // check if player not in form but still can't use (disarm case)
     {

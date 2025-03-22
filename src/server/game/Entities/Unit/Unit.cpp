@@ -679,6 +679,7 @@ void Unit::UpdateInterruptMask()
 
 bool Unit::HasAuraTypeWithFamilyFlags(AuraType auraType, uint32 familyName, flag96 familyFlags) const
 {
+    TC_LOG_INFO("server.worldserver", "Aura Type: {}", auraType);
     if (!HasAuraType(auraType))
         return false;
     AuraEffectList const& auras = GetAuraEffectsByType(auraType);
@@ -2456,7 +2457,7 @@ float Unit::CalculateSpellpowerCoefficientLevelPenalty(SpellInfo const* spellInf
         , TSMutableNumber<float>(&result)
         , TSUnit(const_cast<Unit*>(this))
     );
-    return result;
+    return 1.0f;
     // @tswow-end
 }
 
@@ -7397,6 +7398,14 @@ int32 Unit::SpellBaseDamageBonusDone(SpellSchoolMask schoolMask) const
             }
         }
 
+        AuraEffectList const& mSpellPowerOfStatPercent = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_POWER_OF_STAT_PERCENT);
+        for (AuraEffect const* aurEff : mSpellPowerOfStatPercent)
+        {
+            // stat used dependent from misc value (stat index)
+            Stats usedStat = Stats(aurEff->GetSpellInfo()->GetEffect(aurEff->GetEffIndex()).MiscValue);
+            DoneAdvertisedBenefit += int32(CalculatePct(GetStat(usedStat), aurEff->GetAmount()));
+        }
+
         // ... and attack power
         DoneAdvertisedBenefit += static_cast<int32>(CalculatePct(GetTotalAttackPowerValue(BASE_ATTACK), GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_DAMAGE_OF_ATTACK_POWER, schoolMask)));
 
@@ -8083,9 +8092,10 @@ int32 Unit::SpellBaseHealingBonusDone(SpellSchoolMask schoolMask) const
         for (AuraEffectList::const_iterator i = mSpellPowerOfStatPercent.begin(); i != mSpellPowerOfStatPercent.end(); ++i)
         {
             // stat used dependent from misc value (stat index)
-            Stats usedStat = Stats((*i)->GetSpellInfo()->GetEffect((*i)->GetEffIndex()).MiscValueB);
+            Stats usedStat = Stats((*i)->GetSpellInfo()->GetEffect((*i)->GetEffIndex()).MiscValue);
             advertisedBenefit += int32(CalculatePct(GetStat(usedStat), (*i)->GetAmount()));
         }
+
         // ... and combat rating
         AuraEffectList const& mSpellPowerOfCombatRating = GetAuraEffectsByType(SPELL_AURA_MOD_SPELL_POWER_OF_RATING_PERCENT);
         for (AuraEffectList::const_iterator i = mSpellPowerOfCombatRating.begin(); i != mSpellPowerOfCombatRating.end(); ++i)
