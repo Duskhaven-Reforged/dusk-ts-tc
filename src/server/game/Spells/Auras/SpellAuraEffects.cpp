@@ -4294,11 +4294,9 @@ void AuraEffect::HandleModRating(AuraApplication const* aurApp, uint8 mode, bool
     for (uint32 rating = 0; rating < MAX_COMBAT_RATING; ++rating)
         if (GetMiscValue() & (1 << rating)) {
             auto Bonus = GetAmount();
-            TC_LOG_INFO("server.worldserver", "Rating: {} Bonus: {}", rating, Bonus);
             if (UsePct) {
                 Player* p = target->ToPlayer();
                 Bonus /= p->GetRatingMultiplier(CombatRating(rating));
-                TC_LOG_INFO("server.worldserver", "Using Pct gives {}", Bonus);
             }
 
             target->ToPlayer()->ApplyRatingMod(CombatRating(rating), Bonus, apply);
