@@ -255,6 +255,7 @@ bool Player::UpdateStats(Stats stat)
             UpdateAllSpellCritChances();
             UpdateDodgePercentage();
             UpdateArmor();                                  //SPELL_AURA_MOD_RESISTANCE_OF_INTELLECT_PERCENT, only armor currently
+            UpdateMaxHealth();                              //for Mechanical Fortitude talent
             break;
         case STAT_SPIRIT:
             break;
