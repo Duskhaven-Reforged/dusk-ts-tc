@@ -5578,6 +5578,10 @@ void Player::UpdateRating(CombatRating cr)
                 UpdateAllSpellCritChances();
             }
             break;
+        case CR_SPEED:
+                UpdateSpeed(MOVE_RUN);
+                UpdateSpeed(MOVE_WALK);
+            break;
         default:
             break;
     }

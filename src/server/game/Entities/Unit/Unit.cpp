@@ -9097,8 +9097,11 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
                 stack_bonus     = GetTotalAuraMultiplier(SPELL_AURA_MOD_SPEED_ALWAYS);
                 non_stack_bonus += GetMaxPositiveAuraModifier(SPELL_AURA_MOD_SPEED_NOT_STACK) / 100.0f;
 
-                if (GetTypeId() == TYPEID_PLAYER)
+                if (IsPlayer()) {
                     main_speed_mod += round(ToPlayer()->GetRatingBonusValue(CR_SPEED));
+                    TC_LOG_INFO("server.worldserver", "SpeedBonus: {}", main_speed_mod);
+                }
+
             }
             break;
         }

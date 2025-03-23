@@ -6653,7 +6653,8 @@ bool Spell::CanAutoCast(Unit* target)
             if (GetSpellInfo()->Id == (*auraIt)->GetSpellInfo()->Id)
                 return false;
 
-            switch (sSpellMgr->CheckSpellGroupStackRules(GetSpellInfo(), (*auraIt)->GetSpellInfo()))
+            auto StackRules = sSpellMgr->CheckSpellGroupStackRules(GetSpellInfo(), (*auraIt)->GetSpellInfo());
+            switch (StackRules)
             {
                 case SPELL_GROUP_STACK_RULE_EXCLUSIVE:
                     return false;
