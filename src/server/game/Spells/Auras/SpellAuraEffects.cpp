@@ -581,7 +581,8 @@ int32 AuraEffect::CalculateAmount(Unit* caster)
     }
 
     GetBase()->CallScriptEffectCalcAmountHandlers(this, amount, m_canBeRecalculated);
-    amount *= GetBase()->GetStackAmount();
+    if (!m_spellInfo->HasAttribute(SPELL_ATTR1_CU_STACKS_DONT_ADDUP))
+        amount *= GetBase()->GetStackAmount();
     return amount;
 }
 
@@ -5457,7 +5458,7 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
         return;
 
     CleanDamage cleanDamage = CleanDamage(0, 0, GetSpellInfo()->GetAttackType(), MELEE_HIT_NORMAL);
-
+    uint32 stackAmountForBonuses = !m_spellInfo->HasAttribute(SPELL_ATTR1_CU_STACKS_DONT_ADDUP) ? GetBase()->GetStackAmount() : 1;
     // ignore negative values (can be result apply spellmods to aura damage
     uint32 damage = std::max(GetAmount(), 0);
 
@@ -5475,7 +5476,7 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
 
     // dynobj auras must always have a caster
     if (GetBase()->GetType() == DYNOBJ_AURA_TYPE)
-        damage = ASSERT_NOTNULL(caster)->SpellDamageBonusDone(target, GetSpellInfo(), damage, DOT, GetSpellEffectInfo(), { }, GetBase()->GetStackAmount());
+        damage = ASSERT_NOTNULL(caster)->SpellDamageBonusDone(target, GetSpellInfo(), damage, DOT, GetSpellEffectInfo(), { }, stackAmountForBonuses);
     damage = target->SpellDamageBonusTaken(caster, GetSpellInfo(), damage, DOT);
 
     // @tswow-begin
@@ -5603,7 +5604,8 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
 
     // ignore negative values (can be result apply spellmods to aura damage
     uint32 damage = std::max(GetAmount(), 0);
-
+    uint32 stackAmountForBonuses = !m_spellInfo->HasAttribute(SPELL_ATTR1_CU_STACKS_DONT_ADDUP) ? GetBase()->GetStackAmount() : 1;
+    
     // Script Hook For HandlePeriodicHealAurasTick -- Allow scripts to change the Damage pre class mitigation calculations
     sScriptMgr->ModifyPeriodicDamageAurasTick(target, caster, damage);
     // @tswow-begin
@@ -5622,7 +5624,7 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
     {
         // dynobj auras must always have a caster
         if (GetBase()->GetType() == DYNOBJ_AURA_TYPE)
-            damage = ASSERT_NOTNULL(caster)->SpellHealingBonusDone(target, GetSpellInfo(), damage, DOT, GetSpellEffectInfo(), { }, GetBase()->GetStackAmount());
+            damage = ASSERT_NOTNULL(caster)->SpellHealingBonusDone(target, GetSpellInfo(), damage, DOT, GetSpellEffectInfo(), { }, stackAmountForBonuses);
     }
 
     damage = target->SpellHealingBonusTaken(caster, GetSpellInfo(), damage, DOT);

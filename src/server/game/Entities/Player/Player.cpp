@@ -5430,7 +5430,60 @@ float Player::GetRatingMultiplier(CombatRating cr) const
 
 float Player::GetRatingBonusValue(CombatRating cr) const
 {
-    return float(GetUInt32Value(PLAYER_FIELD_COMBAT_RATING_1 + AsUnderlyingType(cr))) * GetRatingMultiplier(cr);
+    return ApplyRatingDiminishing(cr, float(GetUInt32Value(PLAYER_FIELD_COMBAT_RATING_1 + AsUnderlyingType(cr))) * GetRatingMultiplier(cr));
+}
+
+float Player::ApplyRatingDiminishing(CombatRating cr, float bonusValue) const
+{
+    uint32 diminishingCurveId = 0;
+    // switch (cr)
+    // {
+    //     case CR_DODGE:
+    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::DodgeDiminishing);
+    //         break;
+    //     case CR_PARRY:
+    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::ParryDiminishing);
+    //         break;
+    //     case CR_BLOCK:
+    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::BlockDiminishing);
+    //         break;
+    //     case CR_CRIT_MELEE:
+    //     case CR_CRIT_RANGED:
+    //     case CR_CRIT_SPELL:
+    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::CritDiminishing);
+    //         break;
+    //     case CR_SPEED:
+    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::SpeedDiminishing);
+    //         break;
+    //     case CR_LIFESTEAL:
+    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::LifestealDiminishing);
+    //         break;
+    //     case CR_HASTE_MELEE:
+    //     case CR_HASTE_RANGED:
+    //     case CR_HASTE_SPELL:
+    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::HasteDiminishing);
+    //         break;
+    //     case CR_AVOIDANCE:
+    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::AvoidanceDiminishing);
+    //         break;
+    //     case CR_MASTERY:
+    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::MasteryDiminishing);
+    //         break;
+    //     case CR_VERSATILITY_DAMAGE_DONE:
+    //     case CR_VERSATILITY_HEALING_DONE:
+    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::VersatilityDoneDiminishing);
+    //         break;
+    //     case CR_VERSATILITY_DAMAGE_TAKEN:
+    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::VersatilityTakenDiminishing);
+    //         break;
+    //     default:
+    //         break;
+    // }
+
+    // if (diminishingCurveId)
+    //     return sDB2Manager.GetCurveValueAt(diminishingCurveId, bonusValue);
+
+    return bonusValue;
 }
 
 float Player::GetExpertiseDodgeOrParryReduction(WeaponAttackType attType) const

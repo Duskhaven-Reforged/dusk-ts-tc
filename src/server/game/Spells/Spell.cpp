@@ -1657,9 +1657,14 @@ void Spell::SelectImplicitChainTargets(SpellEffectInfo const& spellEffectInfo, S
         // Chain primary target is added earlier
         CallScriptObjectAreaTargetSelectHandlers(targets, spellEffectInfo.EffectIndex, targetType);
 
-        for (std::list<WorldObject*>::iterator itr = targets.begin(); itr != targets.end(); ++itr)
+        Position const* losPosition = m_spellInfo->HasAttribute(SPELL_ATTR2_CHAIN_FROM_CASTER) ? m_caster : target;
+
+        for (std::list<WorldObject*>::iterator itr = targets.begin(); itr != targets.end(); ++itr) {
             if (Unit* unit = (*itr)->ToUnit())
-                AddUnitTarget(unit, effMask, false);
+                AddUnitTarget(unit, effMask, false, losPosition);
+
+
+        }
     }
 }
 
@@ -1980,12 +1985,20 @@ void Spell::SearchChainTargets(std::list<WorldObject*>& targets, uint32 chainTar
         || m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC);
 
     // max dist which spell can reach
-    float searchRadius = jumpRadius;
-    if (isBouncingFar)
-        searchRadius *= chainTargets;
+    float searchRadius = [&]()
+    {
+        if (m_spellInfo->HasAttribute(SPELL_ATTR2_CHAIN_FROM_CASTER))
+            return GetMinMaxRange(false).second;
 
+        if (isBouncingFar)
+            return jumpRadius * chainTargets;
+
+        return jumpRadius;
+    }();
+
+    WorldObject* chainSource = m_spellInfo->HasAttribute(SPELL_ATTR2_CHAIN_FROM_CASTER) ? m_caster : target;
     std::list<WorldObject*> tempTargets;
-    SearchAreaTargets(tempTargets, searchRadius, target, m_caster, objectType, selectType, effectInfo.ImplicitTargetConditions);
+    SearchAreaTargets(tempTargets, searchRadius, chainSource, m_caster, objectType, selectType, effectInfo.ImplicitTargetConditions);
     tempTargets.remove(target);
 
     // remove targets which are always invalid for chain spells
@@ -2038,7 +2051,10 @@ void Spell::SearchChainTargets(std::list<WorldObject*>& targets, uint32 chainTar
         // not found any valid target - chain ends
         if (foundItr == tempTargets.end())
             break;
-        target = *foundItr;
+
+        if (!m_spellInfo->HasAttribute(SPELL_ATTR2_CHAIN_FROM_CASTER))
+            chainSource = *foundItr;
+
         tempTargets.erase(foundItr);
         targets.push_back(target);
         --chainTargets;
@@ -2951,7 +2967,7 @@ void Spell::DoSpellEffectHit(Unit* unit, SpellEffectInfo const& spellEffectInfo,
 
             if (!hitInfo.HitAura)
             {
-                bool const resetPeriodicTimer = (m_spellInfo->StackAmount < 2) && !(_triggeredCastFlags & TRIGGERED_DONT_RESET_PERIODIC_TIMER) && !m_spellInfo->HasAttribute(SPELL_ATTR0_CU_DONT_RESTART_P_TIMER);
+                bool const resetPeriodicTimer = (m_spellInfo->StackAmount < 2) && !(_triggeredCastFlags & TRIGGERED_DONT_RESET_PERIODIC_TIMER);
                 uint8 const allAuraEffectMask = Aura::BuildEffectMaskForOwner(hitInfo.AuraSpellInfo, MAX_EFFECT_MASK, unit);
                 int32 const* bp = hitInfo.AuraBasePoints;
                 if (hitInfo.AuraSpellInfo == m_spellInfo)

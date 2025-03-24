@@ -922,6 +922,16 @@ void Aura::RefreshTimers(bool resetPeriodicTimer)
     m_maxDuration = CalcMaxDuration();
     RefreshDuration();
 
+    // Pandemic Mechanic
+    if (m_spellInfo->HasAttribute(SPELL_ATTR1_CU_PANDEMIC_TIMER))
+    {
+        // Pandemic doesn't reset periodic timer
+        resetPeriodicTimer = false;
+
+        int32 pandemicDuration = CalculatePct(m_maxDuration, 30.f);
+        m_maxDuration = std::max(GetDuration(), std::min(pandemicDuration, GetDuration()) + m_maxDuration);
+    }
+
     Unit* caster = GetCaster();
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
         if (AuraEffect* aurEff = m_effects[i])

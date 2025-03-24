@@ -201,6 +201,8 @@ enum SpellCustomAttributes2
     SPELL_ATTR1_CU_SPECIAL_DELAY_CALCULATION            = 0x00002000,
     SPELL_ATTR1_CU_CAST_TIME_UNAFFECTED_BY_HASTE        = 0x00004000,
     SPELL_ATTR1_CU_LOW_CAST_TIME_DONT_INTERRUPT         = 0x00008000, // sets result to SPELL_CAST_OK if spell cast time is <= 250ms
+    SPELL_ATTR1_CU_STACKS_DONT_ADDUP                    = 0x00010000,
+    SPELL_ATTR1_CU_PANDEMIC_TIMER                       = 0x00020000,
 };
 
 uint32 GetTargetFlagMask(SpellTargetObjectTypes objType);
