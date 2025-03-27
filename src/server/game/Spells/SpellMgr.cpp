@@ -1903,7 +1903,7 @@ void SpellMgr::LoadSpellBonuses()
     do
     {
         Field* fields = result->Fetch();
-        uint32 entry = fields[0].GetUInt32();
+        uint32 entry  = fields[0].GetUInt32();
         uint32 effect = fields[1].GetUInt8();
 
         SpellInfo const* spell = GetSpellInfo(entry);
@@ -1919,8 +1919,8 @@ void SpellMgr::LoadSpellBonuses()
         }
 
         SpellBonusEntry& sbe = mSpellBonusMap[entry][SpellEffIndex(effect)];
-        sbe.sp = fields[1].GetFloat();
-        sbe.ap = fields[2].GetFloat();
+        sbe.sp = fields[2].GetFloat();
+        sbe.ap = fields[3].GetFloat();
 
         ++count;
     } while (result->NextRow());
