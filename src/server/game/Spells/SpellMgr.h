@@ -297,13 +297,11 @@ typedef std::unordered_map<uint32, SpellEnchantProcEntry> SpellEnchantProcEventM
 
 struct SpellBonusEntry
 {
-    float  direct_damage;
-    float  dot_damage;
-    float  ap_bonus;
-    float  ap_dot_bonus;
+    float  sp;
+    float  ap;
 };
 
-typedef std::unordered_map<uint32, SpellBonusEntry>     SpellBonusMap;
+typedef std::unordered_map<uint32, std::unordered_map<SpellEffIndex, SpellBonusEntry>>     SpellBonusMap;
 
 enum SpellGroup
 {
@@ -647,7 +645,7 @@ class TC_GAME_API SpellMgr
         static bool CanSpellTriggerProcOnEvent(SpellProcEntry const& procEntry, ProcEventInfo& eventInfo);
 
         // Spell bonus data table
-        SpellBonusEntry const* GetSpellBonusData(uint32 spellId) const;
+        SpellBonusEntry const* GetSpellBonusData(uint32 spellId, SpellEffIndex eff) const;
 
         // Spell threat table
         SpellThreatEntry const* GetSpellThreatEntry(uint32 spellID) const;
