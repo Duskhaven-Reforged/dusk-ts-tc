@@ -3413,7 +3413,7 @@ void Spell::EffectInterruptCast()
                 if (m_caster->IsPlayer())
                     FIRE(Player, OnSuccessfulInterrupt, TSPlayer(const_cast<Player*>(m_caster->ToPlayer())), TSUnit(const_cast<Unit*>(unitTarget)), TSSpell(const_cast<Spell*>(spell)));
 
-                FIRE_ID(spell->GetSpellInfo()->events.id, Spell, OnSuccessfulInterrupt, TSUnit(GetUnitCasterForEffectHandlers()), TSUnit(const_cast<Unit*>(unitTarget)), TSSpell(const_cast<Spell*>(spell)));
+                FIRE_ID(GetSpellInfo()->events.id, Spell, OnSuccessfulInterrupt, TSUnit(GetUnitCasterForEffectHandlers()), TSUnit(const_cast<Unit*>(unitTarget)), TSSpell(const_cast<Spell*>(spell)));
             }
         }
     }
