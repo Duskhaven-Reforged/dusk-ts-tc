@@ -741,7 +741,7 @@ void Player::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bo
     float const attackPowerMod = std::max(GetAPMultiplier(attType, normalized), 0.25f);
 
     float baseValue  = GetFlatModifierValue(unitMod, BASE_VALUE);
-    baseValue += GetTotalAttackPowerValue(attType) / 14.0f * attackPowerMod;
+    baseValue += GetTotalAttackPowerValue(attType, false) / 14.0f * attackPowerMod;
 
     float basePct    = GetPctModifierValue(unitMod, BASE_PCT);
     float totalValue = GetFlatModifierValue(unitMod, TOTAL_VALUE);
@@ -1529,7 +1529,7 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
         weaponMaxDamage = 0.0f;
     }
 
-    float attackPower      = GetTotalAttackPowerValue(attType);
+    float attackPower      = GetTotalAttackPowerValue(attType, false);
     float attackSpeedMulti = GetAPMultiplier(attType, normalized);
     float baseValue        = GetFlatModifierValue(unitMod, BASE_VALUE) + (attackPower / 14.0f) * variance;
     float basePct          = GetPctModifierValue(unitMod, BASE_PCT) * attackSpeedMulti;
@@ -1933,7 +1933,7 @@ void Guardian::UpdateDamagePhysical(WeaponAttackType attType)
 
         float att_speed = float(GetAttackTime(BASE_ATTACK))/1000.0f;
 
-        float base_value  = GetFlatModifierValue(unitMod, BASE_VALUE) + GetTotalAttackPowerValue(attType) / 14.0f * att_speed + bonusDamage;
+        float base_value  = GetFlatModifierValue(unitMod, BASE_VALUE) + GetTotalAttackPowerValue(attType, false) / 14.0f * att_speed + bonusDamage;
         float base_pct    = GetPctModifierValue(unitMod, BASE_PCT);
         float total_value = GetFlatModifierValue(unitMod, TOTAL_VALUE);
         float total_pct   = GetPctModifierValue(unitMod, TOTAL_PCT);

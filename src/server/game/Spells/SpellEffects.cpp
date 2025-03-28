@@ -846,22 +846,32 @@ void Spell::EffectTriggerSpell()
         }
     }
 
-    CastSpellExtraArgs args(m_originalCasterGUID);
-    // set basepoints for trigger with value effect
-    if (effectInfo->Effect == SPELL_EFFECT_TRIGGER_SPELL_WITH_VALUE) {
-        if (damage > 0)
-            for (uint32 i = 0; i < MAX_SPELL_EFFECTS; ++i) {
-                args.AddSpellMod(SpellValueMod(SPELLVALUE_BASE_POINT0 + i), damage);
-            }
+    Milliseconds delay = 0ms;
+    if (effectInfo->Effect == SPELL_EFFECT_TRIGGER_SPELL)
+        delay = Milliseconds(effectInfo->MiscValue);
 
-        if (effectInfo->MiscValue == 0 && effectInfo->MiscValueB > 0)
-            args.AddSpellMod(SpellValueMod(SPELLVALUE_DURATION), effectInfo->MiscValueB);
-        else if (effectInfo->MiscValue == 8)
-            args.AddSpellMod(SpellValueMod(SPELLVALUE_AURA_STACK), effectInfo->MiscValueB);
-    }
+    m_caster->m_Events.AddEventAtOffset([caster = m_caster, targets, originalCaster = m_originalCasterGUID, castItemGuid = m_castItemGUID, spellEffectInfo = effectInfo, value = damage]() mutable {
+        targets.Update(caster);
 
-    // original caster guid only for GO cast
-    m_caster->CastSpell(std::move(targets), spellInfo->Id, args);
+        CastSpellExtraArgs args(TRIGGERED_FULL_MASK);
+        args.SetOriginalCaster(originalCaster);
+        if (!castItemGuid.IsEmpty())
+            if (Player const* triggeringAuraCaster = Object::ToPlayer(caster))
+                args.CastItem = triggeringAuraCaster->GetItemByGuid(castItemGuid);
+
+        if (spellEffectInfo->Effect == SPELL_EFFECT_TRIGGER_SPELL_WITH_VALUE)
+        {
+            for (uint32 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                args.AddSpellMod(SpellValueMod(SPELLVALUE_BASE_POINT0 + i), value);
+
+            if (spellEffectInfo->MiscValue == 0 && spellEffectInfo->MiscValueB > 0)
+                args.AddSpellMod(SpellValueMod(SPELLVALUE_DURATION), spellEffectInfo->MiscValueB);
+            else if (spellEffectInfo->MiscValue == 8)
+                args.AddSpellMod(SpellValueMod(SPELLVALUE_AURA_STACK), spellEffectInfo->MiscValueB);
+        }
+
+        caster->CastSpell(std::move(targets), spellEffectInfo->TriggerSpell, args);
+    }, delay);
 }
 
 void Spell::EffectTriggerMissileSpell()

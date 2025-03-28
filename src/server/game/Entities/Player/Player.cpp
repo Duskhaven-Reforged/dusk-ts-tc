@@ -7694,22 +7694,6 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
     WeaponAttackType attType = Player::GetAttackBySlot(slot);
     if (attType != MAX_ATTACK)
         _ApplyWeaponDamage(slot, proto, apply);
-
-    // Druids get feral AP bonus from weapon dps (also use DPS from ScalingStatValue)
-    if (GetClass() == CLASS_DRUID)
-    {
-        int32 dpsMod = 0;
-        int32 feral_bonus = 0;
-        if (ssv)
-        {
-            dpsMod = ssv->getDPSMod(proto->ScalingStatValue);
-            feral_bonus += ssv->getFeralBonus(proto->ScalingStatValue);
-        }
-
-        feral_bonus += proto->getFeralBonus(dpsMod);
-        if (feral_bonus)
-            ApplyFeralAPBonus(feral_bonus, apply);
-    }
 }
 
 void Player::_ApplyWeaponDamage(uint8 slot, ItemTemplate const* proto, bool apply)
@@ -7718,57 +7702,29 @@ void Player::_ApplyWeaponDamage(uint8 slot, ItemTemplate const* proto, bool appl
     if (!IsInFeralForm() && apply && !CanUseAttackType(attType))
         return;
 
-    ScalingStatValuesEntry const* ssv = GetScalingStatValuesFor(*proto);
-    for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
-    {
+    float damage = 0.0f;
+    // hater: removed scaling stat value dps stuff
+    for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i) {
         float minDamage = proto->Damage[i].DamageMin;
         float maxDamage = proto->Damage[i].DamageMax;
 
-        // If set dpsMod in ScalingStatValue use it for min (70% from average), max (130% from average) damage
-        if (ssv && i == 0) // scaling stats only for first damage
-        {
-            int32 extraDPS = ssv->getDPSMod(proto->ScalingStatValue);
-            if (extraDPS)
-            {
-                float average = extraDPS * proto->Delay / 1000.0f;
-                float mod = ssv->isTwoHand(proto->ScalingStatValue) ? 0.2f : 0.3f;
-
-                minDamage = (1.0f - mod) * average;
-                maxDamage = (1.0f + mod) * average;
-            }
+        if (minDamage > 0.f) {
+            damage = apply ? minDamage : BASE_MINDAMAGE;
+            SetBaseWeaponDamage(attType, MINDAMAGE, damage, i);
         }
 
-        if (apply)
-        {
-            if (minDamage > 0.f)
-                SetBaseWeaponDamage(attType, MINDAMAGE, minDamage, i);
-
-            if (maxDamage > 0.f)
-                SetBaseWeaponDamage(attType, MAXDAMAGE, maxDamage, i);
+        if (maxDamage > 0.f) {
+            damage = apply ? minDamage : BASE_MAXDAMAGE;
+            SetBaseWeaponDamage(attType, MAXDAMAGE, damage, i);
         }
     }
-
-    if (!apply)
-    {
-        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
-        {
-            SetBaseWeaponDamage(attType, MINDAMAGE, 0.f, i);
-            SetBaseWeaponDamage(attType, MAXDAMAGE, 0.f, i);
-        }
-
-        if (attType == BASE_ATTACK)
-        {
-            SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, BASE_MINDAMAGE);
-            SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, BASE_MAXDAMAGE);
-        }
-    }
-
-    if (proto->Delay && !IsInFeralForm())
+    
+    SpellShapeshiftFormEntry const* shapeshift = sSpellShapeshiftFormStore.LookupEntry(GetShapeshiftForm());
+    if (proto->Delay && !(shapeshift && shapeshift->CombatRoundTime))
         SetAttackTime(attType, apply ? proto->Delay : BASE_ATTACK_TIME);
 
-    // No need to modify any physical damage for ferals as it is calculated from stats only
-    if (IsInFeralForm())
-        return;
+    float weaponBasedAttackPower = apply ? int32(proto->getDPS() * 6.0f) : 0;
+    SetWeaponAttackPower(attType, weaponBasedAttackPower);
 
     if (CanModifyStats() && (GetWeaponDamageRange(attType, MAXDAMAGE) || proto->Delay))
         UpdateDamagePhysical(attType);

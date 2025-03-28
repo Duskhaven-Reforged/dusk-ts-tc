@@ -1608,12 +1608,16 @@ class TC_GAME_API Unit : public WorldObject
         void SetRangedAttackPowerMultiplier(float attackPowerMult) { SetFloatValue(UNIT_FIELD_RANGED_ATTACK_POWER_MULTIPLIER, attackPowerMult); }
         virtual void UpdateDamagePhysical(WeaponAttackType attType);
 
-        float GetTotalAttackPowerValue(WeaponAttackType attType) const;
+        float GetTotalAttackPowerValue(WeaponAttackType attType, bool includeWeapon = true) const;
         float GetWeaponDamageRange(WeaponAttackType attType, WeaponDamageRange type, uint8 damageIndex = 0) const;
         void SetBaseWeaponDamage(WeaponAttackType attType, WeaponDamageRange damageRange, float value, uint8 damageIndex = 0) { m_weaponDamage[attType][damageRange][damageIndex] = value; }
         virtual void CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bool addTotalPct, float& minDamage, float& maxDamage, uint8 damageIndex) const = 0;
         uint32 CalculateDamage(WeaponAttackType attType, bool normalized, bool addTotalPct, uint8 itemDamagesMask = 0) const;
         float GetAPMultiplier(WeaponAttackType attType, bool normalized) const;
+
+        // hater: weapon ap scaling for hybrid weapon damage and ap
+        void SetWeaponAttackPower(WeaponAttackType attType, float value) { m_weaponAP[attType] = value; }
+        float GetWeaponAttackPower(WeaponAttackType attType) { return m_weaponAP[attType]; }
 
         bool isInFrontInMap(Unit const* target, float distance, float arc = float(M_PI)) const;
         bool isInBackInMap(Unit const* target, float distance, float arc = float(M_PI)) const;
@@ -1946,6 +1950,7 @@ class TC_GAME_API Unit : public WorldObject
         float m_auraFlatModifiersGroup[UNIT_MOD_END][MODIFIER_TYPE_FLAT_END];
         float m_auraPctModifiersGroup[UNIT_MOD_END][MODIFIER_TYPE_PCT_END];
         float m_weaponDamage[MAX_ATTACK][2][2];
+        float m_weaponAP[MAX_ATTACK];
         bool m_canModifyStats;
 
         VisibleAuraMap m_visibleAuras;

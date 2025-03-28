@@ -69,14 +69,20 @@ bool ItemTemplate::CanChangeEquipStateInCombat() const
 
 float ItemTemplate::getDPS() const
 {
-    if (!Delay)
-        return 0.f;
+    if (Class != ITEM_CLASS_WEAPON || Quality > ITEM_QUALITY_ARTIFACT)
+        return 0.0f;
 
-    float temp = 0.f;
-    for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
-        temp += Damage[i].DamageMin + Damage[i].DamageMax;
+    bool CasterWeapon = HasFlag(ITEM_FLAG2_CASTER_WEAPON);
+    float dps = this->InventoryType == INVTYPE_2HWEAPON ? ItemLevel * .95 : SubClass == ITEM_SUBCLASS_WEAPON_WAND ? ItemLevel*1.3 : ItemLevel * .7;
+    if (ItemLevel > 50) {
+        dps = 46.2 * pow(1.01, ItemLevel);
+        if (Quality < ITEM_QUALITY_UNCOMMON)
+            dps /= 2;
+    }
 
-    return temp * 500.f / Delay;
+    if (CasterWeapon)
+        dps /= 2;
+    return dps;
 }
 
 int32 ItemTemplate::getFeralBonus(int32 extraDPS /*= 0*/) const
@@ -84,24 +90,24 @@ int32 ItemTemplate::getFeralBonus(int32 extraDPS /*= 0*/) const
     constexpr uint32 feralApEnabledInventoryTypeMaks = 1 << INVTYPE_WEAPON | 1 << INVTYPE_2HWEAPON | 1 << INVTYPE_WEAPONMAINHAND | 1 << INVTYPE_WEAPONOFFHAND;
 
     // 0x02A5F3 - is mask for Melee weapon from ItemSubClassMask.dbc
-    if (Class == ITEM_CLASS_WEAPON && (1 << InventoryType) & feralApEnabledInventoryTypeMaks)
-    {
-        int32 bonus = int32((extraDPS + getDPS()) * 14.0f) - 767;
+    // if (Class == ITEM_CLASS_WEAPON && (1 << InventoryType) & feralApEnabledInventoryTypeMaks)
+    // {
+    //     int32 bonus = int32((extraDPS + getDPS()) * 14.0f) - 767;
 
-        // @tswow-start
-        FIRE_ID(
-            this->events.id
-            , Item,OnCalculateFeralAttackPower
-            , TSItemTemplate(this)
-            , extraDPS
-            , TSMutableNumber<int32>(&bonus)
-        );
-        // @tswow-end
+    //     // @tswow-start
+    //     FIRE_ID(
+    //         this->events.id
+    //         , Item,OnCalculateFeralAttackPower
+    //         , TSItemTemplate(this)
+    //         , extraDPS
+    //         , TSMutableNumber<int32>(&bonus)
+    //     );
+    //     // @tswow-end
 
-        if (bonus < 0)
-            return 0;
-        return bonus;
-    }
+    //     if (bonus < 0)
+    //         return 0;
+    //     return bonus;
+    // }
 
     return 0;
 }

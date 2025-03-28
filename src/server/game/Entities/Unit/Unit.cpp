@@ -366,6 +366,8 @@ Unit::Unit(bool isWorldObject) :
 
         m_weaponDamage[i][MINDAMAGE][1] = 0.f;
         m_weaponDamage[i][MAXDAMAGE][1] = 0.f;
+
+        m_weaponAP[i] = 0.f;
     }
 
     for (uint8 i = 0; i < MAX_STATS; ++i)
@@ -10062,12 +10064,30 @@ Powers Unit::GetPowerTypeByAuraGroup(UnitMods unitMod) const
     }
 }
 
-float Unit::GetTotalAttackPowerValue(WeaponAttackType attType) const
+float Unit::GetTotalAttackPowerValue(WeaponAttackType attType, bool includeWeapon) const
 {
-    int32 ap = GetInt32Value(UNIT_FIELD_ATTACK_POWER) + int16(GetUInt16Value(UNIT_FIELD_ATTACK_POWER_MODS, 0)) + int16(GetUInt16Value(UNIT_FIELD_ATTACK_POWER_MODS, 1));
-    if (ap < 0)
-        return 0.0f;
-    return ap * (1.0f + GetFloatValue(UNIT_FIELD_ATTACK_POWER_MULTIPLIER));
+    if (attType == RANGED_ATTACK) {
+        float ap = GetInt32Value(UNIT_FIELD_RANGED_ATTACK_POWER) + int16(GetUInt16Value(UNIT_FIELD_RANGED_ATTACK_POWER_MODS, 0)) + int16(GetUInt16Value(UNIT_FIELD_RANGED_ATTACK_POWER_MODS, 1));
+        if (includeWeapon)
+            ap += std::max<float>(m_weaponAP[attType], m_weaponAP[BASE_ATTACK]);
+        if (ap < 0)
+            return 0.f;
+        return ap * (1.0f + GetFloatValue(UNIT_FIELD_ATTACK_POWER_MULTIPLIER));
+    } else {
+        int32 ap = GetInt32Value(UNIT_FIELD_ATTACK_POWER) + int16(GetUInt16Value(UNIT_FIELD_ATTACK_POWER_MODS, 0)) + int16(GetUInt16Value(UNIT_FIELD_ATTACK_POWER_MODS, 1));
+        if (includeWeapon) {
+            if (attType == BASE_ATTACK)
+                ap += std::max<float>(m_weaponAP[attType], m_weaponAP[RANGED_ATTACK]);
+            else {
+                ap += m_weaponAP[attType];
+                ap /= 2;
+            }
+        }
+        if (ap < 0)
+            return 0.0f;
+
+        return ap * (1.0f + GetFloatValue(UNIT_FIELD_ATTACK_POWER_MULTIPLIER));
+    }
 }
 
 float Unit::GetWeaponDamageRange(WeaponAttackType attType, WeaponDamageRange type, uint8 damageIndex /*= 0*/) const
