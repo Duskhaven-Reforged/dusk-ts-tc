@@ -5560,6 +5560,12 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
 
             ApplyCastTimePercentMod(oldVal, false);
             ApplyCastTimePercentMod(newVal, true);
+
+            if (GetClass() == CLASS_DRUID || GetClass() == CLASS_ROGUE)
+                UpdatePowerRegen(POWER_ENERGY);
+            else if (GetClass() == CLASS_HUNTER)
+                UpdatePowerRegen(POWER_FOCUS);
+            
             } break;
         case CR_HASTE_RANGED:
         case CR_HASTE_SPELL:
