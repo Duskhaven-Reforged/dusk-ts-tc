@@ -5435,53 +5435,30 @@ float Player::GetRatingBonusValue(CombatRating cr) const
 
 float Player::ApplyRatingDiminishing(CombatRating cr, float bonusValue) const
 {
-    uint32 diminishingCurveId = 0;
-    // switch (cr)
-    // {
-    //     case CR_DODGE:
-    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::DodgeDiminishing);
-    //         break;
-    //     case CR_PARRY:
-    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::ParryDiminishing);
-    //         break;
-    //     case CR_BLOCK:
-    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::BlockDiminishing);
-    //         break;
-    //     case CR_CRIT_MELEE:
+    FIRE(Player, GetRatingDiminishing, TSPlayer(const_cast<Player*>(this)), TSNumber<uint8>(cr), TSMutableNumber<float>(&bonusValue));
+    // switch (cr) {
+    //     case CR_CRIT:
     //     case CR_CRIT_RANGED:
-    //     case CR_CRIT_SPELL:
-    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::CritDiminishing);
-    //         break;
+    //     case CR_CRIT_SPELL: {
+    //         std::size_t pointIndex = 0;
+
+    //         } break;
+    //     case CR_AVOIDANCE:
     //     case CR_SPEED:
-    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::SpeedDiminishing);
-    //         break;
     //     case CR_LIFESTEAL:
     //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::LifestealDiminishing);
     //         break;
-    //     case CR_HASTE_MELEE:
+    //     case CR_HASTE:
     //     case CR_HASTE_RANGED:
     //     case CR_HASTE_SPELL:
     //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::HasteDiminishing);
     //         break;
-    //     case CR_AVOIDANCE:
-    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::AvoidanceDiminishing);
-    //         break;
     //     case CR_MASTERY:
     //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::MasteryDiminishing);
     //         break;
-    //     case CR_VERSATILITY_DAMAGE_DONE:
-    //     case CR_VERSATILITY_HEALING_DONE:
-    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::VersatilityDoneDiminishing);
-    //         break;
-    //     case CR_VERSATILITY_DAMAGE_TAKEN:
-    //         diminishingCurveId = sDB2Manager.GetGlobalCurveId(GlobalCurve::VersatilityTakenDiminishing);
-    //         break;
-    //     default:
-    //         break;
-    // }
 
-    // if (diminishingCurveId)
-    //     return sDB2Manager.GetCurveValueAt(diminishingCurveId, bonusValue);
+    //     return bonusValue;
+    // }
 
     return bonusValue;
 }
@@ -5567,8 +5544,8 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
         });
 
     float const mult = GetRatingMultiplier(combatRating);
-    float const oldVal = oldRating * mult;
-    float newVal = m_baseRatingValue[combatRating] * mult;
+    float const oldVal = ApplyRatingDiminishing(combatRating, oldRating * mult);
+    float newVal = ApplyRatingDiminishing(combatRating, m_baseRatingValue[combatRating] * mult);
 
     switch (combatRating)
     {
@@ -7592,6 +7569,8 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                 break;
             case ITEM_MOD_HASTE_RATING:
                 ApplyRatingMod(CR_HASTE, int32(val), apply);
+                ApplyRatingMod(CR_HASTE_RANGED, int32(val), apply);
+                ApplyRatingMod(CR_HASTE_SPELL, int32(val), apply);
                 break;
             case ITEM_MOD_MASTERY:
                 ApplyRatingMod(CR_MASTERY, int32(val), apply);
@@ -14167,6 +14146,8 @@ void Player::ApplyEnchantment(Item* item, EnchantmentSlot slot, bool apply, bool
                             break;
                         case ITEM_MOD_HASTE_RATING:
                             ApplyRatingMod(CR_HASTE, enchant_amount, apply);
+                            ApplyRatingMod(CR_HASTE_RANGED, enchant_amount, apply);
+                            ApplyRatingMod(CR_HASTE_SPELL, enchant_amount, apply);
                             TC_LOG_DEBUG("entities.player.items", "+ {} HASTE", enchant_amount);
                             break;
                         case ITEM_MOD_MASTERY:
@@ -25051,14 +25032,12 @@ uint32 Player::GetRuneBaseCooldown(uint8 index)
             cooldown = cooldown * (100 - (*i)->GetAmount()) / 100;
     }
 
-    float haste = (1 - m_modAttackSpeedPct[BASE_ATTACK]);
-    if (haste > 0)
-    {
-        if (haste > .74)
-            haste = .74;
+    // Runes cooldown are now affected by player's haste from equipment ...
+    float hastePct = GetRatingBonusValue(CR_HASTE);
 
-        cooldown -= cooldown * haste;
-    }
+    // ... and some auras.
+    hastePct += GetTotalAuraModifier(SPELL_AURA_MOD_MELEE_HASTE);
+    cooldown *=  1.0f - (hastePct / 100.0f);
 
     return cooldown;
 }

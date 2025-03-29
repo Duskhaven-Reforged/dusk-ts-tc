@@ -1251,6 +1251,13 @@ void Player::UpdatePowerRegen(Powers power)
             break;
     }
 
+    if (power == POWER_ENERGY || power == POWER_FOCUS) {
+        float hastePct = GetRatingBonusValue(CR_HASTE_MELEE);
+        hastePct += GetTotalAuraModifier(SPELL_AURA_MOD_MELEE_HASTE);
+
+        modifier+=  hastePct / 100.0f;
+    }
+
     if (powerRegenInfo[AsUnderlyingType(power)].second.has_value())
         modifier *= sWorld->getRate(powerRegenInfo[AsUnderlyingType(power)].second.value()); // Config rate
 
@@ -1278,8 +1285,8 @@ float Player::GetPowerRegen(Powers power) const
                         (power != POWER_MANA && IsInCombat());
 
     float regen = GetFloatValue((interrupted ? UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER : UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) + AsUnderlyingType(power));
-    if (power != POWER_MANA)
-        regen += (power == POWER_ENERGY || power == POWER_FOCUS || !interrupted) ? powerRegenInfo[AsUnderlyingType(power)].first : 0.f;
+    if (power != POWER_MANA)powerRegenInfo
+        regen += (power == POWER_ENERGY || power == POWER_FOCUS || !interrupted) ? [AsUnderlyingType(power)].first : 0.f;
 
     return regen;
 }

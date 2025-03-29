@@ -74,7 +74,7 @@ float ItemTemplate::getDPS() const
 
     bool CasterWeapon = HasFlag(ITEM_FLAG2_CASTER_WEAPON);
     float dps = this->InventoryType == INVTYPE_2HWEAPON ? ItemLevel * .95 : SubClass == ITEM_SUBCLASS_WEAPON_WAND ? ItemLevel*1.3 : ItemLevel * .7;
-    if (ItemLevel > 50) {
+    if (ItemLevel > 5) {
         dps = 46.2 * pow(1.01, ItemLevel);
         if (Quality < ITEM_QUALITY_UNCOMMON)
             dps /= 2;
@@ -82,6 +82,7 @@ float ItemTemplate::getDPS() const
 
     if (CasterWeapon)
         dps /= 2;
+    
     return dps;
 }
 
