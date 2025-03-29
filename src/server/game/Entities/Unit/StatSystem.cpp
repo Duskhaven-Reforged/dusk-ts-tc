@@ -1285,7 +1285,7 @@ float Player::GetPowerRegen(Powers power) const
                         (power != POWER_MANA && IsInCombat());
 
     float regen = GetFloatValue((interrupted ? UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER : UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) + AsUnderlyingType(power));
-    if (power != POWER_MANA)powerRegenInfo
+    if (power != POWER_MANA)
         regen += (power == POWER_ENERGY || power == POWER_FOCUS || !interrupted) ? [AsUnderlyingType(power)].first : 0.f;
 
     return regen;
