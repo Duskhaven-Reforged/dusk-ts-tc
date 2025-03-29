@@ -1252,7 +1252,7 @@ void Player::UpdatePowerRegen(Powers power)
     }
 
     if (power == POWER_ENERGY || power == POWER_FOCUS) {
-        float hastePct = GetRatingBonusValue(CR_HASTE_MELEE);
+        float hastePct = GetRatingBonusValue(CR_HASTE);
         hastePct += GetTotalAuraModifier(SPELL_AURA_MOD_MELEE_HASTE);
 
         modifier+=  hastePct / 100.0f;
