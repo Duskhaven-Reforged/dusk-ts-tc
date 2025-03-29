@@ -7699,7 +7699,7 @@ void Player::_ApplyWeaponDamage(uint8 slot, ItemTemplate const* proto, bool appl
         }
 
         if (maxDamage > 0.f) {
-            damage = apply ? minDamage : BASE_MAXDAMAGE;
+            damage = apply ? maxDamage : BASE_MAXDAMAGE;
             SetBaseWeaponDamage(attType, MAXDAMAGE, damage, i);
         }
     }
