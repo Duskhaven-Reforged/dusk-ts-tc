@@ -5565,6 +5565,9 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
                 UpdatePowerRegen(POWER_ENERGY);
             else if (GetClass() == CLASS_HUNTER)
                 UpdatePowerRegen(POWER_FOCUS);
+            else if (GetClass() == CLASS_DEATH_KNIGHT)
+                for(auto i = 0; i < MAX_RUNES; i++)
+                    UpdateRuneRegen(RuneType(i));
             
             } break;
         case CR_HASTE_RANGED:
