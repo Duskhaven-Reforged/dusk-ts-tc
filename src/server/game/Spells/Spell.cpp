@@ -8547,8 +8547,6 @@ void Spell::TriggerGlobalCooldown()
             m_spellInfo->HasAttribute(SPELL_ATTR0_REQ_AMMO) ||
             m_spellInfo->HasAttribute(SPELL_ATTR0_ABILITY);
 
-
-        TC_LOG_INFO("server.worldserver", "GCD before haste: {}", gcd);
         // Apply haste rating
         if (gcd > MinGCD && (Category == 133 && !isMeleeOrRangedSpell)) {
             gcd = int32(float(gcd) * m_caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
@@ -8561,7 +8559,6 @@ void Spell::TriggerGlobalCooldown()
             RoundToInterval<int32>(gcd, MinGCD, MaxGCD);
         }
 
-        TC_LOG_INFO("server.worldserver", "GCD after haste: {}", gcd);
         if (gcd)
             m_caster->ToUnit()->GetSpellHistory()->AddGlobalCooldown(m_spellInfo, gcd);
     }
