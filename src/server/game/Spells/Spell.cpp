@@ -8523,7 +8523,7 @@ void Spell::TriggerGlobalCooldown()
     auto Category = m_spellInfo->StartRecoveryCategory;
     FIRE_ID(m_spellInfo->events.id, Spell, OnCheckGCDCategory, TSSpell(this), TSMutableNumber<uint32>(&Category));
 
-    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+    if (m_caster->IsPlayer())
         if (m_caster->ToPlayer()->GetCommandStatus(CHEAT_COOLDOWN))
             return;
 
@@ -8533,23 +8533,38 @@ void Spell::TriggerGlobalCooldown()
     // Global cooldown can't leave range 1..1.5 secs
     int32 gcd = m_spellInfo->StartRecoveryTime;
 
-    // gcd modifier auras are applied only to own spells and only players have such mods
-    if (Player* modOwner = m_caster->GetSpellModOwner())
-        modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_GLOBAL_COOLDOWN, gcd, this);
+    // Global cooldown can't leave range 1..1.5 secs
+    // There are some spells (mostly not cast directly by player) that have < 1 sec and > 1.5 sec global cooldowns
+    // but as tests show are not affected by any spell mods.
+    if (gcd >= MinGCD && gcd <= MaxGCD)
+    {
+        // gcd modifier auras are applied only to own spells and only players have such mods
+        if (Player* modOwner = m_caster->GetSpellModOwner())
+            modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_GLOBAL_COOLDOWN, gcd, this);
 
-    bool isMeleeOrRangedSpell = m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MELEE ||
-        m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_RANGED ||
-        m_spellInfo->HasAttribute(SPELL_ATTR0_REQ_AMMO) ||
-        m_spellInfo->HasAttribute(SPELL_ATTR0_ABILITY);
+        bool isMeleeOrRangedSpell = m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MELEE ||
+            m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_RANGED ||
+            m_spellInfo->HasAttribute(SPELL_ATTR0_REQ_AMMO) ||
+            m_spellInfo->HasAttribute(SPELL_ATTR0_ABILITY);
 
-    // Apply haste rating
-    if (gcd > MinGCD && (Category == 133 && !isMeleeOrRangedSpell)) {
-        gcd = int32(float(gcd) * m_caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
-        RoundToInterval<int32>(gcd, MinGCD, MaxGCD);
+
+        TC_LOG_INFO("server.worldserver", "GCD before haste: {}", gcd);
+        // Apply haste rating
+        if (gcd > MinGCD && (Category == 133 && !isMeleeOrRangedSpell)) {
+            gcd = int32(float(gcd) * m_caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
+            RoundToInterval<int32>(gcd, MinGCD, MaxGCD);
+        }
+
+        if (gcd > MinGCD && m_caster->ToUnit()->HasAuraTypeWithAffectMask(SPELL_AURA_MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN, m_spellInfo))
+        {
+            gcd = int32(gcd * m_caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
+            RoundToInterval<int32>(gcd, MinGCD, MaxGCD);
+        }
+
+        TC_LOG_INFO("server.worldserver", "GCD after haste: {}", gcd);
+        if (gcd)
+            m_caster->ToUnit()->GetSpellHistory()->AddGlobalCooldown(m_spellInfo, gcd);
     }
-
-    if (gcd)
-        m_caster->ToUnit()->GetSpellHistory()->AddGlobalCooldown(m_spellInfo, gcd);
 }
 
 void Spell::CancelGlobalCooldown()

@@ -315,6 +315,26 @@ void SpellHistory::StartCooldown(SpellInfo const* spellInfo, uint32 itemId, Spel
             if (categoryCooldown >= 0 && !spellInfo->HasAttribute(SPELL_ATTR6_IGNORE_CATEGORY_COOLDOWN_MODS))
                 modOwner->ApplySpellMod(spellInfo->Id, SPELLMOD_COOLDOWN, categoryCooldown, spell);
         }
+
+        TC_LOG_INFO("server.worldserver", "Unscaled Cooldown of {}: {}", spellInfo->Id, cooldown);
+
+        if (_owner->HasAuraTypeWithAffectMask(SPELL_AURA_MOD_SPELL_COOLDOWN_BY_HASTE, spellInfo))
+        {
+            needsCooldownPacket = true;
+            cooldown = int64(cooldown * _owner->GetFloatValue(UNIT_MOD_CAST_SPEED));
+            categoryCooldown = int64(categoryCooldown * _owner->GetFloatValue(UNIT_MOD_CAST_SPEED));
+        }
+
+        if (_owner->HasAuraTypeWithAffectMask(SPELL_AURA_MOD_COOLDOWN_BY_HASTE_REGEN, spellInfo))
+        {
+            needsCooldownPacket = true;
+            cooldown = int64(cooldown * _owner->GetFloatValue(UNIT_MOD_CAST_SPEED));
+            categoryCooldown = int64(categoryCooldown * _owner->GetFloatValue(UNIT_MOD_CAST_SPEED));
+        }
+
+
+        TC_LOG_INFO("server.worldserver", "Scaled Cooldown of {}: {}", spellInfo->Id, cooldown);
+
         if (int32 cooldownMod = _owner->GetTotalAuraModifier(SPELL_AURA_MOD_COOLDOWN))
         {
             // Apply SPELL_AURA_MOD_COOLDOWN only to own spells
@@ -596,7 +616,7 @@ void SpellHistory::CancelGlobalCooldown(SpellInfo const* spellInfo)
 uint32 SpellHistory::GetRemainingGlobalCooldown(SpellInfo const* spellInfo) const
 {
     Clock::time_point end;
-    auto itr = _globalCooldowns.find(spellInfo->Id);
+    auto itr = _globalCooldowns.find(spellInfo->StartRecoveryCategory);
     if (itr == _globalCooldowns.end())
         return 0;
     end = itr->second;

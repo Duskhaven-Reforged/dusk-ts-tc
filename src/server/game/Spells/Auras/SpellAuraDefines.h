@@ -258,7 +258,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_DEBUFF_RESISTANCE                        = 178,
     SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE               = 179,
     SPELL_AURA_MOD_FLAT_SPELL_DAMAGE_VERSUS                 = 180,
-    SPELL_AURA_181                                          = 181,  // old SPELL_AURA_MOD_FLAT_SPELL_CRIT_DAMAGE_VERSUS - possible flat spell crit damage versus
+    SPELL_AURA_MOD_COOLDOWN_BY_HASTE_REGEN                  = 181,
     SPELL_AURA_MOD_RESISTANCE_OF_STAT_PERCENT               = 182,
     SPELL_AURA_MOD_CRITICAL_THREAT                          = 183,
     SPELL_AURA_MOD_ATTACKER_MELEE_HIT_CHANCE                = 184,
@@ -275,7 +275,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_TARGET_ABILITY_ABSORB_SCHOOL             = 195,
     SPELL_AURA_MOD_COOLDOWN                                 = 196,  // only 24818 Noxious Breath
     SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE    = 197,
-    SPELL_AURA_198                                          = 198,  // old SPELL_AURA_MOD_ALL_WEAPON_SKILLS
+    SPELL_AURA_MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN           = 198,
     SPELL_AURA_MOD_INCREASES_SPELL_PCT_TO_HIT               = 199,
     SPELL_AURA_MOD_XP_PCT                                   = 200,
     SPELL_AURA_FLY                                          = 201,
@@ -301,7 +301,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_DETAUNT                                  = 221,
     SPELL_AURA_222                                          = 222,
     SPELL_AURA_RAID_PROC_FROM_CHARGE                        = 223,
-    SPELL_AURA_224                                          = 224,
+    SPELL_AURA_MOD_SPELL_COOLDOWN_BY_HASTE                  = 224,
     SPELL_AURA_RAID_PROC_FROM_CHARGE_WITH_VALUE             = 225,
     SPELL_AURA_PERIODIC_DUMMY                               = 226,
     SPELL_AURA_PERIODIC_TRIGGER_SPELL_WITH_VALUE            = 227,
