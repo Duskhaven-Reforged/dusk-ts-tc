@@ -5746,7 +5746,6 @@ void Unit::SendAttackStateUpdate(uint32 HitInfo, Unit* target, uint8 /*SwingType
 
 void Unit::SetPowerType(Powers new_powertype, bool sendUpdate/* = true*/)
 {
-    TC_LOG_INFO("server.worldserver", "Char power type: {} -> {}", GetPowerType(), new_powertype);
     if (GetPowerType() == new_powertype)
         return;
 

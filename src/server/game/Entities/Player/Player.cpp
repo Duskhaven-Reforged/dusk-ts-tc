@@ -542,7 +542,6 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
     SetClass(createInfo->Class);
     SetGender(Gender(createInfo->Gender));
     SetPowerType(Powers(powertype), false);
-    TC_LOG_INFO("server.worldserver", "Char power type: {}", powertype);
     InitDisplayIds();
     if (sWorld->getIntConfig(CONFIG_GAME_TYPE) == REALM_TYPE_PVP || sWorld->getIntConfig(CONFIG_GAME_TYPE) == REALM_TYPE_RPPVP)
     {
@@ -2224,7 +2223,6 @@ void Player::RegenerateHealth()
 void Player::ResetAllPowers()
 {
     SetFullHealth();
-    TC_LOG_INFO("server.worldserver", "Resetting Power Type: {}", GetPowerType());
     switch (GetPowerType())
     {
         case POWER_MANA:
