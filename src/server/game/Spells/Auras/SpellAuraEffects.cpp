@@ -2004,32 +2004,15 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
                 case FORM_BEAR:
                 case FORM_DIREBEAR:
                 {
-                    // get furor proc chance
-                    int32 FurorChance = 0;
-                    if (AuraEffect const* dummy = target->GetDummyAuraEffect(SPELLFAMILY_DRUID, 238, 0))
-                        FurorChance = std::max(dummy->GetAmount(), 0);
-
                     switch (GetMiscValue())
                     {
-                        case FORM_CAT:
-                        {
-                            CastSpellExtraArgs args(this);
-                            args.AddSpellMod(SPELLVALUE_BASE_POINT0, std::min<int32>(oldPower, FurorChance));
-                            target->SetPower(POWER_ENERGY, 0);
-                            target->CastSpell(target, 17099, args);
-                            break;
-                        }
                         case FORM_BEAR:
                         case FORM_DIREBEAR:
-                            if (roll_chance_i(FurorChance))
-                                target->CastSpell(target, 17057, true);
+                            target->SetPower(POWER_RAGE, 250);
                             break;
+                        case FORM_CAT:
                         default:
-                        {
-                            uint32 newEnergy = std::min<int32>(target->GetPower(POWER_ENERGY), FurorChance);
-                            target->SetPower(POWER_ENERGY, newEnergy);
                             break;
-                        }
                     }
                     break;
                 }
@@ -2088,32 +2071,6 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
             case FORM_BATTLESTANCE:
             case FORM_DEFENSIVESTANCE:
             case FORM_BERSERKERSTANCE:
-            {
-                uint32 Rage_val = 0;
-                // Defensive Tactics
-                if (form == FORM_DEFENSIVESTANCE)
-                {
-                    if (AuraEffect const* aurEff = target->IsScriptOverriden(m_spellInfo, 831))
-                        Rage_val += aurEff->GetAmount() * 10;
-                }
-                // Stance mastery + Tactical mastery (both passive, and last have aura only in defense stance, but need apply at any stance switch)
-                if (target->GetTypeId() == TYPEID_PLAYER)
-                {
-                    PlayerSpellMap const& sp_list = target->ToPlayer()->GetSpellMap();
-                    for (PlayerSpellMap::const_iterator itr = sp_list.begin(); itr != sp_list.end(); ++itr)
-                    {
-                        if (itr->second.state == PLAYERSPELL_REMOVED || itr->second.disabled)
-                            continue;
-
-                        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(itr->first);
-                        if (spellInfo && spellInfo->SpellFamilyName == SPELLFAMILY_WARRIOR && spellInfo->SpellIconID == 139)
-                            Rage_val += target->CalculateSpellDamage(spellInfo->GetEffect(EFFECT_0)) * 10;
-                    }
-                }
-                if (target->GetPower(POWER_RAGE) > Rage_val)
-                    target->SetPower(POWER_RAGE, Rage_val);
-                break;
-            }
             default:
                 break;
         }

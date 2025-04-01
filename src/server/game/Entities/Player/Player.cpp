@@ -542,6 +542,7 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
     SetClass(createInfo->Class);
     SetGender(Gender(createInfo->Gender));
     SetPowerType(Powers(powertype), false);
+    TC_LOG_INFO("server.worldserver", "Char power type: {}", powertype);
     InitDisplayIds();
     if (sWorld->getIntConfig(CONFIG_GAME_TYPE) == REALM_TYPE_PVP || sWorld->getIntConfig(CONFIG_GAME_TYPE) == REALM_TYPE_RPPVP)
     {
@@ -613,6 +614,7 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
     // apply original stats mods before spell loading or item equipment that call before equip _RemoveStatsMods()
     UpdateMaxHealth();                                      // Update max Health (for add bonus from stamina)
     SetFullHealth();
+    ResetAllPowers();
 
     // original spells
     LearnDefaultSkills();
@@ -700,7 +702,6 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
     // all item positions resolved
 
     GetThreatManager().Initialize();
-    SetFullPower(POWER_MANA);
 
     return true;
 }
@@ -2223,6 +2224,7 @@ void Player::RegenerateHealth()
 void Player::ResetAllPowers()
 {
     SetFullHealth();
+    TC_LOG_INFO("server.worldserver", "Resetting Power Type: {}", GetPowerType());
     switch (GetPowerType())
     {
         case POWER_MANA:
