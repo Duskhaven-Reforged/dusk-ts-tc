@@ -613,7 +613,6 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
     // apply original stats mods before spell loading or item equipment that call before equip _RemoveStatsMods()
     UpdateMaxHealth();                                      // Update max Health (for add bonus from stamina)
     SetFullHealth();
-    SetFullPower(POWER_MANA);
 
     // original spells
     LearnDefaultSkills();
@@ -701,6 +700,7 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
     // all item positions resolved
 
     GetThreatManager().Initialize();
+    SetFullPower(POWER_MANA);
 
     return true;
 }
