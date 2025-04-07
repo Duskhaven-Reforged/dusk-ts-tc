@@ -815,6 +815,7 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
     if (attacker && cleanDamage && (cleanDamage->attackType == BASE_ATTACK || cleanDamage->attackType == OFF_ATTACK) && damagetype == DIRECT_DAMAGE && attacker != victim && attacker->GetPowerType() == POWER_RAGE)
     {
         uint32 rage = uint32(attacker->GetAttackTime(cleanDamage->attackType) / 1000.f * 1.75f);
+
         if (cleanDamage->attackType == OFF_ATTACK)
             rage /= 2;
         
@@ -7318,10 +7319,13 @@ uint32 Unit::SpellDamageBonusTaken(Unit* caster, SpellInfo const* spellProto, ui
         // multiplicative bonus, for example Dispersion + Shadowform (0.10*0.85=0.085)
         TakenTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, spellProto->GetSchoolMask());
 
+        TakenTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_FROM_CASTER, [caster, spellProto](AuraEffect const* aurEff) -> bool
+            { return aurEff->GetCasterGUID() == caster->GetGUID(); });
+
         // From caster spells
         if (caster)
         {
-            TakenTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_FROM_CASTER, [caster, spellProto](AuraEffect const* aurEff) -> bool
+            TakenTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_FROM_CASTER_SPELL, [caster, spellProto](AuraEffect const* aurEff) -> bool
                 {
                     if (aurEff->GetCasterGUID() == caster->GetGUID() && aurEff->IsAffectedOnSpell(spellProto))
                         return true;
@@ -8557,11 +8561,14 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
     // ..taken
     TakenTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, attacker->GetMeleeDamageSchoolMask());
 
+    TakenTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_FROM_CASTER, [attacker, spellProto](AuraEffect const* aurEff) -> bool
+        { return aurEff->GetCasterGUID() == attacker->GetGUID(); });
+        
     // .. taken pct (special attacks)
     if (spellProto)
     {
         // From caster spells
-        TakenTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_FROM_CASTER, [attacker, spellProto](AuraEffect const* aurEff) -> bool
+        TakenTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_FROM_CASTER_SPELL, [attacker, spellProto](AuraEffect const* aurEff) -> bool
         {
             if (aurEff->GetCasterGUID() == attacker->GetGUID() && aurEff->IsAffectedOnSpell(spellProto))
                 return true;
@@ -14460,7 +14467,6 @@ PlayerMovementPendingChange::PlayerMovementPendingChange()
 void Unit::RewardRage(uint32 baseRage)
 {
     float addRage = baseRage;
-
     AddPct(addRage, GetTotalAuraModifier(SPELL_AURA_MOD_RAGE_FROM_DAMAGE_DEALT));
     addRage *= sWorld->getRate(RATE_POWER_RAGE_INCOME);
 

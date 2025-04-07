@@ -1662,8 +1662,6 @@ void Spell::SelectImplicitChainTargets(SpellEffectInfo const& spellEffectInfo, S
         for (std::list<WorldObject*>::iterator itr = targets.begin(); itr != targets.end(); ++itr) {
             if (Unit* unit = (*itr)->ToUnit())
                 AddUnitTarget(unit, effMask, false, losPosition);
-
-
         }
     }
 }
@@ -2052,11 +2050,12 @@ void Spell::SearchChainTargets(std::list<WorldObject*>& targets, uint32 chainTar
         if (foundItr == tempTargets.end())
             break;
 
+        target = *foundItr;
         if (!m_spellInfo->HasAttribute(SPELL_ATTR2_CHAIN_FROM_CASTER))
             chainSource = *foundItr;
 
-        tempTargets.erase(foundItr);
         targets.push_back(target);
+        tempTargets.erase(foundItr);
         --chainTargets;
     }
 }
@@ -2171,9 +2170,10 @@ class ProcReflectDelayed : public BasicEvent
 
 void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*= true*/, bool implicit /*= true*/, Position const* losPosition /*= nullptr*/)
 {
-    for (SpellEffectInfo const& spellEffectInfo : m_spellInfo->GetEffects())
+    for (SpellEffectInfo const& spellEffectInfo : m_spellInfo->GetEffects()){
         if (!spellEffectInfo.IsEffect() || !CheckEffectTarget(target, spellEffectInfo, losPosition))
             effectMask &= ~(1 << spellEffectInfo.EffectIndex);
+    }
 
     // no effects left
     if (!effectMask)
@@ -2206,8 +2206,6 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
         return;
     }
 
-    // This is new target calculate data for him
-
     // Get spell hit result on target
     TargetInfo targetInfo;
     targetInfo.TargetGUID = targetGUID;                         // Store target GUID
@@ -2239,7 +2237,7 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
         TSMutableNumber<uint32>(&effectMask)
     );
     targetInfo.MissCondition = SpellMissInfo(miss);
-
+    
     if (!effectMask)
         return;
     // @tswow-end
@@ -7621,8 +7619,9 @@ bool Spell::CheckEffectTarget(Unit const* target, SpellEffectInfo const& spellEf
         }
         default:                                            // normal case
         {
-            if (losPosition)
+            if (losPosition) {
                 return target->IsWithinLOS(losPosition->GetPositionX(), losPosition->GetPositionY(), losPosition->GetPositionZ(), LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags::M2);
+            }
             else
             {
                 // Get GO cast coordinates if original caster -> GO
