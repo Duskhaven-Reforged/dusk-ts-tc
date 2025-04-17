@@ -6886,8 +6886,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
     if (SpellBonusEntry const* bonus = sSpellMgr->GetSpellBonusData(spellProto->Id, spellEffectInfo.EffectIndex))
     {
         WeaponAttackType const attType =
-            (spellProto->IsRangedWeaponSpell() && spellProto->DmgClass != SPELL_DAMAGE_CLASS_MELEE) ? RANGED_ATTACK :
-                                                                                                      BASE_ATTACK;
+            (spellProto->IsRangedWeaponSpell() && spellProto->DmgClass != SPELL_DAMAGE_CLASS_MELEE) ? RANGED_ATTACK : spellProto->HasAttribute(SPELL_ATTR3_MAIN_HAND) ? BASE_ATTACK : OFF_ATTACK;
         float APbonus = float(victim->GetTotalAuraModifier(attType == BASE_ATTACK ? SPELL_AURA_MELEE_ATTACK_POWER_ATTACKER_BONUS : SPELL_AURA_RANGED_ATTACK_POWER_ATTACKER_BONUS));
         APbonus += GetTotalAttackPowerValue(attType);
         coeff = bonus->sp;
@@ -7845,7 +7844,7 @@ uint32 Unit::SpellHealingBonusDone(Unit* victim, SpellInfo const* spellProto, ui
     float coeff = spellEffectInfo.BonusMultiplier;
     if (SpellBonusEntry const* bonus = sSpellMgr->GetSpellBonusData(spellProto->Id, spellEffectInfo.EffectIndex))
     {
-        WeaponAttackType const attType = (spellProto->IsRangedWeaponSpell() && spellProto->DmgClass != SPELL_DAMAGE_CLASS_MELEE) ? RANGED_ATTACK : BASE_ATTACK;
+        WeaponAttackType const attType = (spellProto->IsRangedWeaponSpell() && spellProto->DmgClass != SPELL_DAMAGE_CLASS_MELEE) ? RANGED_ATTACK : spellProto->HasAttribute(SPELL_ATTR3_MAIN_HAND) ? BASE_ATTACK : OFF_ATTACK;
         float APbonus = float(victim->GetTotalAuraModifier(attType == BASE_ATTACK ? SPELL_AURA_MELEE_ATTACK_POWER_ATTACKER_BONUS : SPELL_AURA_RANGED_ATTACK_POWER_ATTACKER_BONUS));
         APbonus += GetTotalAttackPowerValue(attType);
         coeff = bonus->sp;
