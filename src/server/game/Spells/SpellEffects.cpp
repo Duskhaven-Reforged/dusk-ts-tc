@@ -4352,15 +4352,17 @@ void Spell::EffectCharge()
         {
             //unitTarget->GetContactPoint(m_caster, pos.m_positionX, pos.m_positionY, pos.m_positionZ);
             Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(m_caster));
-            unitCaster->GetMotionMaster()->MoveCharge(pos.m_positionX, pos.m_positionY, pos.m_positionZ, speed);
+            
+            m_preGeneratedPath = std::make_unique<PathGenerator>(unitCaster);
+            m_preGeneratedPath->CalculatePath(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), false);
         }
-        else {
-            if (G3D::fuzzyGt(m_spellInfo->Speed, 0.0f)) {
-                G3D::Vector3 pos = m_preGeneratedPath->GetActualEndPosition();
-                speed = Position(pos.x, pos.y, pos.z).GetExactDist(m_caster) / speed;
-            }
-            unitCaster->GetMotionMaster()->MoveCharge(*m_preGeneratedPath, speed);
+
+        if (G3D::fuzzyGt(m_spellInfo->Speed, 0.0f) && m_spellInfo->HasAttribute(SPELL_ATTR1_CU_MISSILE_SPEED_IS_DELAY_IN_SEC)) {
+            G3D::Vector3 pos = m_preGeneratedPath->GetActualEndPosition();
+            speed = Position(pos.x, pos.y, pos.z).GetExactDist(m_caster) / speed;
         }
+
+        unitCaster->GetMotionMaster()->MoveCharge(*m_preGeneratedPath, speed);
     }
 
     if (effectHandleMode == SPELL_EFFECT_HANDLE_HIT_TARGET)

@@ -4978,7 +4978,7 @@ void SpellMgr::LoadSpellInfoCorrections()
                 case SPELL_EFFECT_JUMP:
                 case SPELL_EFFECT_JUMP_DEST:
                 case SPELL_EFFECT_LEAP_BACK:
-                    if (!spellInfo->Speed && !spellInfo->SpellFamilyName)
+                    if (!spellInfo->Speed && !spellInfo->SpellFamilyName && !spellInfo->HasAttribute(SPELL_ATTR1_CU_MISSILE_SPEED_IS_DELAY_IN_SEC))
                         spellInfo->Speed = SPEED_CHARGE;
                     break;
                 case SPELL_EFFECT_APPLY_AURA:

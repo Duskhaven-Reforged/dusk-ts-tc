@@ -929,6 +929,8 @@ uint64 Spell::CalculateDelayMomentForDst() const
             if (speed > 0.0f)
                 return (uint64)floor(m_targets.GetDist2d() / speed * 1000.0f);
         }
+        else if (m_spellInfo->HasAttribute(SPELL_ATTR1_CU_MISSILE_SPEED_IS_DELAY_IN_SEC))
+            return uint64(std::floor(m_spellInfo->Speed * 1000.0f));
         else if (m_spellInfo->Speed > 0.0f)
         {
             // We should not subtract caster size from dist calculation (fixes execution time desync with animation on client, eg. Malleable Goo cast by PP)
@@ -2244,19 +2246,21 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
     
     // Spell have speed - need calculate incoming time
     // Incoming time is zero for self casts. At least I think so.
-    if (m_spellInfo->Speed > 0.0f && m_caster != target)
+    if (m_caster != target)
     {
-        // calculate spell incoming interval
-        /// @todo this is a hack
-        float dist = m_caster->GetDistance(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ());
+        float hitDelay = 0.0f;
 
-        if (dist < 5.0f)
-            dist = 5.0f;
-        targetInfo.TimeDelay = uint64(std::floor(dist / m_spellInfo->Speed * 1000.0f));
+        if (m_spellInfo->HasAttribute(SPELL_ATTR1_CU_MISSILE_SPEED_IS_DELAY_IN_SEC))
+            hitDelay += m_spellInfo->Speed;
+        else if (m_spellInfo->Speed > 0.0f) { 
+            // calculate spell incoming interval
+            /// @todo this is a hack
+            float dist = std::max(m_caster->GetDistance(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ()), 5.0f);
 
-        // Calculate minimum incoming time
-        if (!m_delayMoment || m_delayMoment > targetInfo.TimeDelay)
-            m_delayMoment = targetInfo.TimeDelay;
+            hitDelay += dist / m_spellInfo->Speed;
+        }
+
+        targetInfo.TimeDelay = uint64(std::floor(hitDelay * 1000.0f));
     }
     else
         targetInfo.TimeDelay = 0ULL;
@@ -2282,6 +2286,10 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
     }
     else
         targetInfo.ReflectResult = SPELL_MISS_NONE;
+
+    // Calculate minimum incoming time
+    if (targetInfo.TimeDelay && (!m_delayMoment || m_delayMoment > targetInfo.TimeDelay))
+        m_delayMoment = targetInfo.TimeDelay;
 
     // Add target to list
     m_UniqueTargetInfo.emplace_back(std::move(targetInfo));
@@ -2330,18 +2338,24 @@ void Spell::AddGOTarget(GameObject* go, uint32 effectMask)
     target.EffectMask = effectMask;
 
     // Spell have speed - need calculate incoming time
-    if (m_spellInfo->Speed > 0.0f)
-    {
-        // calculate spell incoming interval
-        float dist = m_caster->GetDistance(go->GetPositionX(), go->GetPositionY(), go->GetPositionZ());
-        if (dist < 5.0f)
-            dist = 5.0f;
-        target.TimeDelay = uint64(std::floor(dist / m_spellInfo->Speed * 1000.0f));
-        if (!m_delayMoment || m_delayMoment > target.TimeDelay)
-            m_delayMoment = target.TimeDelay;
-    }
-    else
+    float hitDelay = 0;
+    if (static_cast<WorldObject*>(m_caster) != go) {
+        if (m_spellInfo->HasAttribute(SPELL_ATTR1_CU_MISSILE_SPEED_IS_DELAY_IN_SEC))
+            hitDelay += m_spellInfo->Speed;
+        else if (m_spellInfo->Speed > 0.0f)
+        {
+            // calculate spell incoming interval
+            float dist = std::max(m_caster->GetDistance(go->GetPositionX(), go->GetPositionY(), go->GetPositionZ()), 5.0f);
+            hitDelay += dist / m_spellInfo->Speed;
+        }
+
+        target.TimeDelay = uint64(std::floor(hitDelay * 1000.0f));
+
+    } else
         target.TimeDelay = 0ULL;
+
+    if (target.TimeDelay && (!m_delayMoment || m_delayMoment > target.TimeDelay))
+        m_delayMoment = target.TimeDelay;
 
     // Add target to list
     m_UniqueGOTargetInfo.emplace_back(std::move(target));
@@ -2402,21 +2416,25 @@ void Spell::AddCorpseTarget(Corpse* corpse, uint32 effectMask)
     target.EffectMask = effectMask;
 
     // Spell have speed - need calculate incoming time
-    if (m_spellInfo->Speed > 0.0f)
+    if (m_caster != corpse)
     {
-        // calculate spell incoming interval
-        float dist = m_caster->GetDistance(corpse->GetPositionX(), corpse->GetPositionY(), corpse->GetPositionZ());
-        if (dist < 5.0f)
-            dist = 5.0f;
+        float hitDelay = 0.0f;
+        if (m_spellInfo->HasAttribute(SPELL_ATTR1_CU_MISSILE_SPEED_IS_DELAY_IN_SEC))
+            hitDelay += m_spellInfo->Speed;
+        else if (m_spellInfo->Speed > 0.0f) {
+            float dist = std::max(m_caster->GetDistance(corpse->GetPositionX(), corpse->GetPositionY(), corpse->GetPositionZ()), 5.0f);
+            hitDelay += dist / m_spellInfo->Speed;
+        }
 
-        target.TimeDelay = uint64(floor(dist / m_spellInfo->Speed * 1000.0f));
-
-        if (!m_delayMoment || m_delayMoment > target.TimeDelay)
-            m_delayMoment = target.TimeDelay;
+        target.TimeDelay = uint64(floor(hitDelay * 1000.0f));
     }
     else
         target.TimeDelay = 0LL;
 
+    // Calculate minimum incoming time
+    if (target.TimeDelay && (!m_delayMoment || m_delayMoment > target.TimeDelay))
+        m_delayMoment = target.TimeDelay;
+        
     // Add target to list
     m_UniqueCorpseTargetInfo.push_back(target);
 }
