@@ -4316,56 +4316,52 @@ void ObjectMgr::LoadPlayerInfo()
         {
             uint32 count = 0;
 
-            do
-            {
-                Field* fields = result->Fetch();
+            do {
+                Field* fields       = result->Fetch();
+                uint32 raceMask     = fields[0].GetUInt32();
+                uint32 classMask    = fields[1].GetUInt32();
 
-                uint32 current_race = fields[0].GetUInt8();
-                if (current_race >= MAX_RACES)
+                if (raceMask != 0 && !(raceMask & RACEMASK_ALL_PLAYABLE))
                 {
-                    TC_LOG_ERROR("sql.sql", "Wrong race {} in `playercreateinfo_item` table, ignoring.", current_race);
+                    TC_LOG_ERROR("sql.sql", "Wrong race mask {} in `playercreateinfo_cast_spell` table, ignoring.", raceMask);
                     continue;
                 }
 
-                uint32 current_class = fields[1].GetUInt8();
-                if (current_class >= MAX_CLASSES)
+                if (classMask != 0 && !(classMask & CLASSMASK_ALL_PLAYABLE))
                 {
-                    TC_LOG_ERROR("sql.sql", "Wrong class {} in `playercreateinfo_item` table, ignoring.", current_class);
+                    TC_LOG_ERROR("sql.sql", "Wrong class mask {} in `playercreateinfo_cast_spell` table, ignoring.", classMask);
                     continue;
                 }
 
                 uint32 item_id = fields[2].GetUInt32();
-
                 if (!GetItemTemplate(item_id))
                 {
-                    TC_LOG_ERROR("sql.sql", "Item id {} (race {} class {}) in `playercreateinfo_item` table but not listed in `item_template`, ignoring.", item_id, current_race, current_class);
+                    TC_LOG_ERROR("sql.sql", "Item id {} (race {} class {}) in `playercreateinfo_item` table but not listed in `item_template`, ignoring.", item_id, raceMask, classMask);
                     continue;
                 }
 
                 int32 amount   = fields[3].GetInt8();
-
                 if (!amount)
                 {
-                    TC_LOG_ERROR("sql.sql", "Item id {} (class {} race {}) have amount == 0 in `playercreateinfo_item` table, ignoring.", item_id, current_race, current_class);
+                    TC_LOG_ERROR("sql.sql", "Item id {} (class {} race {}) have amount == 0 in `playercreateinfo_item` table, ignoring.", item_id, raceMask, classMask);
                     continue;
                 }
 
-                if (!current_race || !current_class)
+                for (uint32 raceIndex = RACE_HUMAN; raceIndex < MAX_RACES; ++raceIndex)
                 {
-                    uint32 min_race = current_race ? current_race : 1;
-                    uint32 max_race = current_race ? current_race + 1 : MAX_RACES;
-                    uint32 min_class = current_class ? current_class : 1;
-                    uint32 max_class = current_class ? current_class + 1 : MAX_CLASSES;
-                    for (uint32 r = min_race; r < max_race; ++r)
-                        for (uint32 c = min_class; c < max_class; ++c)
-                            PlayerCreateInfoAddItemHelper(r, c, item_id, amount);
+                    if (raceMask == 0 || ((1 << (raceIndex - 1)) & raceMask))
+                    {
+                        for (uint32 classIndex = CLASS_WARRIOR; classIndex < MAX_CLASSES; ++classIndex)
+                        {
+                            if (classMask == 0 || ((1 << (classIndex - 1)) & classMask))
+                            {
+                                PlayerCreateInfoAddItemHelper(raceIndex, classIndex, item_id, amount);
+                                ++count;
+                            }
+                        }
+                    }
                 }
-                else
-                    PlayerCreateInfoAddItemHelper(current_race, current_class, item_id, amount);
-
-                ++count;
-            }
-            while (result->NextRow());
+            } while (result->NextRow());
 
             TC_LOG_INFO("server.loading", ">> Loaded {} custom player create items in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
         }
@@ -4580,28 +4576,40 @@ void ObjectMgr::LoadPlayerInfo()
 
             do
             {
-                Field* fields = result->Fetch();
+                Field* fields       = result->Fetch();
+                uint32 raceMask     = fields[0].GetUInt32();
+                uint32 classMask    = fields[1].GetUInt32();
 
-                uint32 current_race = fields[0].GetUInt8();
-                if (current_race >= MAX_RACES)
+                if (raceMask != 0 && !(raceMask & RACEMASK_ALL_PLAYABLE))
                 {
-                    TC_LOG_ERROR("sql.sql", "Wrong race {} in `playercreateinfo_action` table, ignoring.", current_race);
+                    TC_LOG_ERROR("sql.sql", "Wrong race mask {} in `playercreateinfo_cast_spell` table, ignoring.", raceMask);
                     continue;
                 }
 
-                uint32 current_class = fields[1].GetUInt8();
-                if (current_class >= MAX_CLASSES)
+                if (classMask != 0 && !(classMask & CLASSMASK_ALL_PLAYABLE))
                 {
-                    TC_LOG_ERROR("sql.sql", "Wrong class {} in `playercreateinfo_action` table, ignoring.", current_class);
+                    TC_LOG_ERROR("sql.sql", "Wrong class mask {} in `playercreateinfo_cast_spell` table, ignoring.", classMask);
                     continue;
                 }
 
-                if (auto& info = _playerInfo[current_race][current_class])
-                    info->action.push_back(PlayerCreateInfoAction(fields[2].GetUInt16(), fields[3].GetUInt32(), fields[4].GetUInt16()));
-
-                ++count;
-            }
-            while (result->NextRow());
+                for (uint32 raceIndex = RACE_HUMAN; raceIndex < MAX_RACES; ++raceIndex)
+                {
+                    if (raceMask == 0 || ((1 << (raceIndex - 1)) & raceMask))
+                    {
+                        for (uint32 classIndex = CLASS_WARRIOR; classIndex < MAX_CLASSES; ++classIndex)
+                        {
+                            if (classMask == 0 || ((1 << (classIndex - 1)) & classMask))
+                            {
+                                if (auto& info = _playerInfo[raceIndex][classIndex])
+                                {
+                                    info->action.push_back(PlayerCreateInfoAction(fields[2].GetUInt16(), fields[3].GetUInt32(), fields[4].GetUInt16()));
+                                    ++count;
+                                }
+                            }
+                        }
+                    }
+                }
+            } while (result->NextRow());
 
             TC_LOG_INFO("server.loading", ">> Loaded {} player create actions in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
         }
