@@ -102,6 +102,8 @@ class TC_GAME_API Pet : public Guardian
         void UpdateDamagePhysical(WeaponAttackType attType) override;
         */
 
+        void BeginAttacking(Unit* target);
+
         void ToggleAutocast(SpellInfo const* spellInfo, bool apply);
 
         bool HasSpell(uint32 spell) const override;

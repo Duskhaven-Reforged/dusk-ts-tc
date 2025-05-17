@@ -16,6 +16,7 @@
  */
 
 #include "Pet.h"
+#include "PetAI.h"
 #include "Common.h"
 #include "DatabaseEnv.h"
 #include "Formulas.h"
@@ -2078,4 +2079,27 @@ std::string Pet::GetDebugInfo() const
         << "PetType: " << std::to_string(getPetType()) << " "
         << "PetNumber: " << m_charmInfo->GetPetNumber();
     return sstr.str();
+}
+
+void Pet::BeginAttacking(Unit* target) {
+    CharmInfo* charmInfo = GetCharmInfo();
+    if (charmInfo && target) {
+        auto owner = GetOwner();
+        auto victim = GetVictim();
+        if (!owner->HasAuraType(SPELL_AURA_MOD_PACIFY) && owner->IsValidAttackTarget(target) && target != victim){
+            if (victim)
+                AttackStop();
+            if (ToCreature()->IsAIEnabled()) {
+                charmInfo->SetIsCommandAttack(true);
+                charmInfo->SetIsAtStay(false);
+                charmInfo->SetIsFollowing(false);
+                charmInfo->SetIsCommandFollow(false);
+                charmInfo->SetIsReturning(false);
+
+                CreatureAI* AI = ToCreature()->AI();
+                if (PetAI* petAI = dynamic_cast<PetAI*>(AI))
+                    petAI->_AttackStart(target); // force target switch
+            }
+        }
+    }
 }
