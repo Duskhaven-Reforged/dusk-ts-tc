@@ -681,14 +681,16 @@ void Unit::UpdateInterruptMask()
 
 bool Unit::HasAuraTypeWithFamilyFlags(AuraType auraType, uint32 familyName, flag96 familyFlags) const
 {
-    TC_LOG_INFO("server.worldserver", "Aura Type: {}", auraType);
     if (!HasAuraType(auraType))
         return false;
     AuraEffectList const& auras = GetAuraEffectsByType(auraType);
-    for (AuraEffectList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
-        if (SpellInfo const* iterSpellProto = (*itr)->GetSpellInfo())
+    for (AuraEffectList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr) {
+        if (SpellInfo const* iterSpellProto = (*itr)->GetSpellInfo()) {
+            TC_LOG_INFO("server.worldserver", "{} | {} =? {} | {} ?= {} | {} ?= {}", iterSpellProto->SpellName[0], iterSpellProto->SpellFamilyFlags[0], familyFlags[0], iterSpellProto->SpellFamilyFlags[1], familyFlags[1], iterSpellProto->SpellFamilyFlags[2], familyFlags[2]);
             if (iterSpellProto->SpellFamilyName == familyName && iterSpellProto->SpellFamilyFlags & familyFlags)
                 return true;
+        }
+    }
     return false;
 }
 
@@ -3234,7 +3236,7 @@ bool Unit::IsNonMeleeSpellCast(bool withDelayed, bool skipChanneled, bool skipAu
     if (!skipChanneled && m_currentSpells[CURRENT_CHANNELED_SPELL] &&
         (m_currentSpells[CURRENT_CHANNELED_SPELL]->getState() != SPELL_STATE_FINISHED))
     {
-        if (!isAutoshoot || !(m_currentSpells[CURRENT_CHANNELED_SPELL]->m_spellInfo->HasAttribute(SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS)))
+        if (!isAutoshoot || !(m_currentSpells[CURRENT_CHANNELED_SPELL]->m_spellInfo->HasAttribute(SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS)) || !(m_currentSpells[CURRENT_CHANNELED_SPELL]->m_spellInfo->HasAttribute(SPELL_ATTR1_CU_ALLOW_DEFENSE_WHILE_CASTING)))
             return true;
     }
     // autorepeat spells may be finished or delayed, but they are still considered cast

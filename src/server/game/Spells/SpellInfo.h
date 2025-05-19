@@ -204,6 +204,7 @@ enum SpellCustomAttributes2
     SPELL_ATTR1_CU_STACKS_DONT_ADDUP                    = 0x00010000,
     SPELL_ATTR1_CU_PANDEMIC_TIMER                       = 0x00020000,
     SPELL_ATTR1_CU_MISSILE_SPEED_IS_DELAY_IN_SEC        = 0x00040000,
+    SPELL_ATTR1_CU_ALLOW_DEFENSE_WHILE_CASTING          = 0x00080000,
 };
 
 uint32 GetTargetFlagMask(SpellTargetObjectTypes objType);
