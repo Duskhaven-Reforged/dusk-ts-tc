@@ -7662,8 +7662,8 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
 /*static*/ uint32 Unit::SpellCriticalDamageBonus(Unit const* caster, SpellInfo const* spellProto, uint32 damage, Unit* victim)
 {
     // Calculate critical bonus
-    int32 crit_bonus = 0;
-    float crit_mod = 0.0f;
+    int32 crit_bonus;
+    float crit_mult = 0.0f;
 
     if (caster)
     {
@@ -7673,36 +7673,39 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
             // Aleist3r: splitting melee and ranged cases for specific aura-related cases
         case SPELL_DAMAGE_CLASS_MELEE:                      // for melee based spells is 100%
             crit_bonus = damage;
-            crit_mod += caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_MELEE);
+            crit_mult += caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_MELEE);
             break;
         case SPELL_DAMAGE_CLASS_RANGED:
             crit_bonus = damage;
             /// @todo write here full calculation for melee/ranged spells
-            crit_mod += caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_RANGED);
+            crit_mult += caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_RANGED);
             break;
         default: // for spells is 50%
             crit_bonus = damage / 2;
-            crit_mod += caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_MAGIC);
+            crit_mult += caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_BASE_CRIT_DAMAGE, SPELL_DAMAGE_CLASS_MASK_MAGIC);
             break;
         }
 
-        crit_mod += (caster->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CRIT_DAMAGE_BONUS, spellProto->GetSchoolMask()) - 1.0f) * 100;
+        crit_mult += (caster->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CRIT_DAMAGE_BONUS, spellProto->GetSchoolMask()) - 1.0f) * 100;
 
         if (victim)
-            crit_mod += caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_CRIT_PERCENT_VERSUS, victim->GetCreatureTypeMask());
+            crit_mult += caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_CRIT_PERCENT_VERSUS, victim->GetCreatureTypeMask());
 
         if (caster->IsPlayer())
-            FIRE(Player, OnCustomScriptedCritDamageMod, TSPlayer(const_cast<Player*>(caster->ToPlayer())), TSUnit(victim), TSSpellInfo(const_cast<SpellInfo*>(spellProto)), TSMutableNumber<float>(&crit_mod));
+            FIRE(Player, OnCustomScriptedCritDamageMod, TSPlayer(const_cast<Player*>(caster->ToPlayer())), TSUnit(victim), TSSpellInfo(const_cast<SpellInfo*>(spellProto)), TSMutableNumber<float>(&crit_mult));
 
-        if (crit_mod != 0)
-            AddPct(crit_bonus, crit_mod);
+        if (crit_mult != 0)
+            AddPct(crit_bonus, crit_mult);
 
         // adds additional damage to critBonus (from talents)
         if (Player* modOwner = caster->GetSpellModOwner())
             modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_CRIT_SEVERITY, crit_bonus);
     }
 
-    return crit_bonus;
+    if (crit_bonus > 0)
+        damage += crit_bonus;
+
+    return damage;
 }
 
 /*static*/ uint32 Unit::SpellCriticalHealingBonus(Unit const* caster, SpellInfo const* spellProto, uint32 damage, Unit* victim)
