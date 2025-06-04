@@ -7653,7 +7653,6 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
 
         if (caster->IsPlayer())
             FIRE(Player, OnCustomScriptedCritMod, TSPlayer(const_cast<Player*>(caster->ToPlayer())), TSUnit(const_cast<Unit*>(this)), TSSpellInfo(spellInfo), TSMutableNumber<float>(&crit_chance));
-
     }
 
     return std::max(crit_chance, 0.0f);

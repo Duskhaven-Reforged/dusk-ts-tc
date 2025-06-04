@@ -5257,6 +5257,7 @@ void AuraEffect::HandlePeriodicTriggerSpellWithValueAuraTick(Unit* target, Unit*
         if (Unit* triggerCaster = triggeredSpellInfo->NeedsToBeTriggeredByCaster(m_spellInfo) ? caster : target)
         {
             CastSpellExtraArgs args(this);
+            args.SetTriggerFlags(TRIGGERED_FULL_MASK);
             for (uint32 i = 0; i < MAX_SPELL_EFFECTS; ++i)
                 args.AddSpellMod(SpellValueMod(SPELLVALUE_BASE_POINT0 + i), GetAmount());
 
@@ -5885,6 +5886,7 @@ void AuraEffect::HandleProcTriggerSpellAuraProc(AuraApplication* aurApp, ProcEve
         TC_LOG_DEBUG("spells.aura.effect", "AuraEffect::HandleProcTriggerSpellAuraProc: Triggering spell {} from aura {} proc", triggeredSpellInfo->Id, GetId());
 
         CastSpellExtraArgs args(this);
+        args.SetTriggerFlags(TRIGGERED_FULL_MASK);
         if (GetMiscValue() == 8)
             args.AddSpellMod(SpellValueMod(SPELLVALUE_AURA_STACK), GetMiscValueB());
 
@@ -5909,9 +5911,10 @@ void AuraEffect::HandleProcTriggerSpellWithValueAuraProc(AuraApplication* aurApp
     if (SpellInfo const* triggeredSpellInfo = sSpellMgr->GetSpellInfo(triggerSpellId))
     {
         CastSpellExtraArgs args(this);
+        args.SetTriggerFlags(TRIGGERED_FULL_MASK);
         args.AddSpellMod(SPELLVALUE_BASE_POINT0, GetAmount());
         if (GetMiscValueB() > 0)
-                args.AddSpellMod(SpellValueMod(SPELLVALUE_DURATION), GetMiscValueB());
+            args.AddSpellMod(SpellValueMod(SPELLVALUE_DURATION), GetMiscValueB());
 
         triggerCaster->CastSpell(triggerTarget, triggerSpellId, args);
         TC_LOG_DEBUG("spells.aura.effect", "AuraEffect::HandleProcTriggerSpellWithValueAuraProc: Triggering spell {} with value {} from aura {} proc", triggeredSpellInfo->Id, GetAmount(), GetId());
