@@ -2952,7 +2952,6 @@ void SpellInfo::_LoadImmunityInfo()
                 }
 
                 bool UseNew = effect.MiscValueB > 0;
-
                 if (immuneInfo.AuraTypeImmune.empty())
                 {
                     if (UseNew) {
@@ -3045,6 +3044,7 @@ void SpellInfo::_LoadImmunityInfo()
                         }
 
                         removeEffectsWithMechanic = true;
+
                     } else {
                         if (miscVal & (1 << 10))
                             immuneInfo.AuraTypeImmune.insert(SPELL_AURA_MOD_STUN);
