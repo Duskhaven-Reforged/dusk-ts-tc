@@ -18,7 +18,12 @@
 #ifndef SpellHistory_h__
 #define SpellHistory_h__
 
+#include "TSEvents.h"
+#include "TSSpell.h"
+
 #include "SharedDefines.h"
+#include "SpellMgr.h"
+#include "SpellInfo.h"
 #include "DatabaseEnvFwd.h"
 #include "GameTime.h"
 #include "Log.h"
@@ -153,12 +158,9 @@ private:
     void SendClearCooldowns(std::vector<int32> const& cooldowns) const;
     CooldownStorageType::iterator EraseCooldown(CooldownStorageType::iterator itr)
     {
+        const SpellInfo* Info = sSpellMgr->GetSpellInfo(itr->second.SpellId);
         /** @dh-begin*/
-        FIRE(Unit
-            , OnCooldownReset, TSUnit(_owner)
-            , TSNumber<uint32>(itr->second.SpellId)
-            , TSNumber<uint32>(itr->second.CategoryId)
-            , TSNumber<uint32>(itr->second.ItemId));
+        FIRE_ID(Info->events.id, Spell, OnCooldownFinished, TSUnit(_owner), TSSpellInfo(Info), TSNumber<uint32>(itr->second.CategoryId), TSNumber<uint32>(itr->second.ItemId));
         /** @dh-end*/
 
         _categoryCooldowns.erase(itr->second.CategoryId);
