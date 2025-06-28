@@ -2544,32 +2544,11 @@ void Spell::EffectDispel()
         dataSuccess << uint32(itr->GetAura()->GetId());         // Spell Id
         dataSuccess << uint8(0);                                // 0 - dispelled !=0 cleansed
         unitTarget->RemoveAurasDueToSpellByDispel(itr->GetAura()->GetId(), m_spellInfo->Id, itr->GetAura()->GetCasterGUID(), m_caster, itr->GetDispelCharges());
+    
+        if (auto caster = m_caster->ToPlayer())
+            FIRE_ID(m_spellInfo->events.id,Spell,OnSuccessfulDispel, TSPlayer(caster), TSSpellInfo(m_spellInfo), TSUnit(unitTarget), TSAura(itr->GetAura()), TSNumber<uint32>(dispel_type));
     }
     m_caster->SendMessageToSet(&dataSuccess, true);
-
-    // On success dispel
-    // Devour Magic
-    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_WARLOCK && m_spellInfo->GetCategory() == SPELLCATEGORY_DEVOUR_MAGIC)
-    {
-        CastSpellExtraArgs args(TRIGGERED_FULL_MASK);
-        args.AddSpellMod(SPELLVALUE_BASE_POINT0, m_spellInfo->GetEffect(EFFECT_1).CalcValue());
-        m_caster->CastSpell(m_caster, 19658, args);
-        // Glyph of Felhunter
-        if (Unit* owner = m_caster->GetOwner())
-            if (owner->GetAura(56249))
-                owner->CastSpell(owner, 19658, args);
-    }
-
-    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN)
-    {
-        // Purge with Electrified Purge
-        if (m_spellInfo->Id == 1230022 && m_caster->ToUnit()->HasAura(1230023))
-            m_caster->CastSpell(m_caster, 1230021, true);
-
-        // Purge/Cleanse Spirit with Inundate
-        if ((m_spellInfo->Id == 1230022 || m_spellInfo->Id == 1230038) && m_caster->ToUnit()->HasAura(1250019))
-            m_caster->CastSpell(m_caster, 1250020, true);
-    }
 }
 
 void Spell::EffectDualWield()

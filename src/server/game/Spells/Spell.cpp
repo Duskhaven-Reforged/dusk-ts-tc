@@ -8287,7 +8287,6 @@ bool Spell::CallScriptEffectHandlers(SpellEffIndex effIndex, SpellEffectHandleMo
 
 void Spell::CallScriptSuccessfulDispel(SpellEffIndex effIndex)
 {
-    FIRE_ID(m_spellInfo->events.id,Spell,OnSuccessfulDispel,TSSpell(this),(uint32)effIndex); // @tswow-line
     for (auto scritr = m_loadedScripts.begin(); scritr != m_loadedScripts.end(); ++scritr)
     {
         (*scritr)->_PrepareScriptCall(SPELL_SCRIPT_HOOK_EFFECT_SUCCESSFUL_DISPEL);
