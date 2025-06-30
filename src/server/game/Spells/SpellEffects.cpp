@@ -850,7 +850,7 @@ void Spell::EffectTriggerSpell()
     if (effectInfo->Effect == SPELL_EFFECT_TRIGGER_SPELL)
         delay = Milliseconds(effectInfo->MiscValue);
 
-    m_caster->m_Events.AddEventAtOffset([caster = m_caster, targets, originalCaster = m_originalCasterGUID, castItemGuid = m_castItemGUID, spellEffectInfo = effectInfo, value = damage]() mutable {
+        m_caster->m_Events.AddEventAtOffset([caster = m_caster, targets, originalCaster = m_originalCasterGUID, castItemGuid = m_castItemGUID, spellEffectInfo = effectInfo, value = damage]() mutable {
         targets.Update(caster);
 
         CastSpellExtraArgs args(TRIGGERED_FULL_MASK);

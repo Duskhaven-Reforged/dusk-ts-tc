@@ -1601,6 +1601,7 @@ enum Targets
     TARGET_UNIT_CONE_ENTRY_110         = 110, // 1 spell
     TARGET_UNIT_CASTER_AREA_SUMMONS    = 111,
     TARGET_DEST_PET                    = 112,
+    TARGET_UNIT_TARGET_ALLY_OR_RAID    = 113,
     TOTAL_SPELL_TARGETS
 };
 
