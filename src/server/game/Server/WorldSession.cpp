@@ -1838,6 +1838,7 @@ bool WorldSession::HandleCustomNotInWorld(WorldPacket& packet)
             return true;
         }
     }
+    buffer.ClearPacket();
     return false;
 }
 // @tswow-end
