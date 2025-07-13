@@ -23,6 +23,7 @@
 #include "TSPlayer.h"
 #include "TSEvents.h"
 #include "TSCustomPacket.h"
+#include "TSGlobal.h"
 // @tswow-end
 #include "WorldSession.h"
 #include "AccountMgr.h"
@@ -323,7 +324,8 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                             //@tswow-begin 
                             if (packet->GetOpcode() == 0x51f)
                             {
-                                HandleCustomNotInWorld(*packet);
+                                if(HandleCustomNotInWorld(*packet))
+                                    break;
                             }
                             //@tswow-end
                             requeuePackets.push_back(packet);
@@ -1823,8 +1825,20 @@ void WorldSession::HandleCustom(WorldPacket& packet)
         .ReceivePacket(packet.size(),(char*)packet.contents());
 }
 
-void WorldSession::HandleCustomNotInWorld(WorldPacket& packet)
+bool WorldSession::HandleCustomNotInWorld(WorldPacket& packet)
 {
-    TSServerBuffer(GetAccountId()).ReceivePacket(packet.size(), (char*)packet.contents());
+    TSServerBuffer buffer = TSServerBuffer(GetAccountId());
+    if (buffer.ReceivePacket(packet.size(), (char*)packet.contents(), true) == CustomPacketResult::HANDLED_MESSAGE)
+    {
+        opcode_t opcode = buffer.GetOpcode();
+        auto it = notInWorldCustomOpcodeMap.find(opcode);
+        if (it != notInWorldCustomOpcodeMap.end() && it->second)
+        {
+            buffer.callOnSuccess();
+            return true;
+        }
+    }
+    buffer.ClearPacket();
+    return false;
 }
 // @tswow-end
