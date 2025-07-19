@@ -332,16 +332,20 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
         return;
     }
 
+    auto AllowedRace = true;
+    FIRE(Player,CheckValidRace, TSNumber<uint32>(GetAccountId()), TSNumber<uint32>(createInfo->Race), TSMutable<bool, bool>(&AllowedRace));
     // prevent character creating Expansion race without Expansion account
-    if (raceEntry->RequiredExpansion > Expansion())
+    if (raceEntry->RequiredExpansion > Expansion() && AllowedRace)
     {
         TC_LOG_ERROR("entities.player.cheat", "Expansion {} account:[{}] tried to Create character with expansion {} race ({})", Expansion(), GetAccountId(), raceEntry->RequiredExpansion, createInfo->Race);
         SendCharCreate(CHAR_CREATE_EXPANSION);
         return;
     }
 
+    auto AllowedClass = true;
+    FIRE(Player,CheckValidClass, TSNumber<uint32>(GetAccountId()), TSNumber<uint32>(createInfo->Class), TSMutable<bool, bool>(&AllowedClass));
     // prevent character creating Expansion class without Expansion account
-    if (classEntry->RequiredExpansion > Expansion())
+    if (classEntry->RequiredExpansion > Expansion() && AllowedClass)
     {
         TC_LOG_ERROR("entities.player.cheat", "Expansion {} account:[{}] tried to Create character with expansion {} class ({})", Expansion(), GetAccountId(), classEntry->RequiredExpansion, createInfo->Class);
         SendCharCreate(CHAR_CREATE_EXPANSION_CLASS);
