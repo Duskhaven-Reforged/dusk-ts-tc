@@ -2991,9 +2991,13 @@ void Unit::_UpdateSpells(uint32 time)
     // remove expired auras - do that after updates(used in scripts?)
     for (AuraMap::iterator i = m_ownedAuras.begin(); i != m_ownedAuras.end();)
     {
-        if (i->second->IsExpired())
-            RemoveOwnedAura(i, AURA_REMOVE_BY_EXPIRE);
-        else if (i->second->GetSpellInfo()->IsChanneled() && i->second->GetCasterGUID() != GetGUID() && !ObjectAccessor::GetWorldObject(*this, i->second->GetCasterGUID()))
+        if (i->second->IsExpired()) {
+            if (i->second->GetSpellInfo()->HasAttribute(SPELL_ATTR1_CU_DROP_STACK_ON_EXPIRE) &&  i->second->GetStackAmount() > 1){
+                i->second->DropCharge(AURA_REMOVE_BY_EXPIRE);
+                i->second->RefreshDuration(true);
+            } else
+                RemoveOwnedAura(i, AURA_REMOVE_BY_EXPIRE);
+        } else if (i->second->GetSpellInfo()->IsChanneled() && i->second->GetCasterGUID() != GetGUID() && !ObjectAccessor::GetWorldObject(*this, i->second->GetCasterGUID()))
             RemoveOwnedAura(i, AURA_REMOVE_BY_CANCEL); // remove channeled auras when caster is not on the same map
         else
             ++i;
