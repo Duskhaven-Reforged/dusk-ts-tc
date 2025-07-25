@@ -2039,9 +2039,7 @@ void Player::RegenerateAll()
     Regenerate(POWER_FOCUS);
     Regenerate(POWER_MANA);
     Regenerate(POWER_RAGE);
-    Regenerate(POWER_RUNIC_POWER);
 
-    Regenerate(POWER_RAGE);
     //@tswow-begin
     //if (HasRunes()) // Aleist3r: pls don't touch this again, it breaks RP decay for priest and other classes using it as a base for their class specific resource
         Regenerate(POWER_RUNIC_POWER);

@@ -6792,7 +6792,7 @@ void Unit::EnergizeBySpell(Unit* victim, uint32 spellId, int32 damage, Powers po
 
 void Unit::EnergizeBySpell(Unit* victim, SpellInfo const* spellInfo, int32 damage, Powers powerType)
 {
-    FIRE_ID(spellInfo->events.id, Spell, OnEnergize, TSUnit(victim), TSSpellInfo(spellInfo), TSNumber<uint8>(powerType), TSMutableNumber<int32>(&damage));
+    FIRE_ID(spellInfo->events.id, Spell, OnEnergizeBySpell, TSUnit(victim), TSSpellInfo(spellInfo), TSNumber<uint8>(powerType), TSMutableNumber<int32>(&damage));
 
     victim->ModifyPower(powerType, damage, false);
     victim->GetThreatManager().ForwardThreatForAssistingMe(this, float(damage)/2, spellInfo, true);
@@ -6876,7 +6876,6 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
         APbonus += GetTotalAttackPowerValue(attType);
         coeff = bonus->sp;
         DoneTotal += int32(bonus->ap * stack * ApCoeffMod * APbonus);
-
     } else {
         // No bonus damage for SPELL_DAMAGE_CLASS_NONE class spells by default
         if (spellProto->DmgClass == SPELL_DAMAGE_CLASS_NONE)
@@ -11558,6 +11557,47 @@ std::list<Unit*> Unit::SelectNearbyTargets(std::list<Unit*> exclude, float dist,
     return targets;
 }
 
+std::list<Unit*> Unit::SelectTargetsNearTarget(Unit* target, std::list<Unit*> exclude, float dist, uint32 amount) const
+{
+    std::list<Unit*> targets;
+    std::list<Unit*> tempTargets;
+    Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(target, this, dist);
+    Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(this, tempTargets, u_check);
+    Cell::VisitAllObjects(target, searcher, dist);
+
+    // remove current target
+    if (GetVictim())
+        tempTargets.remove(GetVictim());
+
+    if (!exclude.empty())
+        for (auto unit : exclude)
+            tempTargets.remove(unit);
+
+    // remove not LoS targets
+    for (std::list<Unit*>::iterator tIter = tempTargets.begin(); tIter != tempTargets.end();)
+    {
+        if (!IsWithinLOSInMap(*tIter) || (*tIter)->IsTotem() || (*tIter)->IsSpiritService() || (*tIter)->IsCritter())
+            tempTargets.erase(tIter++);
+        else
+            ++tIter;
+    }
+
+    if (!amount) // if amount is set to 0, get all
+        amount = tempTargets.size();
+
+    // add unique target to list
+    for (uint32 i = 0; i < amount; ++i)
+    {
+        Unit* tempUnit = Trinity::Containers::SelectRandomContainerElement(tempTargets);
+        tempTargets.remove(tempUnit);
+
+        if (std::find(targets.begin(), targets.end(), tempUnit) == targets.end())
+            targets.push_back(tempUnit);
+    }
+
+    return targets;
+}
+
 void ApplyPercentModFloatVar(float& var, float val, bool apply)
 {
     var *= (apply ? (100.0f + val) / 100.0f : 100.0f / (100.0f + val));
@@ -12251,9 +12291,7 @@ void Unit::SetControlled(bool apply, UnitState state)
         if (state & UNIT_STATE_CONTROLLED)
             CastStop();
 
-
         AddUnitState(state);
-        FIRE(Unit, OnLossOfControl, TSUnit(this), state)
         switch (state)
         {
             case UNIT_STATE_STUNNED:
@@ -12323,6 +12361,18 @@ void Unit::SetControlled(bool apply, UnitState state)
 
         ApplyControlStatesIfNeeded();
     }
+
+    if (auto Player = this->ToPlayer()) {
+        auto StillLost = Player->HasUnitState(UNIT_STATE_STUNNED) || Player->HasUnitState(UNIT_STATE_ROOT) 
+            || Player->HasUnitState(UNIT_STATE_CONFUSED) || Player->HasUnitState(UNIT_STATE_FLEEING);
+
+        if (StillLost) {
+            FIRE(Player, OnLossOfControl, TSPlayer(Player));
+        } else {
+            FIRE(Player, OnControlRegained, TSPlayer(Player));
+        }
+    }
+
 }
 
 void Unit::ApplyControlStatesIfNeeded()

@@ -889,6 +889,7 @@ class TC_GAME_API Unit : public WorldObject
         Unit* SelectNearbyTargetWithoutAura(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE, uint32 WithoutAura = 0) const;
         std::list<Unit*> SelectNearbyTargets(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1) const;
         std::list<Unit*> SelectNearbyTargets(std::list<Unit*> exclude = {}, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1) const;
+        std::list<Unit*> SelectTargetsNearTarget(Unit* target, std::list<Unit*> exclude = {}, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1) const;
         void SendMeleeAttackStop(Unit* victim = nullptr);
         void SendMeleeAttackStart(Unit* victim);
 

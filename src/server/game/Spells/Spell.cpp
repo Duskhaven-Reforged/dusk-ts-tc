@@ -5215,8 +5215,12 @@ void Spell::TakeRunePower(bool didHit)
     if (didHit) {
         FIRE(Player,OnRunesSpent, TSPlayer(m_caster->ToPlayer()), runeCost[RUNE_BLOOD] + runeCost[RUNE_UNHOLY] + runeCost[RUNE_FROST]);
 
-        if (int32 rp = int32(Runic * sWorld->getRate(RATE_POWER_RUNICPOWER_INCOME)))
+        if (int32 rp = int32(Runic * sWorld->getRate(RATE_POWER_RUNICPOWER_INCOME))) {
+            if (auto Target = m_targets.GetUnitTarget())
+                FIRE(Player, OnRunicGainedFromSpell, TSSpell(this), TSPlayer(m_caster->ToPlayer()), TSUnit(Target), TSMutableNumber<int32>(&rp));
+
             player->ModifyPower(POWER_RUNIC_POWER, int32(rp));
+        }
     }
 }
 
