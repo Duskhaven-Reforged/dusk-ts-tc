@@ -1072,11 +1072,12 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
                     damage = Unit::SpellCriticalDamageBonus(this, spellInfo, damage, victim);
                 }
 
-                if (blocked)
+                auto player = victim->ToPlayer();
+                if (blocked && player)
                 {
-                    damageInfo->blocked = victim->GetShieldBlockValue();
+                    damageInfo->blocked = player->GetShieldBlockValue(true);
                     // double blocked amount if block is critical
-                    if (victim->IsBlockCritical())
+                    if (player->IsBlockCritical(true))
                         damageInfo->blocked += damageInfo->blocked;
                     if (damage <= int32(damageInfo->blocked))
                     {
@@ -2480,12 +2481,7 @@ bool Unit::isSpellBlocked(Unit* victim, SpellInfo const* spellProto, WeaponAttac
         if (victim->IsNonMeleeSpellCast(false, false, true) || victim->HasUnitState(UNIT_STATE_CONTROLLED))
             return false;
 
-        int32 Pct = victim->GetTotalAuraModifier(SPELL_AURA_ADD_SPELL_BLOCK);
-
-        if (Pct == 0)
-            Pct = 100;
-
-        float blockChance = CalculatePct(victim->GetUnitBlockChance(attackType, victim), Pct);
+        float blockChance = victim->GetUnitBlockChance(attackType, victim);
         if (roll_chance_f(blockChance))
             return true;
     }
@@ -2498,11 +2494,17 @@ bool Unit::CanBlockSpells(Unit* victim)
 }
 
 
-bool Unit::IsBlockCritical()
+bool Unit::IsBlockCritical(bool IsSpell)
 {
-    if (roll_chance_i(GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_CRIT_CHANCE)))
-        return true;
-    return false;
+    if (Player* player = ToPlayer()) {
+        auto IsCritical = false;
+        FIRE(Player, IsCriticalBlock, TSPlayer(this->ToPlayer()), TSMutable<bool,bool>(&IsCritical), IsSpell);
+        return IsCritical;
+    } else {
+        if (roll_chance_i(GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_CRIT_CHANCE)))
+            return true;
+        return false;
+    }
 }
 
 int32 Unit::GetMechanicResistChance(SpellInfo const* spellInfo) const
@@ -6876,6 +6878,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
         APbonus += GetTotalAttackPowerValue(attType);
         coeff = bonus->sp;
         DoneTotal += int32(bonus->ap * stack * ApCoeffMod * APbonus);
+        DoneTotal += int32(bonus->bv * GetShieldBlockValue());
     } else {
         // No bonus damage for SPELL_DAMAGE_CLASS_NONE class spells by default
         if (spellProto->DmgClass == SPELL_DAMAGE_CLASS_NONE)
@@ -7491,109 +7494,109 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
             // scripted (increase crit chance ... against ... target by x%
             if (caster)
             {
-                AuraEffectList const& mOverrideClassScript = caster->GetAuraEffectsByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
-                for (AuraEffect const* aurEff : mOverrideClassScript)
-                {
-                    if (!aurEff->IsAffectedOnSpell(spellInfo))
-                        continue;
+                // AuraEffectList const& mOverrideClassScript = caster->GetAuraEffectsByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
+                // for (AuraEffect const* aurEff : mOverrideClassScript)
+                // {
+                //     if (!aurEff->IsAffectedOnSpell(spellInfo))
+                //         continue;
 
-                    float modChance = 0.f;
-                    switch (aurEff->GetMiscValue())
-                    {
-                        case 91111: // Shatter (Duskhaven)
-                            modChance += 15.f;
-                            [[fallthrough]];
-                        case 911: // Shatter (Rank 3)
-                            modChance += 16.f;
-                            [[fallthrough]];
-                        case 910: // Shatter (Rank 2)
-                            modChance += 17.f;
-                            [[fallthrough]];
-                        case 849: // Shatter (Rank 1)
-                            modChance += 17.f;
-                            if (!HasAuraState(AURA_STATE_FROZEN, spellInfo, caster) || !HasAura(1290013)) // Brittlefrost
-                                break;
+                //     float modChance = 0.f;
+                //     switch (aurEff->GetMiscValue())
+                //     {
+                //         case 91111: // Shatter (Duskhaven)
+                //             modChance += 15.f;
+                //             [[fallthrough]];
+                //         case 911: // Shatter (Rank 3)
+                //             modChance += 16.f;
+                //             [[fallthrough]];
+                //         case 910: // Shatter (Rank 2)
+                //             modChance += 17.f;
+                //             [[fallthrough]];
+                //         case 849: // Shatter (Rank 1)
+                //             modChance += 17.f;
+                //             if (!HasAuraState(AURA_STATE_FROZEN, spellInfo, caster) || !HasAura(1290013)) // Brittlefrost
+                //                 break;
 
-                            crit_chance += modChance;
-                            break;
-                        case 7917: // Glyph of Shadowburn
-                            if (HasAuraState(AURA_STATE_HEALTHLESS_35_PERCENT, spellInfo, caster))
-                                crit_chance += aurEff->GetAmount();
-                            break;
-                        case 7997: // Renewed Hope
-                        case 7998:
-                            if (HasAura(6788))
-                                crit_chance += aurEff->GetAmount();
-                            break;
-                        case 69420: // Instant Blaze (Duskhaven)
-                            if (GetHealthPct() > aurEff->GetAmount())
-                                crit_chance = 100.f;
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                // Custom crit by class
-                switch (spellInfo->SpellFamilyName)
-                {
-                    case SPELLFAMILY_MAGE:
-                        // Glyph of Fire Blast
-                        if (spellInfo->SpellFamilyFlags[0] == 0x2 && spellInfo->SpellIconID == 12)
-                            if (HasAuraWithMechanic((1 << MECHANIC_STUN) | (1 << MECHANIC_KNOCKOUT)))
-                                if (AuraEffect const* aurEff = caster->GetAuraEffect(56369, EFFECT_0))
-                                    crit_chance += aurEff->GetAmount();
-                        break;
-                    case SPELLFAMILY_DRUID:
-                        // Improved Faerie Fire
-                        if (HasAuraState(AURA_STATE_FAERIE_FIRE))
-                            if (AuraEffect const* aurEff = caster->GetDummyAuraEffect(SPELLFAMILY_DRUID, 109, 0))
-                                crit_chance += aurEff->GetAmount();
+                //             crit_chance += modChance;
+                //             break;
+                //         case 7917: // Glyph of Shadowburn
+                //             if (HasAuraState(AURA_STATE_HEALTHLESS_35_PERCENT, spellInfo, caster))
+                //                 crit_chance += aurEff->GetAmount();
+                //             break;
+                //         case 7997: // Renewed Hope
+                //         case 7998:
+                //             if (HasAura(6788))
+                //                 crit_chance += aurEff->GetAmount();
+                //             break;
+                //         case 69420: // Instant Blaze (Duskhaven)
+                //             if (GetHealthPct() > aurEff->GetAmount())
+                //                 crit_chance = 100.f;
+                //             break;
+                //         default:
+                //             break;
+                //     }
+                // }
+                // // Custom crit by class
+                // switch (spellInfo->SpellFamilyName)
+                // {
+                //     case SPELLFAMILY_MAGE:
+                //         // Glyph of Fire Blast
+                //         if (spellInfo->SpellFamilyFlags[0] == 0x2 && spellInfo->SpellIconID == 12)
+                //             if (HasAuraWithMechanic((1 << MECHANIC_STUN) | (1 << MECHANIC_KNOCKOUT)))
+                //                 if (AuraEffect const* aurEff = caster->GetAuraEffect(56369, EFFECT_0))
+                //                     crit_chance += aurEff->GetAmount();
+                //         break;
+                //     case SPELLFAMILY_DRUID:
+                //         // Improved Faerie Fire
+                //         if (HasAuraState(AURA_STATE_FAERIE_FIRE))
+                //             if (AuraEffect const* aurEff = caster->GetDummyAuraEffect(SPELLFAMILY_DRUID, 109, 0))
+                //                 crit_chance += aurEff->GetAmount();
 
-                        // cumulative effect - don't break
+                //         // cumulative effect - don't break
 
-                        // Starfire
-                        if (spellInfo->SpellFamilyFlags[0] & 0x4 && spellInfo->SpellIconID == 1485)
-                        {
-                            // Improved Insect Swarm
-                            if (AuraEffect const* aurEff = caster->GetDummyAuraEffect(SPELLFAMILY_DRUID, 1771, 0))
-                                if (GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, 0x00000002, 0, 0))
-                                    crit_chance += aurEff->GetAmount();
-                            break;
-                        }
-                        break;
-                    case SPELLFAMILY_ROGUE:
-                        // Shiv-applied poisons can't crit
-                        if (caster->FindCurrentSpellBySpellId(5938))
-                            crit_chance = 0.0f;
-                        break;
-                    case SPELLFAMILY_PALADIN:
-                        // Flash of light
-                        if (spellInfo->SpellFamilyFlags[0] & 0x40000000)
-                        {
-                            // Sacred Shield
-                            if (AuraEffect const* aura = GetAuraEffect(58597, 1, GetGUID()))
-                                crit_chance += aura->GetAmount();
-                            break;
-                        }
-                        // Exorcism
-                        else if (spellInfo->GetCategory() == 19)
-                        {
-                            if (GetCreatureTypeMask() & CREATURE_TYPEMASK_DEMON_OR_UNDEAD)
-                                return 100.0f;
-                            break;
-                        }
-                        break;
-                    case SPELLFAMILY_SHAMAN:
-                        // Lava Burst
-                        if (spellInfo->SpellFamilyFlags[0] & 0x200)
-                        {
-                            if (GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_SHAMAN, 0x1000, 0, 0, caster->GetGUID()))
-                                if (GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE) > -100)
-                                    return 100.0f;
-                            break;
-                        }
-                        break;
-                }
+                //         // Starfire
+                //         if (spellInfo->SpellFamilyFlags[0] & 0x4 && spellInfo->SpellIconID == 1485)
+                //         {
+                //             // Improved Insect Swarm
+                //             if (AuraEffect const* aurEff = caster->GetDummyAuraEffect(SPELLFAMILY_DRUID, 1771, 0))
+                //                 if (GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, 0x00000002, 0, 0))
+                //                     crit_chance += aurEff->GetAmount();
+                //             break;
+                //         }
+                //         break;
+                //     case SPELLFAMILY_ROGUE:
+                //         // Shiv-applied poisons can't crit
+                //         if (caster->FindCurrentSpellBySpellId(5938))
+                //             crit_chance = 0.0f;
+                //         break;
+                //     case SPELLFAMILY_PALADIN:
+                //         // Flash of light
+                //         if (spellInfo->SpellFamilyFlags[0] & 0x40000000)
+                //         {
+                //             // Sacred Shield
+                //             if (AuraEffect const* aura = GetAuraEffect(58597, 1, GetGUID()))
+                //                 crit_chance += aura->GetAmount();
+                //             break;
+                //         }
+                //         // Exorcism
+                //         else if (spellInfo->GetCategory() == 19)
+                //         {
+                //             if (GetCreatureTypeMask() & CREATURE_TYPEMASK_DEMON_OR_UNDEAD)
+                //                 return 100.0f;
+                //             break;
+                //         }
+                //         break;
+                //     case SPELLFAMILY_SHAMAN:
+                //         // Lava Burst
+                //         if (spellInfo->SpellFamilyFlags[0] & 0x200)
+                //         {
+                //             if (GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_SHAMAN, 0x1000, 0, 0, caster->GetGUID()))
+                //                 if (GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE) > -100)
+                //                     return 100.0f;
+                //             break;
+                //         }
+                //         break;
+                // }
 
                 // Spell crit suppression
                 if (GetTypeId() == TYPEID_UNIT)
@@ -7609,30 +7612,30 @@ float Unit::SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo,
             // Custom crit by class
             if (caster)
             {
-                switch (spellInfo->SpellFamilyName)
-                {
-                    case SPELLFAMILY_DRUID:
-                        // Rend and Tear - bonus crit chance for Ferocious Bite on bleeding targets
-                        if (spellInfo->SpellFamilyFlags[0] & 0x00800000
-                            && spellInfo->SpellIconID == 1680
-                            && HasAuraState(AURA_STATE_BLEEDING))
-                        {
-                            if (AuraEffect const* rendAndTear = caster->GetDummyAuraEffect(SPELLFAMILY_DRUID, 2859, 1))
-                                crit_chance += rendAndTear->GetAmount();
-                            break;
-                        }
-                        break;
-                    case SPELLFAMILY_WARRIOR:
-                        // Victory Rush
-                        if (spellInfo->SpellFamilyFlags[1] & 0x100)
-                        {
-                            // Glyph of Victory Rush
-                            if (AuraEffect const* aurEff = caster->GetAuraEffect(58382, 0))
-                                crit_chance += aurEff->GetAmount();
-                            break;
-                        }
-                        break;
-                }
+                // switch (spellInfo->SpellFamilyName)
+                // {
+                //     case SPELLFAMILY_DRUID:
+                //         // Rend and Tear - bonus crit chance for Ferocious Bite on bleeding targets
+                //         if (spellInfo->SpellFamilyFlags[0] & 0x00800000
+                //             && spellInfo->SpellIconID == 1680
+                //             && HasAuraState(AURA_STATE_BLEEDING))
+                //         {
+                //             if (AuraEffect const* rendAndTear = caster->GetDummyAuraEffect(SPELLFAMILY_DRUID, 2859, 1))
+                //                 crit_chance += rendAndTear->GetAmount();
+                //             break;
+                //         }
+                //         break;
+                //     case SPELLFAMILY_WARRIOR:
+                //         // Victory Rush
+                //         if (spellInfo->SpellFamilyFlags[1] & 0x100)
+                //         {
+                //             // Glyph of Victory Rush
+                //             if (AuraEffect const* aurEff = caster->GetAuraEffect(58382, 0))
+                //                 crit_chance += aurEff->GetAmount();
+                //             break;
+                //         }
+                //         break;
+                // }
             }
             [[fallthrough]]; // Calculate critical strike chance for both Ranged and Melee spells
         }
@@ -8509,20 +8512,20 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
         }
     }
 
-    // Custom scripted damage
-    if (spellProto)
-    {
-        switch (spellProto->SpellFamilyName)
-        {
-            case SPELLFAMILY_DEATHKNIGHT:
-                // Glacier Rot
-                if (spellProto->SpellFamilyFlags[0] & 0x2 || spellProto->SpellFamilyFlags[1] & 0x6)
-                    if (AuraEffect* aurEff = GetDummyAuraEffect(SPELLFAMILY_DEATHKNIGHT, 196, 0))
-                        if (victim->GetDiseasesByCaster(owner->GetGUID()) > 0)
-                            AddPct(DoneTotalMod, aurEff->GetAmount());
-                break;
-        }
-    }
+    // // Custom scripted damage
+    // if (spellProto)
+    // {
+    //     switch (spellProto->SpellFamilyName)
+    //     {
+    //         case SPELLFAMILY_DEATHKNIGHT:
+    //             // Glacier Rot
+    //             if (spellProto->SpellFamilyFlags[0] & 0x2 || spellProto->SpellFamilyFlags[1] & 0x6)
+    //                 if (AuraEffect* aurEff = GetDummyAuraEffect(SPELLFAMILY_DEATHKNIGHT, 196, 0))
+    //                     if (victim->GetDiseasesByCaster(owner->GetGUID()) > 0)
+    //                         AddPct(DoneTotalMod, aurEff->GetAmount());
+    //             break;
+    //     }
+    // }
 
     float tmpDamage = float(int32(pdamage) + DoneFlatBenefit) * DoneTotalMod;
     // bonus result can be negative

@@ -2755,7 +2755,7 @@ void Creature::SendZoneUnderAttackMessage(Player* attacker)
     sWorld->SendGlobalMessage(&data, nullptr, (enemy_team == ALLIANCE ? HORDE : ALLIANCE));
 }
 
-uint32 Creature::GetShieldBlockValue() const                  //dunno mob block value
+uint32 Creature::GetShieldBlockValue(bool isSpell) const                  //dunno mob block value
 {
     return (GetLevel()/2 + uint32(GetStat(STAT_STRENGTH)/20));
 }

@@ -171,7 +171,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool SetFeatherFall(bool enable, bool packetOnly = false) override;
         bool SetHover(bool enable, bool packetOnly = false, bool updateAnimTier = true) override;
 
-        uint32 GetShieldBlockValue() const override;
+        uint32 GetShieldBlockValue(bool isSpell = false) const override;
 
         SpellSchoolMask GetMeleeDamageSchoolMask(WeaponAttackType /*attackType*/ = BASE_ATTACK, uint8 /*damageIndex*/ = 0) const override { return m_meleeDamageSchoolMask; }
         void SetMeleeDamageSchool(SpellSchools school) { m_meleeDamageSchoolMask = SpellSchoolMask(1 << school); }

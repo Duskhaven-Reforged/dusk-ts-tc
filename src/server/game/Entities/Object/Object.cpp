@@ -2464,35 +2464,35 @@ int32 WorldObject::ModSpellDuration(SpellInfo const* spellInfo, WorldObject cons
         }
     }
 
-    // Glyphs which increase duration of selfcast buffs
-    if (unitTarget == this)
-    {
-        switch (spellInfo->SpellFamilyName)
-        {
-            case SPELLFAMILY_DRUID:
-                if (spellInfo->SpellFamilyFlags[0] & 0x100)
-                {
-                    // Glyph of Thorns
-                    if (AuraEffect* aurEff = unitTarget->GetAuraEffect(57862, EFFECT_0))
-                        duration += aurEff->GetAmount() * MINUTE * IN_MILLISECONDS;
-                }
-                break;
-            case SPELLFAMILY_PALADIN:
-                if ((spellInfo->SpellFamilyFlags[0] & 0x00000002) && spellInfo->SpellIconID == 298)
-                {
-                    // Glyph of Blessing of Might
-                    if (AuraEffect* aurEff = unitTarget->GetAuraEffect(57958, EFFECT_0))
-                        duration += aurEff->GetAmount() * MINUTE * IN_MILLISECONDS;
-                }
-                else if ((spellInfo->SpellFamilyFlags[0] & 0x00010000) && spellInfo->SpellIconID == 306)
-                {
-                    // Glyph of Blessing of Wisdom
-                    if (AuraEffect* aurEff = unitTarget->GetAuraEffect(57979, EFFECT_0))
-                        duration += aurEff->GetAmount() * MINUTE * IN_MILLISECONDS;
-                }
-                break;
-        }
-    }
+    // // Glyphs which increase duration of selfcast buffs
+    // if (unitTarget == this)
+    // {
+    //     switch (spellInfo->SpellFamilyName)
+    //     {
+    //         case SPELLFAMILY_DRUID:
+    //             if (spellInfo->SpellFamilyFlags[0] & 0x100)
+    //             {
+    //                 // Glyph of Thorns
+    //                 if (AuraEffect* aurEff = unitTarget->GetAuraEffect(57862, EFFECT_0))
+    //                     duration += aurEff->GetAmount() * MINUTE * IN_MILLISECONDS;
+    //             }
+    //             break;
+    //         case SPELLFAMILY_PALADIN:
+    //             if ((spellInfo->SpellFamilyFlags[0] & 0x00000002) && spellInfo->SpellIconID == 298)
+    //             {
+    //                 // Glyph of Blessing of Might
+    //                 if (AuraEffect* aurEff = unitTarget->GetAuraEffect(57958, EFFECT_0))
+    //                     duration += aurEff->GetAmount() * MINUTE * IN_MILLISECONDS;
+    //             }
+    //             else if ((spellInfo->SpellFamilyFlags[0] & 0x00010000) && spellInfo->SpellIconID == 306)
+    //             {
+    //                 // Glyph of Blessing of Wisdom
+    //                 if (AuraEffect* aurEff = unitTarget->GetAuraEffect(57979, EFFECT_0))
+    //                     duration += aurEff->GetAmount() * MINUTE * IN_MILLISECONDS;
+    //             }
+    //             break;
+    //     }
+    // }
 
     return std::max(duration, 0);
 }

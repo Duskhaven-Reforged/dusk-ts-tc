@@ -5381,7 +5381,7 @@ float Player::GetTotalBaseModValue(BaseModGroup modGroup) const
     return m_auraBaseFlatMod[modGroup] * m_auraBasePctMod[modGroup];
 }
 
-uint32 Player::GetShieldBlockValue() const
+uint32 Player::GetShieldBlockValue(bool IsSpell) const
 {
     float value = m_auraBaseFlatMod[SHIELD_BLOCK_VALUE]; // from gear
     FIRE(Player,OnCalcBlockValueFlat
@@ -5393,7 +5393,12 @@ uint32 Player::GetShieldBlockValue() const
         ,TSPlayer(const_cast<Player*>(this))
         ,TSMutableNumber<float>(&value)
     );
-    return uint32(std::max(0.f, value * pct));
+    uint32 Amount = uint32(std::max(0.f, value * pct));
+    if (IsSpell) {
+        int32 Pct = GetTotalAuraModifier(SPELL_AURA_ADD_SPELL_BLOCK);
+        Amount = CalculatePct(Amount, Pct);
+    }
+    return Amount;
 }
 
 float Player::GetMeleeCritFromAgility() const

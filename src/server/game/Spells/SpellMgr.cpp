@@ -1891,8 +1891,8 @@ void SpellMgr::LoadSpellBonuses()
 
     mSpellBonusMap.clear();                             // need for reload case
 
-    //                                                0      1             2          3         4
-    QueryResult result = WorldDatabase.Query("SELECT entry, effect, sp, ap FROM spell_bonus_data");
+    //                                                0      1      2   3   4
+    QueryResult result = WorldDatabase.Query("SELECT entry, effect, sp, ap, bv FROM spell_bonus_data");
     if (!result)
     {
         TC_LOG_INFO("server.loading", ">> Loaded 0 spell bonus data. DB table `spell_bonus_data` is empty.");
@@ -1921,6 +1921,7 @@ void SpellMgr::LoadSpellBonuses()
         SpellBonusEntry& sbe = mSpellBonusMap[entry][SpellEffIndex(effect)];
         sbe.sp = fields[2].GetFloat();
         sbe.ap = fields[3].GetFloat();
+        sbe.bv = fields[4].GetFloat();
 
         ++count;
     } while (result->NextRow());
@@ -2850,12 +2851,12 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
                                 break;
 
                             // Frost Fever
-                            if (spellInfo->Id == 55095)
-                                break;
+                            // if (spellInfo->Id == 55095)
+                            //     break;
 
                             // Haunt
-                            if (spellInfo->SpellFamilyName == SPELLFAMILY_WARLOCK && (spellInfo->SpellFamilyFlags[1] & 0x40000))
-                                break;
+                            // if (spellInfo->SpellFamilyName == SPELLFAMILY_WARLOCK && (spellInfo->SpellFamilyFlags[1] & 0x40000))
+                            //     break;
 
                             setFlag = true;
                             break;

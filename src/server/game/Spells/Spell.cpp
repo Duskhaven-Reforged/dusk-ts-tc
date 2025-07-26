@@ -2132,18 +2132,18 @@ void Spell::prepareDataForTriggerSystem()
             // Because spell positivity is dependant on target
     }
 
-    // Hunter trap spells - activation proc for Lock and Load, Entrapment and Misdirection
-    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER &&
-        (m_spellInfo->SpellFamilyFlags[0] & 0x18 ||         // Freezing and Frost Trap, Freezing Arrow
-            m_spellInfo->Id == 57879 ||                     // Snake Trap - done this way to avoid double proc
-            m_spellInfo->SpellFamilyFlags[2] & 0x00024000)) // Explosive and Immolation Trap
-    {
-        m_procAttacker |= PROC_FLAG_DONE_TRAP_ACTIVATION;
+    // // Hunter trap spells - activation proc for Lock and Load, Entrapment and Misdirection
+    // if (m_spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER &&
+    //     (m_spellInfo->SpellFamilyFlags[0] & 0x18 ||         // Freezing and Frost Trap, Freezing Arrow
+    //         m_spellInfo->Id == 57879 ||                     // Snake Trap - done this way to avoid double proc
+    //         m_spellInfo->SpellFamilyFlags[2] & 0x00024000)) // Explosive and Immolation Trap
+    // {
+    //     m_procAttacker |= PROC_FLAG_DONE_TRAP_ACTIVATION;
 
-        // also fill up other flags (TargetInfo::DoDamageAndTriggers only fills up flag if both are not set)
-        m_procAttacker |= PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG;
-        m_procVictim |= PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG;
-    }
+    //     // also fill up other flags (TargetInfo::DoDamageAndTriggers only fills up flag if both are not set)
+    //     m_procAttacker |= PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG;
+    //     m_procVictim |= PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG;
+    // }
 
     // Hellfire Effect - trigger as DOT
     if (m_spellInfo->SpellFamilyName == SPELLFAMILY_WARLOCK && m_spellInfo->SpellFamilyFlags[0] & 0x00000040)

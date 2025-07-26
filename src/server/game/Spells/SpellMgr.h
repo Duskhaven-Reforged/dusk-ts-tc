@@ -299,6 +299,7 @@ struct SpellBonusEntry
 {
     float  sp;
     float  ap;
+    float  bv;
 };
 
 typedef std::unordered_map<uint32, std::unordered_map<SpellEffIndex, SpellBonusEntry>>     SpellBonusMap;
