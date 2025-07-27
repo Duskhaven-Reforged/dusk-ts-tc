@@ -329,7 +329,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //262 SPELL_AURA_ABILITY_IGNORE_AURASTATE implemented in Spell::CheckCast
     &AuraEffect::HandleNoImmediateEffect,                         //263 SPELL_AURA_DISABLE_CASTING_EXCEPT_ABILITIES player can use only abilities set in SpellClassMask
     &AuraEffect::HandleNoImmediateEffect,                         //264 Aleist3r: changed to SPELL_AURA_IMMUNE_TO_DISARM
-    &AuraEffect::HandleNoImmediateEffect,                         //265 unused (3.2.0)
+    &AuraEffect::HandleAuraModStatFromResistencePercent,          //265 SPELL_AURA_MOD_STAT_FROM_RESISTANCE_PERCENT
     &AuraEffect::HandleNoImmediateEffect,                         //266 unused (3.2.0)
     &AuraEffect::HandleNoImmediateEffect,                         //267 SPELL_AURA_MOD_IMMUNE_AURA_APPLY_SCHOOL         implemented in Unit::IsImmunedToSpellEffect
     &AuraEffect::HandleAuraModAttackPowerOfStatPercent,           //268 SPELL_AURA_MOD_ATTACK_POWER_OF_STAT_PERCENT
@@ -3806,6 +3806,20 @@ void AuraEffect::HandleAuraModResistenceOfStatPercent(AuraApplication const* aur
     target->UpdateArmor();
 }
 
+void AuraEffect::HandleAuraModStatFromResistencePercent(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
+{
+    if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
+        return;
+
+    Unit* target = aurApp->GetTarget();
+
+    if (target->GetTypeId() != TYPEID_PLAYER)
+        return;
+
+    // Recalculate Stats
+    target->UpdateStats(Stats(GetMiscValue()));
+}
+
 void AuraEffect::HandleAuraModExpertise(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
 {
     if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
@@ -5293,15 +5307,6 @@ void AuraEffect::HandlePeriodicDamageAurasTick(Unit* target, Unit* caster) const
 
     // Script Hook For HandlePeriodicDamageAurasTick -- Allow scripts to change the Damage pre class mitigation calculations
     sScriptMgr->ModifyPeriodicDamageAurasTick(target, caster, damage);
-    // @tswow-begin
-    FIRE_ID(
-        this->m_spellInfo->events.id
-        , Spell,OnPeriodicDamage
-        , TSAuraEffect(const_cast<AuraEffect*>(this))
-        , TSUnit(target)
-        , TSMutableNumber<uint32>(&damage)
-    );
-    // @tswow-end
 
     if (GetAuraType() == SPELL_AURA_PERIODIC_DAMAGE)
     {
@@ -5334,6 +5339,16 @@ void AuraEffect::HandlePeriodicDamageAurasTick(Unit* target, Unit* caster) const
         damage = uint32(ceil(CalculatePct<float, float>(target->GetMaxHealth(), damage)));
 
     damage = target->SpellDamageBonusTaken(caster, GetSpellInfo(), damage, DOT);
+
+    // @tswow-begin
+    FIRE_ID(
+        this->m_spellInfo->events.id
+        , Spell,OnPeriodicDamage
+        , TSAuraEffect(const_cast<AuraEffect*>(this))
+        , TSUnit(target)
+        , TSMutableNumber<uint32>(&damage)
+    );
+    // @tswow-end
 
     // @tswow-begin
     float crit_chance = GetCritChanceFor(caster,target);
@@ -5423,6 +5438,12 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
 
     // Script Hook For HandlePeriodicDamageAurasTick -- Allow scripts to change the Damage pre class mitigation calculations
     sScriptMgr->ModifyPeriodicDamageAurasTick(target, caster, damage);
+
+    // dynobj auras must always have a caster
+    if (GetBase()->GetType() == DYNOBJ_AURA_TYPE)
+        damage = ASSERT_NOTNULL(caster)->SpellDamageBonusDone(target, GetSpellInfo(), damage, DOT, GetSpellEffectInfo(), { }, stackAmountForBonuses);
+    damage = target->SpellDamageBonusTaken(caster, GetSpellInfo(), damage, DOT);
+
     // @tswow-begin
     FIRE_ID(
         this->m_spellInfo->events.id
@@ -5432,11 +5453,6 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
         , TSMutableNumber<uint32>(&damage)
     );
     // @tswow-end
-
-    // dynobj auras must always have a caster
-    if (GetBase()->GetType() == DYNOBJ_AURA_TYPE)
-        damage = ASSERT_NOTNULL(caster)->SpellDamageBonusDone(target, GetSpellInfo(), damage, DOT, GetSpellEffectInfo(), { }, stackAmountForBonuses);
-    damage = target->SpellDamageBonusTaken(caster, GetSpellInfo(), damage, DOT);
 
     // @tswow-begin
     float crit_chance = GetCritChanceFor(caster,target);
@@ -5567,15 +5583,6 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
     
     // Script Hook For HandlePeriodicHealAurasTick -- Allow scripts to change the Damage pre class mitigation calculations
     sScriptMgr->ModifyPeriodicDamageAurasTick(target, caster, damage);
-    // @tswow-begin
-    FIRE_ID(
-          this->m_spellInfo->events.id
-        , Spell,OnPeriodicDamage
-        , TSAuraEffect(const_cast<AuraEffect*>(this))
-        , TSUnit(target)
-        , TSMutableNumber<uint32>(&damage)
-    );
-    // @tswow-end
 
     if (GetAuraType() == SPELL_AURA_OBS_MOD_HEALTH)
         damage = uint32(target->CountPctFromMaxHealth(damage));
@@ -5587,6 +5594,16 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
     }
 
     damage = target->SpellHealingBonusTaken(caster, GetSpellInfo(), damage, DOT);
+
+    // @tswow-begin
+    FIRE_ID(
+          this->m_spellInfo->events.id
+        , Spell,OnPeriodicDamage
+        , TSAuraEffect(const_cast<AuraEffect*>(this))
+        , TSUnit(target)
+        , TSMutableNumber<uint32>(&damage)
+    );
+    // @tswow-end
 
     // @tswow-begin
     float crit_chance = GetCritChanceFor(caster,target);

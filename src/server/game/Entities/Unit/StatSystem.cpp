@@ -226,6 +226,15 @@ bool Player::UpdateStats(Stats stat)
     // value = ((base_value * base_pct) + total_value) * total_pct
     float value = StatChanged(stat, GetTotalStatValue(stat));
 
+    //add dynamic flat mods
+    AuraEffectList const& statFromresists = GetAuraEffectsByType(SPELL_AURA_MOD_STAT_FROM_RESISTANCE_PERCENT);
+    for (AuraEffectList::const_iterator i = statFromresists.begin(); i != statFromresists.end(); ++i)
+    {
+        if ((*i)->GetMiscValue() == stat)
+            value += CalculatePct(GetResistance(SpellSchools((*i)->GetMiscValueB())), (*i)->GetAmount());
+    }
+
+
     SetStat(stat, int32(value));
 
     if (stat == STAT_STAMINA || stat == STAT_INTELLECT || stat == STAT_STRENGTH)
