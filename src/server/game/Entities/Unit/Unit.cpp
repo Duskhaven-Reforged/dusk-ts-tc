@@ -6822,11 +6822,11 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
     uint32 damageTypeMask = 1 << damagetype;
 
     if (IsPlayer()) {
-        FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(victim), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), false);
+        FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(victim), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSNumber<uint8>(WeaponAttackType::MAX_ATTACK), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), false);
     }
     else if (IsPet() && GetOwner()) {
         if (GetOwner()->IsPlayer())
-            FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(GetOwner()->ToPlayer())), TSUnit(victim), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), true);
+            FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(GetOwner()->ToPlayer())), TSUnit(victim), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSNumber<uint8>(WeaponAttackType::MAX_ATTACK), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), true);
     }
 
     // done scripted mod (take it from owner)
@@ -7328,7 +7328,7 @@ uint32 Unit::SpellDamageBonusTaken(Unit* caster, SpellInfo const* spellProto, ui
     }
 
     if (caster && IsPlayer())
-        FIRE(Player, OnCustomScriptedDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(caster)), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSMutableNumber<float>(&TakenTotalMod), TSNumber<uint8>(1 << damagetype));
+        FIRE(Player, OnCustomScriptedDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(caster)), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSNumber<uint8>(WeaponAttackType::MAX_ATTACK), TSMutableNumber<float>(&TakenTotalMod), TSNumber<uint8>(1 << damagetype));
 
     // Sanctified Wrath (bypass damage reduction)
     if (caster && TakenTotalMod < 1.0f)
@@ -8404,11 +8404,11 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
         }
 
         if (IsPlayer()) {
-            FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(SPELL_DIRECT_DAMAGE), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), false);
+            FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(SPELL_DIRECT_DAMAGE), TSNumber<uint8>(attType), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), false);
         }
         else if (IsPet() && GetOwner()) {
             if (GetOwner()->IsPlayer())
-                FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(GetOwner()->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(SPELL_DIRECT_DAMAGE), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), true);
+                FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(GetOwner()->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSSpellInfo(spellProto), TSNumber<uint8>(SPELL_DIRECT_DAMAGE), TSNumber<uint8>(attType), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), true);
         }
 
     } else {
@@ -8420,11 +8420,11 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
         }
 
         if (IsPlayer()) {
-            FIRE(Player, OnCustomScriptedAutoattackMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), false);
+            FIRE(Player, OnCustomScriptedAutoattackMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), TSNumber<uint8>(attType), false);
         }
         else if (IsPet() && GetOwner()) {
             if (GetOwner()->IsPlayer())
-                    FIRE(Player, OnCustomScriptedAutoattackMod, TSPlayer(const_cast<Player*>(GetOwner()->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), true);
+                FIRE(Player, OnCustomScriptedAutoattackMod, TSPlayer(const_cast<Player*>(GetOwner()->ToPlayer())), TSUnit(const_cast<Unit*>(victim)), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), TSNumber<uint8>(attType), true);
         }
     }
 
@@ -8597,7 +8597,7 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
         }
 
         if (IsPlayer())
-            FIRE(Player, OnCustomScriptedDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(attacker)), TSSpellInfo(spellProto), TSNumber<uint8>(0), TSMutableNumber<float>(&TakenTotalMod), TSNumber<uint8>(2));
+            FIRE(Player, OnCustomScriptedDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(attacker)), TSSpellInfo(spellProto), TSNumber<uint8>(0), TSNumber<uint8>(attType), TSMutableNumber<float>(&TakenTotalMod), TSNumber<uint8>(2));
     } else { // auto attack
         if (IsPlayer())
             FIRE(Player, OnCustomScriptedAutoattackDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(attacker)), TSMutableNumber<float>(&TakenTotalMod), TSMutableNumber<uint32>(&pdamage));

@@ -3301,6 +3301,7 @@ void Spell::EffectWeaponDmg()
 
     // Add melee damage bonuses (also check for negative)
     weaponDamage = unitCaster->MeleeDamageBonusDone(unitTarget, weaponDamage, m_attackType, m_spellInfo);
+
     m_damage += unitTarget->MeleeDamageBonusTaken(unitCaster, weaponDamage, m_attackType, m_spellInfo);
 }
 
