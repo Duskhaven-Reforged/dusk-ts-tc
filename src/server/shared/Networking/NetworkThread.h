@@ -19,6 +19,7 @@
 #define NetworkThread_h__
 
 #include "Define.h"
+#include "Socket.h"
 #include "DeadlineTimer.h"
 #include "Errors.h"
 #include "IoContext.h"
@@ -39,7 +40,7 @@ class NetworkThread
 {
 public:
     NetworkThread() : _connections(0), _stopped(false), _thread(nullptr), _ioContext(1),
-        _acceptSocket(_ioContext), _updateTimer(_ioContext)
+        _acceptSocket(_ioContext), _updateTimer(_ioContext), _readProxyHeader(false)
     {
     }
 
@@ -93,29 +94,87 @@ public:
 
     tcp::socket* GetSocketForAccept() { return &_acceptSocket; }
 
+    void EnableProxyProtocol() { _readProxyHeader = true; }
+
 protected:
     virtual void SocketAdded(std::shared_ptr<SocketType> /*sock*/) { }
     virtual void SocketRemoved(std::shared_ptr<SocketType> /*sock*/) { }
 
     void AddNewSockets()
     {
-        std::lock_guard<std::mutex> lock(_newSocketsLock);
+        std::scoped_lock<std::mutex> lock(_newSocketsLock);
 
         if (_newSockets.empty())
             return;
 
-        for (std::shared_ptr<SocketType> sock : _newSockets)
+        if (!_readProxyHeader)
+        {
+            for (std::shared_ptr<SocketType> sock : _newSockets)
+            {
+                if (!sock->IsOpen())
+                {
+                    SocketRemoved(sock);
+                    --_connections;
+                    continue;
+                }
+
+                _sockets.push_back(sock);
+
+                // No proxy protocol to validate, start the WoW connection
+                sock->Start();
+            }
+
+            _newSockets.clear();
+        }
+        else
+            StartProxyProtocol();
+    }
+
+    void StartProxyProtocol()
+    {
+        std::vector<std::shared_ptr<SocketType>> newSocketsToRemove;
+        for (auto&& sock : _newSockets)
         {
             if (!sock->IsOpen())
             {
+                newSocketsToRemove.emplace_back(sock);
                 SocketRemoved(sock);
                 --_connections;
+                continue;
             }
-            else
-                _sockets.push_back(sock);
+
+            const auto proxyHeaderReadingState = sock->GetProxyReadState();
+            if (proxyHeaderReadingState == ProxyConnectionState::Started)
+                continue;
+
+            switch (proxyHeaderReadingState)
+            {
+                case ProxyConnectionState::Idle:
+                    sock->AsyncReadProxyHeader();
+                    break;
+                case ProxyConnectionState::Finished:
+                    newSocketsToRemove.emplace_back(sock);
+                    _sockets.emplace_back(sock);
+                    sock->Start();
+                    break;
+                default:
+                    newSocketsToRemove.emplace_back(sock);
+                    SocketRemoved(sock);
+                    --_connections;
+                    break;
+            }
         }
 
-        _newSockets.clear();
+        for (auto&& sock : newSocketsToRemove)
+        {
+            auto sockIter = std::find(_newSockets.begin(), _newSockets.end(), sock);
+            if (sockIter != _newSockets.end())
+                _newSockets.erase(sockIter);
+            else
+                TC_LOG_ERROR("network", "NetworkThread::StartProxyProtocol: Socket not found in newSockets, possibly already removed due to duplicate?");
+        }
+
+        newSocketsToRemove.clear();
     }
 
     void Run()
@@ -174,6 +233,7 @@ private:
     Trinity::Asio::IoContext _ioContext;
     tcp::socket _acceptSocket;
     Trinity::Asio::DeadlineTimer _updateTimer;
+    bool _readProxyHeader : 1 = false;
 };
 
 #endif // NetworkThread_h__

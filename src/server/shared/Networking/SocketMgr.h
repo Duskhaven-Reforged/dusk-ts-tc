@@ -100,7 +100,8 @@ public:
         try
         {
             std::shared_ptr<SocketType> newSocket = std::make_shared<SocketType>(std::move(sock));
-            newSocket->Start();
+            // No longer called right away, server might be behind proxy and we need to resolve PROXY protocol first
+            // newSocket->Start();
 
             _threads[threadIndex].AddSocket(newSocket);
         }

@@ -97,6 +97,7 @@ enum SpellTargetCheckTypes : uint8
     TARGET_CHECK_SUMMON,
     TARGET_CHECK_PET,
     TARGET_CHECK_CASTER,
+    TARGET_CHECK_SUMMONER_ALLY,
 };
 
 enum SpellTargetDirectionTypes

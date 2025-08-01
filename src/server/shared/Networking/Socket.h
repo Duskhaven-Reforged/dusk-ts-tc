@@ -34,14 +34,36 @@ using boost::asio::ip::tcp;
 #define TC_SOCKET_USE_IOCP
 #endif
 
+enum class ProxyConnectionState
+{
+    Idle,
+    Started,
+    Finished,
+    Failed
+};
+
+enum class ProxyProtocolFamily
+{
+    TCP_V4 = 0x11,
+    TCP_V6 = 0x21
+};
+
 template<class T>
 class Socket : public std::enable_shared_from_this<T>
 {
 public:
-    explicit Socket(tcp::socket&& socket) : _socket(std::move(socket)), _remoteAddress(_socket.remote_endpoint().address()),
-        _remotePort(_socket.remote_endpoint().port()), _readBuffer(), _closed(false), _closing(false), _isWritingAsync(false)
+    explicit Socket(tcp::socket&& socket) : _socket(std::move(socket)), _readBuffer(), _closed(false), _closing(false), _isWritingAsync(false)
+        , _proxyState(ProxyConnectionState::Idle) // Default state, only valid if the network thread is behind a proxy
     {
         _readBuffer.Resize(READ_BLOCK_SIZE);
+    }
+
+    /// Do not call this when a server is behind a proxy, the remote_* members will throw an exception
+    /// the IP and port are extracted from the proxy header, see ProcessProxyProtocol
+    void Initialize()
+    {
+        _remoteAddress = _socket.remote_endpoint().address();
+        _remotePort = _socket.remote_endpoint().port();
     }
 
     virtual ~Socket()
@@ -79,6 +101,11 @@ public:
         return _remotePort;
     }
 
+    ProxyConnectionState GetProxyReadState() const
+    {
+        return _proxyState;
+    }
+
     void AsyncRead()
     {
         if (!IsOpen())
@@ -99,6 +126,18 @@ public:
         _readBuffer.EnsureFreeSpace();
         _socket.async_read_some(boost::asio::buffer(_readBuffer.GetWritePointer(), _readBuffer.GetRemainingSpace()),
             std::bind(callback, this->shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+    }
+
+    void AsyncReadProxyHeader()
+    {
+        if (!IsOpen())
+            return;
+
+        _proxyState = ProxyConnectionState::Started;
+        _readBuffer.Normalize();
+        _readBuffer.EnsureFreeSpace();
+        _socket.async_read_some(boost::asio::buffer(_readBuffer.GetWritePointer(), _readBuffer.GetRemainingSpace()),
+            std::bind(&Socket<T>::ProcessProxyProtocol, this->shared_from_this(), std::placeholders::_1, std::placeholders::_2));
     }
 
     void QueuePacket(MessageBuffer&& buffer)
@@ -172,6 +211,112 @@ protected:
     }
 
 private:
+    // See https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt (2.2. Binary header format (version 2)) for more details.
+    void ProcessProxyProtocol(boost::system::error_code error, std::size_t transferredBytes)
+    {
+        if (error)
+        {
+            CloseSocket();
+            return;
+        }
+
+        _readBuffer.WriteCompleted(transferredBytes);
+
+        MessageBuffer& packet = GetReadBuffer();
+
+        const int minimumProxyProtocolV2Size = 28;
+        if (packet.GetActiveSize() < minimumProxyProtocolV2Size)
+        {
+            AsyncReadProxyHeader();
+            return;
+        }
+
+        uint8* readPointer = packet.GetReadPointer();
+
+        const uint8 signatureSize = 12;
+        const uint8 expectedSignature[signatureSize] = { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A };
+        if (memcmp(packet.GetReadPointer(), expectedSignature, signatureSize) != 0)
+        {
+            _proxyState = ProxyConnectionState::Failed;
+            // we cannot deduce ip, ip is stored in the proxy header pkt which we failed to deserialize
+            TC_LOG_ERROR("network", "ReadProxyHeader: Some ip sent bad PROXY Protocol v2 signature");
+            return;
+        }
+
+        const uint8 version = (readPointer[signatureSize] & 0xF0) >> 4;
+        const uint8 command = (readPointer[signatureSize] & 0xF);
+        if (version != 2)
+        {
+            _proxyState = ProxyConnectionState::Failed;
+            TC_LOG_ERROR("network", "ReadProxyHeader: Some ip sent bad PROXY Protocol v2 version");
+            return;
+        }
+
+        const uint8 addressFamily = readPointer[13];
+        const uint16 len = (readPointer[14] << 8) | readPointer[15];
+        if (len + 16 > packet.GetActiveSize())
+        {
+            AsyncReadProxyHeader();
+            return;
+        }
+
+        // Connection created by a proxy itself (health checks?), ignore and do nothing.
+        if (command == 0)
+        {
+            packet.ReadCompleted(len + 16);
+            _proxyState = ProxyConnectionState::Finished;
+            TC_LOG_ERROR("network", "ReadProxyHeader: Some ip sent PROXY Protocol v2 command 0");
+            // TODO actually check what to dowith command 0, we just let them go without assigning ip?
+            return;
+        }
+
+        auto remainingLen = packet.GetActiveSize() - 16;
+        readPointer += 16; // Actual data begins here
+
+        switch (static_cast<ProxyProtocolFamily>(addressFamily))
+        {
+            case ProxyProtocolFamily::TCP_V4:
+            {
+                if (remainingLen < 12)
+                {
+                    AsyncReadProxyHeader();
+                    return;
+                }
+
+                boost::asio::ip::address_v4::bytes_type b;
+                auto addressSize = sizeof(b);
+                std::copy(readPointer, readPointer + addressSize, b.begin());
+                _remoteAddress = boost::asio::ip::address_v4(b);
+                readPointer += 2 * addressSize; // Skip server address.
+                _remotePort = (readPointer[0] << 8) | readPointer[1];
+                break;
+            }
+            case ProxyProtocolFamily::TCP_V6:
+            {
+                if (remainingLen < 36)
+                {
+                    AsyncReadProxyHeader();
+                    return;
+                }
+
+                boost::asio::ip::address_v6::bytes_type b;
+                auto addressSize = sizeof(b);
+                std::copy(readPointer, readPointer + addressSize, b.begin());
+                _remoteAddress = boost::asio::ip::address_v6(b);
+                readPointer += 2 * addressSize; // Skip server address.
+                _remotePort = (readPointer[0] << 8) | readPointer[1];
+                break;
+            }
+            default:
+                _proxyState = ProxyConnectionState::Failed;
+                TC_LOG_ERROR("network", "ReadProxyHeader: Some ip sent unsupported PROXY Protocol v2 address family type");
+                return; // Exit out of function, do not go further
+        }
+
+        packet.ReadCompleted(len + 16);
+        _proxyState = ProxyConnectionState::Finished;
+    }
+
     void ReadHandlerInternal(boost::system::error_code error, size_t transferredBytes)
     {
         if (error)
@@ -267,6 +412,7 @@ private:
     std::atomic<bool> _closing;
 
     bool _isWritingAsync;
+    ProxyConnectionState _proxyState;
 };
 
 #endif // __SOCKET_H__
