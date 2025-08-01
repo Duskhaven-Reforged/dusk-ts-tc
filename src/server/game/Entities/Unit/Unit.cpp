@@ -12048,22 +12048,25 @@ bool Unit::InitTamedPet(Pet* pet, uint8 level, uint32 spell_id)
                 for (Creature* c : creaturedie) {
                     Loot* eLoot = &c->loot;
                     if (eLoot->lootOwnerGUID == player->GetGUID() && c->HasDynamicFlag(UNIT_DYNFLAG_LOOTABLE) && !eLoot->isLooted()) {
-                        if (eLoot->items.size() + loot->items.size() < MAX_NR_LOOT_ITEMS) {
+                        if (eLoot->items.size() + loot->items.size() + eLoot->quest_items.size() + loot->quest_items.size() < MAX_NR_LOOT_ITEMS) {
                             for (LootItem& item : loot->items) {
                                 eLoot->MergeItemIn(item);
                             }
+
+                            for (LootItem& item : loot->quest_items) {
+                                eLoot->MergeItemIn(item);
+                            }
+
                             eLoot->gold += loot->gold;
 
-                            loot->items.clear();
-                            loot->gold = 0;
 
-                            if (loot->quest_items.empty()) {
-                                creature->AllLootRemovedFromCorpse();
-                            }
+                            loot->clear();
+                            creature->AllLootRemovedFromCorpse();
+                            eLoot->FillQuestLoot(player);
 
-                            if (player) {
+                            if (player)
                                 player->SendLoot(c->GetGUID(), LOOT_CORPSE);
-                            }
+                            
                             break;
                         }
                     }

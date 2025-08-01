@@ -156,33 +156,6 @@ void Loot::clear()
     i_LootValidatorRefManager.clearReferences();
 }
 
-void Loot::MergeItemIn(LootItem item)
-{
-    ItemTemplate const* proto = sObjectMgr->GetItemTemplate(item.itemid);
-    if (!proto || item.needs_quest) // Skip quest items
-        return;
-
-    // Try to stack with existing items in the 'items' vector
-    for (LootItem& existing : items) {
-        if (existing.itemid == item.itemid && existing.conditions == item.conditions) {
-            uint32 newCount = existing.count + item.count;
-            if (newCount <= proto->GetMaxStackSize()) {
-                existing.count = newCount;
-                ++unlootedCount;
-                return;
-            } else {
-                existing.count = proto->GetMaxStackSize();
-                item.count     = newCount - proto->GetMaxStackSize();
-            }
-        }
-    }
-
-    // Add as a new item if not fully stacked
-    item.itemIndex = items.size();
-    items.push_back(item);
-    ++unlootedCount;
-}
-
 // Inserts the item into the loot (called by LootTemplate processors)
 void Loot::AddItem(LootStoreItem const& item)
 {
@@ -336,6 +309,34 @@ NotNormalLootItemList* Loot::FillFFALoot(Player* player)
 
     PlayerFFAItems[player->GetGUID()] = ql;
     return ql;
+}
+
+void Loot::MergeItemIn(LootItem item)
+{
+    ItemTemplate const* proto = sObjectMgr->GetItemTemplate(item.itemid);
+    if (!proto)
+        return;
+
+    std::vector<LootItem>& target = item.needs_quest ? quest_items : items;
+    for (LootItem& existing : target) {
+        if (existing.itemid == item.itemid && existing.conditions == item.conditions) {
+            uint32 newCount = existing.count + item.count;
+            if (newCount <= proto->GetMaxStackSize()) {
+                existing.count = newCount;
+                if (!item.needs_quest)
+                    ++unlootedCount;
+                return;
+            } else {
+                existing.count = proto->GetMaxStackSize();
+                item.count     = newCount - proto->GetMaxStackSize();
+            }
+        }
+    }
+
+    item.itemIndex = target.size();
+    target.push_back(item);
+    if (!item.needs_quest)
+        ++unlootedCount;
 }
 
 NotNormalLootItemList* Loot::FillQuestLoot(Player* player)

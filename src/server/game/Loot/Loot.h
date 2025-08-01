@@ -266,10 +266,11 @@ struct TC_GAME_API Loot
     bool hasItemFor(Player const* player) const;
     bool hasOverThresholdItem() const;
 
+    NotNormalLootItemList* FillQuestLoot(Player* player);
+
     private:
         void FillNotNormalLootFor(Player* player, bool presentAtLooting);
         NotNormalLootItemList* FillFFALoot(Player* player);
-        NotNormalLootItemList* FillQuestLoot(Player* player);
         NotNormalLootItemList* FillNonQuestNonFFAConditionalLoot(Player* player, bool presentAtLooting);
 
         GuidSet PlayersLooting;
