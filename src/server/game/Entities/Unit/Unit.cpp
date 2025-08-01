@@ -12045,34 +12045,31 @@ bool Unit::InitTamedPet(Pet* pet, uint8 level, uint32 spell_id)
                 float range = 30.0f;
                 std::vector<Creature*> creaturedie;
                 creature->GetDeadCreatureListInGrid(creaturedie, range);
-                for (std::vector<Creature*>::iterator itr = creaturedie.begin(); itr != creaturedie.end(); ++itr) {
-                    Creature* c = *itr;
+                for (Creature* c : creaturedie) {
                     Loot* eLoot = &c->loot;
-
-                    if (eLoot->lootOwnerGUID == player->GetGUID() && c->HasDynamicFlag(UNIT_DYNFLAG_LOOTABLE) &&
-                        !eLoot->isLooted() && !eLoot->empty())
-                    {
-                        // Check if there's space for items
-                        if (eLoot->items.size() + loot->items.size() + eLoot->quest_items.size() + loot->quest_items.size() < MAX_NR_LOOT_ITEMS) {
+                    if (eLoot->lootOwnerGUID == player->GetGUID() && c->HasDynamicFlag(UNIT_DYNFLAG_LOOTABLE) && !eLoot->isLooted()) {
+                        if (eLoot->items.size() + loot->items.size() < MAX_NR_LOOT_ITEMS) {
                             for (LootItem& item : loot->items) {
-                                eLoot->MergeItemIn(item);
-                            }
-                            for (LootItem& item : loot->quest_items) {
                                 eLoot->MergeItemIn(item);
                             }
                             eLoot->gold += loot->gold;
 
-                            loot->clear();
-                            creature->AllLootRemovedFromCorpse();
+                            loot->items.clear();
+                            loot->gold = 0;
 
-                            player->SendLoot(c->GetGUID(), LOOT_CORPSE);
+                            if (loot->quest_items.empty()) {
+                                creature->AllLootRemovedFromCorpse();
+                            }
+
+                            if (player) {
+                                player->SendLoot(c->GetGUID(), LOOT_CORPSE);
+                            }
                             break;
                         }
                     }
                 }
             }
         }
-
         player->RewardPlayerAndGroupAtKill(victim, false);
     }
 

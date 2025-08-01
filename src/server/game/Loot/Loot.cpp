@@ -156,37 +156,31 @@ void Loot::clear()
     i_LootValidatorRefManager.clearReferences();
 }
 
-void Loot::MergeItemIn(LootItem item) {
+void Loot::MergeItemIn(LootItem item)
+{
     ItemTemplate const* proto = sObjectMgr->GetItemTemplate(item.itemid);
-    if (!proto)
+    if (!proto || item.needs_quest) // Skip quest items
         return;
 
-    bool found = false;
-    std::vector<LootItem>& target = item.needs_quest ? quest_items : items;
+    // Try to stack with existing items in the 'items' vector
     for (LootItem& existing : items) {
-        if (existing.itemid == item.itemid && existing.conditions == item.conditions)
-        {
+        if (existing.itemid == item.itemid && existing.conditions == item.conditions) {
             uint32 newCount = existing.count + item.count;
-            if (newCount <= proto->GetMaxStackSize())
-            {
+            if (newCount <= proto->GetMaxStackSize()) {
                 existing.count = newCount;
-                if (!item.needs_quest)
-                    ++unlootedCount; // Update unlooted count for non-quest items
+                ++unlootedCount;
                 return;
-            }
-            else
-            {
-                item.count = newCount - proto->GetMaxStackSize();
+            } else {
                 existing.count = proto->GetMaxStackSize();
+                item.count     = newCount - proto->GetMaxStackSize();
             }
         }
     }
 
-    // Add new item if not stacked fully
-    item.itemIndex = target.size();
-    target.push_back(item);
-    if (!item.needs_quest)
-        ++unlootedCount;
+    // Add as a new item if not fully stacked
+    item.itemIndex = items.size();
+    items.push_back(item);
+    ++unlootedCount;
 }
 
 // Inserts the item into the loot (called by LootTemplate processors)
