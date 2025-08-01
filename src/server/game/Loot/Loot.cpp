@@ -156,6 +156,39 @@ void Loot::clear()
     i_LootValidatorRefManager.clearReferences();
 }
 
+void Loot::MergeItemIn(LootItem item) {
+    ItemTemplate const* proto = sObjectMgr->GetItemTemplate(item.itemid);
+    if (!proto)
+        return;
+
+    bool found = false;
+    std::vector<LootItem>& target = item.needs_quest ? quest_items : items;
+    for (LootItem& existing : items) {
+        if (existing.itemid == item.itemid && existing.conditions == item.conditions)
+        {
+            uint32 newCount = existing.count + item.count;
+            if (newCount <= proto->GetMaxStackSize())
+            {
+                existing.count = newCount;
+                if (!item.needs_quest)
+                    ++unlootedCount; // Update unlooted count for non-quest items
+                return;
+            }
+            else
+            {
+                item.count = newCount - proto->GetMaxStackSize();
+                existing.count = proto->GetMaxStackSize();
+            }
+        }
+    }
+
+    // Add new item if not stacked fully
+    item.itemIndex = target.size();
+    target.push_back(item);
+    if (!item.needs_quest)
+        ++unlootedCount;
+}
+
 // Inserts the item into the loot (called by LootTemplate processors)
 void Loot::AddItem(LootStoreItem const& item)
 {

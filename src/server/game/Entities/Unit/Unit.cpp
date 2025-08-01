@@ -12041,6 +12041,35 @@ bool Unit::InitTamedPet(Pet* pet, uint8 level, uint32 spell_id)
                 // Update round robin looter only if the creature had loot
                 if (!loot->empty())
                     group->UpdateLooterGuid(creature);
+            } else {
+                float range = 30.0f;
+                std::vector<Creature*> creaturedie;
+                creature->GetDeadCreatureListInGrid(creaturedie, range);
+                for (std::vector<Creature*>::iterator itr = creaturedie.begin(); itr != creaturedie.end(); ++itr) {
+                    Creature* c = *itr;
+                    Loot* eLoot = &c->loot;
+
+                    if (eLoot->lootOwnerGUID == player->GetGUID() && c->HasDynamicFlag(UNIT_DYNFLAG_LOOTABLE) &&
+                        !eLoot->isLooted() && !eLoot->empty())
+                    {
+                        // Check if there's space for items
+                        if (eLoot->items.size() + loot->items.size() + eLoot->quest_items.size() + loot->quest_items.size() < MAX_NR_LOOT_ITEMS) {
+                            for (LootItem& item : loot->items) {
+                                eLoot->MergeItemIn(item);
+                            }
+                            for (LootItem& item : loot->quest_items) {
+                                eLoot->MergeItemIn(item);
+                            }
+                            eLoot->gold += loot->gold;
+
+                            loot->clear();
+                            creature->AllLootRemovedFromCorpse();
+
+                            player->SendLoot(c->GetGUID(), LOOT_CORPSE);
+                            break;
+                        }
+                    }
+                }
             }
         }
 
