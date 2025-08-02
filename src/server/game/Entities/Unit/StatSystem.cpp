@@ -247,6 +247,7 @@ bool Player::UpdateStats(Stats stat)
     switch (stat)
     {
         case STAT_STRENGTH:
+            UpdateArmor();
             UpdateShieldBlockValue();
             UpdateParryPercentage();
             break;
@@ -265,6 +266,7 @@ bool Player::UpdateStats(Stats stat)
             UpdateDodgePercentage();
             UpdateArmor();                                  //SPELL_AURA_MOD_RESISTANCE_OF_INTELLECT_PERCENT, only armor currently
             UpdateMaxHealth();                              //for Mechanical Fortitude talent
+            UpdateParryPercentage();
             break;
         case STAT_SPIRIT:
             break;
@@ -418,7 +420,6 @@ void Player::UpdateArmor()
 
     float value = GetFlatModifierValue(unitMod, BASE_VALUE);    // base armor (from items)
     value *= GetPctModifierValue(unitMod, BASE_PCT);            // armor percent from items
-    value += GetStat(STAT_AGILITY) * 2.0f;                      // armor bonus from stats
     value += GetFlatModifierValue(unitMod, TOTAL_VALUE);
 
     //add dynamic flat mods
