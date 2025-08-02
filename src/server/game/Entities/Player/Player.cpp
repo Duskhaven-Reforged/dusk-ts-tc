@@ -5538,6 +5538,12 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
         if (aurEff->GetMiscValue() & (1 << combatRating))
             m_bonusRatingValue[combatRating] += int32(CalculatePct(GetStat(Stats(aurEff->GetMiscValueB())), aurEff->GetAmount()));
 
+    for (AuraEffect const* aurEff : GetAuraEffectsByType(SPELL_AURA_MOD_RATING_OF_RATING_PCT))
+    {
+        if (aurEff->GetMiscValue() & (1 << combatRating))
+            m_bonusRatingValue[combatRating] += int32(CalculatePct(m_baseRatingValue[aurEff->GetMiscValueB()] + m_bonusRatingValue[aurEff->GetMiscValueB()], aurEff->GetAmount()));
+    }
+
     // apply bonus from SPELL_AURA_MOD_RATING_FROM_ALL_SOURCES_BY_PCT
     m_bonusRatingValue[combatRating] *= GetTotalAuraMultiplier(SPELL_AURA_MOD_RATING_FROM_ALL_SOURCES_BY_PCT, [combatRating](AuraEffect const* aurEff) -> bool
         {
