@@ -305,6 +305,8 @@ class TC_GAME_API InstanceScript : public ZoneScript
 
         void TriggerResetHook();
 
+        bool HandleRelease(Player* who);
+
     protected:
         void SetHeaders(std::string const& dataHeaders);
 

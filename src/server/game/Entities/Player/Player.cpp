@@ -5080,16 +5080,20 @@ void Player::RepopAtGraveyard()
     }
 
     WorldSafeLocsEntry const* ClosestGrave;
+    bool HandledReleaseCorpse = false;
+    if (InstanceScript* instance = GetInstanceScript())
+        HandledReleaseCorpse = instance->HandleRelease(this);
 
     // Special handle for battleground maps
     if (Battleground* bg = GetBattleground())
         ClosestGrave = bg->GetClosestGraveyard(this);
     else
     {
-        if (Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(GetZoneId()))
+        if (Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(GetZoneId())) {
             ClosestGrave = bf->GetClosestGraveyard(this);
-        else
+        } else if (!HandledReleaseCorpse) {
             ClosestGrave = sObjectMgr->GetClosestGraveyard(GetPositionX(), GetPositionY(), GetPositionZ(), GetMapId(), GetTeam());
+        }
     }
 
     // stop countdown until repop
@@ -5097,7 +5101,7 @@ void Player::RepopAtGraveyard()
 
     // if no grave found, stay at the current location
     // and don't show spirit healer location
-    if (ClosestGrave)
+    if (ClosestGrave && !HandledReleaseCorpse)
     {
         TeleportTo(ClosestGrave->Continent, ClosestGrave->Loc.X, ClosestGrave->Loc.Y, ClosestGrave->Loc.Z, GetOrientation(), shouldResurrect ? TELE_REVIVE_AT_TELEPORT : 0);
         if (isDead())                                        // not send if alive, because it used in TeleportTo()
@@ -5540,8 +5544,8 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
 
     for (AuraEffect const* aurEff : GetAuraEffectsByType(SPELL_AURA_MOD_RATING_OF_RATING_PCT))
     {
-        if (aurEff->GetMiscValue() & (1 << combatRating))
-            m_bonusRatingValue[combatRating] += int32(CalculatePct(m_baseRatingValue[aurEff->GetMiscValueB()] + m_bonusRatingValue[aurEff->GetMiscValueB()], aurEff->GetAmount()));
+        if (aurEff->GetMiscValueB() == combatRating) // If this feeds other ratings
+            ApplyRatingMod(CombatRating(aurEff->GetMiscValue()), int32(CalculatePct(value, aurEff->GetAmount())), apply);
     }
 
     // apply bonus from SPELL_AURA_MOD_RATING_FROM_ALL_SOURCES_BY_PCT
@@ -5591,9 +5595,11 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
 void Player::UpdateRating(CombatRating cr)
 {
     int32 amount = m_baseRatingValue[cr] + m_bonusRatingValue[cr];
+
     if (amount < 0)
         amount = 0;
     SetUInt32Value(PLAYER_FIELD_COMBAT_RATING_1 + AsUnderlyingType(cr), uint32(amount));
+
 
     bool affectStats = CanModifyStats();
 
@@ -5606,6 +5612,8 @@ void Player::UpdateRating(CombatRating cr)
             UpdateDodgePercentage();
             UpdateParryPercentage();
             UpdateBlockPercentage();
+            UpdateAttackPowerAndDamage();
+            UpdateAllSpellCritChances();
             SetUInt32Value(PLAYER_MASTERY, amount);
             break;
         case CR_DODGE:

@@ -1010,6 +1010,20 @@ void InstanceScript::Update(uint32 diff)
     );
 }
 
+bool InstanceScript::HandleRelease(Player* who)
+{
+    bool HandledReleaseCorpse = false;
+    FIRE_ID(
+          instance->GetEntry()->ID
+        , Instance,HandleRelease
+        , TSInstance(instance, this)
+        , TSPlayer(who)
+        , TSMutable<bool, bool>(&HandledReleaseCorpse)
+    );
+
+    return HandledReleaseCorpse;
+}
+
 void InstanceScript::OnPlayerEnter(Player* player)
 {
     FIRE_ID(
