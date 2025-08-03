@@ -617,45 +617,40 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
 
     UnitMods unitMod = ranged ? UNIT_MOD_ATTACK_POWER_RANGED : UNIT_MOD_ATTACK_POWER;
 
-    if (ranged)
-    {
-        FIRE(Player,OnUpdateRangedAttackPower
-            , TSPlayer(this)
-            , TSMutableNumber<float>(&val2)
-        );
-    }
-    else
-    {
-        FIRE(Player,OnUpdateAttackPower
-            , TSPlayer(this)
-            , TSMutableNumber<float>(&val2)
-        );
-    }
-
     SetStatFlatModifier(unitMod, BASE_VALUE, val2);
 
     float base_attPower  = GetFlatModifierValue(unitMod, BASE_VALUE) * GetPctModifierValue(unitMod, BASE_PCT);
     float attPowerMod = GetFlatModifierValue(unitMod, TOTAL_VALUE);
 
     //add dynamic flat mods
-    if (ranged)
-    {
-        if ((GetClassMask() & CLASSMASK_WAND_USERS) == 0)
-        {
+    if (ranged) {
+        if ((GetClassMask() & CLASSMASK_WAND_USERS) == 0) {
             AuraEffectList const& mRAPbyStat = GetAuraEffectsByType(SPELL_AURA_MOD_RANGED_ATTACK_POWER_OF_STAT_PERCENT);
             for (AuraEffect const* aurEff : mRAPbyStat)
-                attPowerMod += CalculatePct(GetStat(Stats(aurEff->GetMiscValue())), aurEff->GetAmount());
+                base_attPower += CalculatePct(GetStat(Stats(aurEff->GetMiscValue())), aurEff->GetAmount());
         }
-    }
-    else
-    {
+    } else {
         AuraEffectList const& mAPbyStat = GetAuraEffectsByType(SPELL_AURA_MOD_ATTACK_POWER_OF_STAT_PERCENT);
         for (AuraEffect const* aurEff : mAPbyStat)
-            attPowerMod += CalculatePct(GetStat(Stats(aurEff->GetMiscValue())), aurEff->GetAmount());
+            base_attPower += CalculatePct(GetStat(Stats(aurEff->GetMiscValue())), aurEff->GetAmount());
     }
 
     // applies to both, amount updated in PeriodicTick each 30 seconds
     attPowerMod += GetTotalAuraModifier(SPELL_AURA_MOD_ATTACK_POWER_OF_ARMOR);
+
+    if (ranged) {
+        FIRE(Player,OnUpdateRangedAttackPower
+            , TSPlayer(this)
+            , TSMutableNumber<float>(&base_attPower)
+            , TSMutableNumber<float>(&attPowerMod)
+        );
+    } else {
+        FIRE(Player,OnUpdateAttackPower
+            , TSPlayer(this)
+            , TSMutableNumber<float>(&base_attPower)
+            , TSMutableNumber<float>(&attPowerMod)
+        );
+    }
 
     float attPowerMultiplier = GetPctModifierValue(unitMod, TOTAL_PCT) - 1.0f;
 
