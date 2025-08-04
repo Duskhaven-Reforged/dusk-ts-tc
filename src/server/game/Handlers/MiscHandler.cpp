@@ -36,6 +36,7 @@
 #include "GossipDef.h"
 #include "Group.h"
 #include "GuildMgr.h"
+#include "InstanceScript.h"
 // @tswow-begin
 #include "Item.h"
 // @tswow-end
@@ -87,6 +88,10 @@ void WorldSession::HandleRepopRequest(WorldPackets::Misc::RepopRequest& /*packet
             GetPlayer()->GetName(), GetPlayer()->GetGUID().ToString());
         GetPlayer()->KillPlayer();
     }
+
+    if (InstanceScript* instance = GetPlayer()->GetInstanceScript())
+        if (instance->IsEncounterInProgress())
+            return;
 
     //this is spirit release confirm?
     GetPlayer()->RemoveGhoul();
