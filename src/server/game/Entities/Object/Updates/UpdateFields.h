@@ -386,7 +386,8 @@ enum EUnitFields
     PLAYER_RUNE_REGEN_1                       = UNIT_END + 0x0485, // Size: 4, Type: FLOAT, Flags: PRIVATE
     PLAYER_NO_REAGENT_COST_1                  = UNIT_END + 0x0489, // Size: 3, Type: INT, Flags: PRIVATE
     PLAYER_FIELD_GLYPH_SLOTS_1                = UNIT_END + 0x048C, // Size: 6, Type: INT, Flags: PRIVATE
-    PLAYER_FIELD_GLYPHS_1                     = UNIT_END + 0x0492, // Size: 6, Type: INT, Flags: PRIVATE
+    PLAYER_FIELD_GLYPHS_1                     = UNIT_END + 0x0492, // Size: 3, Type: INT, Flags: PRIVATE
+    PLAYER_FIELD_WEAPON_BONUS_AP              = UNIT_END + 0x0495, // Size: 3, Type: INT, Flags: PRIVATE
     PLAYER_GLYPHS_ENABLED                     = UNIT_END + 0x0498, // Size: 1, Type: INT, Flags: PRIVATE
     PLAYER_PET_SPELL_POWER                    = UNIT_END + 0x0499, // Size: 1, Type: INT, Flags: PRIVATE
     PLAYER_END                                = UNIT_END + 0x049A

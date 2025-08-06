@@ -2481,6 +2481,16 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void HandleDrowning(uint32 time_diff);
         int32 getMaxTimer(MirrorTimerType timer) const;
 
+        void SendCooldownPacket(uint8 flags, uint32 spellid, int32 cooldown) {
+            WorldPacket spellCooldown;
+            spellCooldown.Initialize(SMSG_SPELL_COOLDOWN, 8 + 1 + 4 + 4);
+            spellCooldown << uint64(GetGUID());
+            spellCooldown << uint8(flags);
+            spellCooldown << uint32(spellid);
+            spellCooldown << uint32(cooldown);
+            SendDirectMessage(&spellCooldown);
+        }
+
         /*********************************************************/
         /***                  HONOR SYSTEM                     ***/
         /*********************************************************/

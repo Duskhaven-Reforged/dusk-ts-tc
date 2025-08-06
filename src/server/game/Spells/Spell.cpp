@@ -5408,10 +5408,18 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
 
         if (m_caster->ToUnit() && !m_caster->ToUnit()->GetSpellHistory()->IsReady(m_spellInfo, m_castItemEntry, IsIgnoringCooldowns()))
         {
-            if (m_triggeredByAuraSpell || m_spellInfo->IsCooldownStartedOnEvent())
-                return SPELL_FAILED_DONT_REPORT;
-            else
-                return SPELL_FAILED_NOT_READY;
+            // hook for charged spell checks
+            bool ValidChargedCast = false;
+            if (Player* player = m_caster->ToPlayer())
+                FIRE_ID(m_spellInfo->events.id, Spell, CheckChargedCast, TSPlayer(player), TSSpellInfo(m_spellInfo), TSSpell(this), TSMutable<bool, bool>(&ValidChargedCast));
+
+            TC_LOG_INFO("server.worldserver", "Charged can cast {}", ValidChargedCast);
+            if (!ValidChargedCast) {
+                if (m_triggeredByAuraSpell || m_spellInfo->IsCooldownStartedOnEvent())
+                    return SPELL_FAILED_DONT_REPORT;
+                else
+                    return SPELL_FAILED_NOT_READY;
+            }
         }
     }
 

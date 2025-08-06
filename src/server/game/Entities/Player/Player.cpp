@@ -606,7 +606,6 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
     // base stats and related field values
     InitStatsForLevel();
     InitTaxiNodesForLevel();
-    InitGlyphsForLevel();
     InitTalentForLevel();
     InitPrimaryProfessions();                               // to max set before any spell added
 
@@ -2625,7 +2624,6 @@ void Player::GiveLevel(uint8 level)
 
     InitTalentForLevel();
     InitTaxiNodesForLevel();
-    InitGlyphsForLevel();
 
     UpdateAllStats();
 
@@ -7730,6 +7728,7 @@ void Player::_ApplyWeaponDamage(uint8 slot, ItemTemplate const* proto, bool appl
 
     float weaponBasedAttackPower = apply ? int32(proto->getDPS() * 6.0f) : 0;
     SetWeaponAttackPower(attType, weaponBasedAttackPower);
+    SetInt32Value(PLAYER_FIELD_WEAPON_BONUS_AP + attType, weaponBasedAttackPower);
 
     if (CanModifyStats() && (GetWeaponDamageRange(attType, MAXDAMAGE) || proto->Delay))
         UpdateDamagePhysical(attType);
@@ -18031,7 +18030,6 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
 
     // reset stats before loading any modifiers
     InitStatsForLevel();
-    InitGlyphsForLevel();
     InitTaxiNodesForLevel();
     InitRunes();
 
@@ -24988,7 +24986,7 @@ void Player::InitGlyphsForLevel()
 void Player::SetGlyph(uint8 slot, uint32 glyph)
 {
     m_Glyphs[m_activeSpec][slot] = glyph;
-    SetUInt32Value(PLAYER_FIELD_GLYPHS_1 + slot, glyph);
+    // 
 }
 
 bool Player::isTotalImmune() const
@@ -25234,8 +25232,7 @@ void Player::InitRunes()
         m_runes->SetRuneState(i);
     }
 
-    for (uint8 i = 0; i < NUM_RUNE_TYPES; ++i)
-        SetFloatValue(PLAYER_RUNE_REGEN_1 + i, 0.1f);
+    SetFloatValue(PLAYER_RUNE_REGEN_1 + RUNE_DEATH, 0.1f);
 }
 
 bool Player::IsBaseRuneSlotsOnCooldown(RuneType runeType) const
@@ -26681,18 +26678,18 @@ void Player::ActivateSpec(uint8 spec)
         }
     }
 
-    // set glyphs
-    for (uint8 slot = 0; slot < MAX_GLYPH_SLOT_INDEX; ++slot)
-    {
-        uint32 glyph = m_Glyphs[m_activeSpec][slot];
+    // // set glyphs
+    // for (uint8 slot = 0; slot < MAX_GLYPH_SLOT_INDEX; ++slot)
+    // {
+    //     uint32 glyph = m_Glyphs[m_activeSpec][slot];
 
-        // apply primary glyph
-        if (glyph)
-            if (GlyphPropertiesEntry const* gp = sGlyphPropertiesStore.LookupEntry(glyph))
-                CastSpell(this, gp->SpellID, true);
+    //     // apply primary glyph
+    //     if (glyph)
+    //         if (GlyphPropertiesEntry const* gp = sGlyphPropertiesStore.LookupEntry(glyph))
+    //             CastSpell(this, gp->SpellID, true);
 
-        SetGlyph(slot, glyph);
-    }
+    //     SetGlyph(slot, glyph);
+    // }
 
     m_usedTalentCount = spentTalents;
     InitTalentForLevel();
