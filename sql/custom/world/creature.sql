@@ -1,3 +1,4 @@
+DELETE FROM creature;
 REPLACE INTO creature (guid,id,`map`,zoneId,areaId,spawnMask,phaseMask,modelid,equipment_id,position_x,position_y,position_z,orientation,spawntimesecs,wander_distance,currentwaypoint,curhealth,curmana,MovementType,npcflag,unit_flags,dynamicflags,ScriptName,VerifiedBuild) VALUES
 	 (1,2843,0,0,0,1,1,4481,1,-14467.8,468.374,15.1064,0.139626,300,0.0,0,2059,0,0,0,0,0,'',0),
 	 (2,7853,0,0,0,1,1,7036,1,-14464.9,459.585,15.2488,3.735,300,0.0,0,1003,0,0,0,0,0,'',0),
