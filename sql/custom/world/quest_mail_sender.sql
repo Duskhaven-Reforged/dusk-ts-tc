@@ -1,0 +1,1 @@
+delete from quest_mail_sender;
