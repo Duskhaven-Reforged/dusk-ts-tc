@@ -1,0 +1,1 @@
+delete from lfg_dungeon_rewards;

@@ -1,0 +1,1 @@
+delete from spell_area;
