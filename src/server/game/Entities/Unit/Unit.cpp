@@ -11454,10 +11454,13 @@ Unit* Unit::SelectNearbyTarget(Unit* exclude, float dist) const
     return Trinity::Containers::SelectRandomContainerElement(targets);
 }
 
-Unit* Unit::SelectNearbyTargetWithoutAura(Unit* exclude, float dist, uint32 WithoutAura) const
+Unit* Unit::SelectNearbyTargetWithoutAura(Unit* exclude, Unit const* friendly, float dist, uint32 WithoutAura) const
 {
+    if (!friendly)
+        friendly = this;
+
     std::list<Unit*> targets;
-    Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(this, this, dist);
+    Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(this, friendly, dist);
     Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(this, targets, u_check);
     Cell::VisitAllObjects(this, searcher, dist);
 
