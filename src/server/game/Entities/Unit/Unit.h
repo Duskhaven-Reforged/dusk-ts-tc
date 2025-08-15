@@ -884,14 +884,15 @@ class TC_GAME_API Unit : public WorldObject
         void CombatStop(bool includingCast = false, bool mutualPvP = true);
         void CombatStopWithPets(bool includingCast = false);
         void StopAttackFaction(uint32 faction_id);
-        std::list<Unit*> SelectNearbyAllies(std::list<Unit*> exclude = {}, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1) const;
         Unit* SelectNearbyTarget(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE) const;
         Unit* SelectNearbyTargetWithoutAura(Unit* exclude = nullptr, Unit const* friendly = nullptr, float dist = NOMINAL_MELEE_RANGE, uint32 WithoutAura = 0) const;
         std::list<Unit*> SelectNearbyTargets(Unit* exclude = nullptr, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1) const;
-        std::list<Unit*> SelectNearbyTargets(std::list<Unit*> exclude = {}, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1) const;
-        std::list<Unit*> SelectTargetsNearTarget(Unit* target, std::list<Unit*> exclude = {}, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1) const;
         void SendMeleeAttackStop(Unit* victim = nullptr);
         void SendMeleeAttackStart(Unit* victim);
+
+        
+        std::list<Unit*> SelectNearbyAllies(std::list<Unit*> exclude = {}, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1, uint32 WithoutAura = 0) const;
+        std::list<Unit*> SelectTargetsNearTarget(Unit* target, std::list<Unit*> exclude = {}, float dist = NOMINAL_MELEE_RANGE, uint32 amount = 1, uint32 WithoutAura = 0) const;
 
         void AddUnitState(uint32 f) { m_state |= f; }
         bool HasUnitState(const uint32 f) const { return (m_state & f) != 0; }

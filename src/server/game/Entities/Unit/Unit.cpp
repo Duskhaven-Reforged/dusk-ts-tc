@@ -11385,33 +11385,39 @@ void Unit::UpdateReactives(uint32 p_time)
     }
 }
 
-std::list<Unit*> Unit::SelectNearbyAllies(std::list<Unit*> exclude, float dist, uint32 amount) const
+std::list<Unit*> Unit::SelectNearbyAllies(std::list<Unit*> exclude, float dist, uint32 amount, uint32 WithoutAura) const
 {
     std::list<Unit*> targets;
-    std::list<Unit*> tempTargets;
     Trinity::AnyFriendlyUnitInObjectRangeCheck u_check(this, this, dist);
-    Trinity::UnitListSearcher<Trinity::AnyFriendlyUnitInObjectRangeCheck> searcher(this, tempTargets, u_check);
+    Trinity::UnitListSearcher<Trinity::AnyFriendlyUnitInObjectRangeCheck> searcher(this, targets, u_check);
     Cell::VisitAllObjects(this, searcher, dist);
 
     // remove current target
     if (GetVictim())
-        tempTargets.remove(GetVictim());
+        targets.remove(GetVictim());
 
     if (!exclude.empty())
         for (auto unit : exclude)
-            tempTargets.remove(unit);
+            targets.remove(unit);
 
     // remove not LoS targets
-    for (std::list<Unit*>::iterator tIter = tempTargets.begin(); tIter != tempTargets.end();)
+    for (std::list<Unit*>::iterator tIter = targets.begin(); tIter != targets.end();)
     {
-        if (!IsWithinLOSInMap(*tIter) || (*tIter)->IsTotem() || (*tIter)->IsSpiritService() || (*tIter)->IsCritter())
-            tempTargets.erase(tIter++);
+        bool Without = WithoutAura ? (*tIter)->HasAura(WithoutAura) : false;
+
+        if (!IsWithinLOSInMap(*tIter) || (*tIter)->IsTotem() || (*tIter)->IsSpiritService() || (*tIter)->IsCritter() || Without)
+            targets.erase(tIter++);
         else
             ++tIter;
     }
 
-    Trinity::Containers::RandomResize(tempTargets, amount);
-    return tempTargets;
+    if (!amount)
+        amount = targets.size();
+
+    if (amount < targets.size())
+        Trinity::Containers::RandomResize(targets, amount);
+
+    return targets;
 }
 
 Unit* Unit::SelectNearbyTarget(Unit* exclude, float dist) const
@@ -11516,65 +11522,38 @@ std::list<Unit*> Unit::SelectNearbyTargets(Unit* exclude, float dist, uint32 amo
     return targets;
 }
 
-std::list<Unit*> Unit::SelectNearbyTargets(std::list<Unit*> exclude, float dist, uint32 amount) const
-{
+std::list<Unit*> Unit::SelectTargetsNearTarget(Unit* target, std::list<Unit*> exclude, float dist, uint32 amount, uint32 WithoutAura) const {
     std::list<Unit*> targets;
-    std::list<Unit*> tempTargets;
-    Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(this, this, dist);
-    Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(this, tempTargets, u_check);
-    Cell::VisitAllObjects(this, searcher, dist);
-
-    // remove current target
-    if (GetVictim())
-        tempTargets.remove(GetVictim());
-
-    if (!exclude.empty())
-        for (auto unit : exclude)
-            tempTargets.remove(unit);
-
-    // remove not LoS targets
-    for (std::list<Unit*>::iterator tIter = tempTargets.begin(); tIter != tempTargets.end();)
-    {
-        if (!IsWithinLOSInMap(*tIter) || (*tIter)->IsTotem() || (*tIter)->IsSpiritService() || (*tIter)->IsCritter())
-            tempTargets.erase(tIter++);
-        else
-            ++tIter;
-    }
-
-    Trinity::Containers::RandomResize(tempTargets, amount);
-    return tempTargets;
-}
-
-std::list<Unit*> Unit::SelectTargetsNearTarget(Unit* target, std::list<Unit*> exclude, float dist, uint32 amount) const
-{
-    std::list<Unit*> targets;
-    std::list<Unit*> tempTargets;
     Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(target, this, dist);
-    Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(this, tempTargets, u_check);
+    Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(this, targets, u_check);
     Cell::VisitAllObjects(target, searcher, dist);
 
     // remove current target
     if (GetVictim())
-        tempTargets.remove(GetVictim());
+        targets.remove(GetVictim());
 
     if (!exclude.empty())
         for (auto unit : exclude)
-            tempTargets.remove(unit);
+            targets.remove(unit);
 
     // remove not LoS targets
-    for (std::list<Unit*>::iterator tIter = tempTargets.begin(); tIter != tempTargets.end();)
+    for (std::list<Unit*>::iterator tIter = targets.begin(); tIter != targets.end();)
     {
-        if (!IsWithinLOSInMap(*tIter) || (*tIter)->IsTotem() || (*tIter)->IsSpiritService() || (*tIter)->IsCritter())
-            tempTargets.erase(tIter++);
+        bool Without = WithoutAura ? (*tIter)->HasAura(WithoutAura) : false;
+
+        if (!IsWithinLOSInMap(*tIter) || (*tIter)->IsTotem() || (*tIter)->IsSpiritService() || (*tIter)->IsCritter() || Without)
+            targets.erase(tIter++);
         else
             ++tIter;
     }
 
-    if (!amount) // if amount is set to 0, get all
-        amount = tempTargets.size();
+    if (!amount)
+        amount = targets.size();
 
-    Trinity::Containers::RandomResize(tempTargets, amount);
-    return tempTargets;
+    if (amount < targets.size())
+        Trinity::Containers::RandomResize(targets, amount);
+
+    return targets;
 }
 
 void ApplyPercentModFloatVar(float& var, float val, bool apply)
