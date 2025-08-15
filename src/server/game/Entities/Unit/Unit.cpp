@@ -11410,17 +11410,8 @@ std::list<Unit*> Unit::SelectNearbyAllies(std::list<Unit*> exclude, float dist, 
             ++tIter;
     }
 
-    // add unique target to list
-    for (uint32 i = 0; i < amount; ++i)
-    {
-        Unit* tempUnit = Trinity::Containers::SelectRandomContainerElement(tempTargets);
-        tempTargets.remove(tempUnit);
-
-        if (std::find(targets.begin(), targets.end(), tempUnit) == targets.end())
-            targets.push_back(tempUnit);
-    }
-
-    return targets;
+    Trinity::Containers::RandomResize(tempTargets, amount);
+    return tempTargets;
 }
 
 Unit* Unit::SelectNearbyTarget(Unit* exclude, float dist) const
@@ -11550,17 +11541,8 @@ std::list<Unit*> Unit::SelectNearbyTargets(std::list<Unit*> exclude, float dist,
             ++tIter;
     }
 
-    // add unique target to list
-    for (uint32 i = 0; i < amount; ++i)
-    {
-        Unit* tempUnit = Trinity::Containers::SelectRandomContainerElement(tempTargets);
-        tempTargets.remove(tempUnit);
-
-        if (std::find(targets.begin(), targets.end(), tempUnit) == targets.end())
-            targets.push_back(tempUnit);
-    }
-
-    return targets;
+    Trinity::Containers::RandomResize(tempTargets, amount);
+    return tempTargets;
 }
 
 std::list<Unit*> Unit::SelectTargetsNearTarget(Unit* target, std::list<Unit*> exclude, float dist, uint32 amount) const
@@ -11591,17 +11573,8 @@ std::list<Unit*> Unit::SelectTargetsNearTarget(Unit* target, std::list<Unit*> ex
     if (!amount) // if amount is set to 0, get all
         amount = tempTargets.size();
 
-    // add unique target to list
-    for (uint32 i = 0; i < amount; ++i)
-    {
-        Unit* tempUnit = Trinity::Containers::SelectRandomContainerElement(tempTargets);
-        tempTargets.remove(tempUnit);
-
-        if (std::find(targets.begin(), targets.end(), tempUnit) == targets.end())
-            targets.push_back(tempUnit);
-    }
-
-    return targets;
+    Trinity::Containers::RandomResize(tempTargets, amount);
+    return tempTargets;
 }
 
 void ApplyPercentModFloatVar(float& var, float val, bool apply)
