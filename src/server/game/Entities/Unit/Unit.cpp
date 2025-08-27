@@ -2875,7 +2875,7 @@ float Unit::GetUnitCriticalChanceTaken(Unit const* attacker, WeaponAttackType at
 {
     float chance = critDone;
 
-    if (attacker->GetTypeId() != TYPEID_PLAYER) {
+    if (attacker->GetTypeId() != TYPEID_PLAYER && !attacker->IsPet()) {
         int32 const levelDiff = attacker->GetLevelForTarget(this) - GetLevelForTarget(this);
         if (levelDiff > 3)
             chance += 5.f * levelDiff;

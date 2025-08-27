@@ -5563,6 +5563,7 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
         case CR_HASTE: {
             ApplyAttackTimePercentMod(BASE_ATTACK, oldVal, false);
             ApplyAttackTimePercentMod(OFF_ATTACK, oldVal, false);
+
             ApplyAttackTimePercentMod(BASE_ATTACK, newVal, true);
             ApplyAttackTimePercentMod(OFF_ATTACK, newVal, true);
 
@@ -5571,6 +5572,20 @@ void Player::ApplyRatingMod(CombatRating combatRating, int32 value, bool apply)
 
             ApplyCastTimePercentMod(oldVal, false);
             ApplyCastTimePercentMod(newVal, true);
+
+            if (Pet* pet = GetPet()) {
+                pet->ApplyAttackTimePercentMod(BASE_ATTACK, oldVal, false);
+                pet->ApplyAttackTimePercentMod(OFF_ATTACK, oldVal, false);
+
+                pet->ApplyAttackTimePercentMod(BASE_ATTACK, newVal, true);
+                pet->ApplyAttackTimePercentMod(OFF_ATTACK, newVal, true);
+
+                pet->ApplyAttackTimePercentMod(RANGED_ATTACK, oldVal, false);
+                pet->ApplyAttackTimePercentMod(RANGED_ATTACK, newVal, true);
+
+                pet->ApplyCastTimePercentMod(oldVal, false);
+                pet->ApplyCastTimePercentMod(newVal, true);
+            }
 
             if (GetClass() == CLASS_DRUID || GetClass() == CLASS_ROGUE)
                 UpdatePowerRegen(POWER_ENERGY);

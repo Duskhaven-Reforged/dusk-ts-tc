@@ -1009,7 +1009,7 @@ void Player::UpdateSpellCritChance(uint32 school)
     // Increase crit by school from SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL
     crit += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL, 1<<school);
     // Increase crit from spell crit ratings
-    crit += GetRatingBonusValue(CR_CRIT_SPELL);
+    crit += GetRatingBonusValue(CR_CRIT);
 
     // @tswow-begin
     FIRE(
@@ -1581,67 +1581,6 @@ bool Guardian::UpdateStats(Stats stat)
     float value = GetTotalStatValue(stat);
     //ApplyStatBuffMod(stat, m_statFromOwner[stat], false);
     float ownersBonus = 0.0f;
-
-    //Unit* owner = GetOwner();
-    //// Handle Death Knight Glyphs and Talents
-    //float mod = 0.75f;
-    //if ((IsPetGhoul() || IsRisenAlly()) && (stat == STAT_STAMINA || stat == STAT_STRENGTH))
-    //{
-    //    if (stat == STAT_STAMINA)
-    //        mod = 0.3f; // Default Owner's Stamina scale
-    //    else
-    //        mod = 0.7f; // Default Owner's Strength scale
-
-    //    // Check just if owner has Ravenous Dead since it's effect is not an aura
-    //    AuraEffect const* aurEff = owner->GetAuraEffect(SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE, SPELLFAMILY_DEATHKNIGHT, 3010, 0);
-    //    if (aurEff)
-    //    {
-    //        SpellInfo const* spellInfo = aurEff->GetSpellInfo();                                                // Then get the SpellProto and add the dummy effect value
-    //        AddPct(mod, spellInfo->GetEffect(EFFECT_1).CalcValue());                                            // Ravenous Dead edits the original scale
-    //    }
-    //    // Glyph of the Ghoul
-    //    aurEff = owner->GetAuraEffect(58686, 0);
-    //    if (aurEff)
-    //        mod += CalculatePct(1.0f, aurEff->GetAmount());                                                    // Glyph of the Ghoul adds a flat value to the scale mod
-    //    ownersBonus = float(owner->GetStat(stat)) * mod;
-    //    value += ownersBonus;
-    //}
-    //else if (stat == STAT_STAMINA)
-    //{
-    //    if (owner->GetClass() == CLASS_WARLOCK && IsPet())
-    //    {
-    //        ownersBonus = CalculatePct(owner->GetStat(STAT_STAMINA), 75);
-    //        value += ownersBonus;
-    //    }
-    //    else
-    //    {
-    //        mod = 0.45f;
-    //        if (IsPet())
-    //        {
-    //            PetSpellMap::const_iterator itr = (ToPet()->m_spells.find(62758)); // Wild Hunt rank 1
-    //            if (itr == ToPet()->m_spells.end())
-    //                itr = ToPet()->m_spells.find(62762);                            // Wild Hunt rank 2
-
-    //            if (itr != ToPet()->m_spells.end())                                 // If pet has Wild Hunt
-    //            {
-    //                SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(itr->first); // Then get the SpellProto and add the dummy effect value
-    //                AddPct(mod, spellInfo->GetEffect(EFFECT_0).CalcValue());
-    //            }
-    //        }
-    //        ownersBonus = float(owner->GetStat(stat)) * mod;
-    //        value += ownersBonus;
-    //    }
-    //}
-                                                            //warlock's and mage's pets gain 30% of owner's intellect
-    //else if (stat == STAT_INTELLECT)
-    //{
-    //    if (owner->GetClass() == CLASS_WARLOCK || owner->GetClass() == CLASS_MAGE)
-    //    {
-    //        ownersBonus = CalculatePct(owner->GetStat(stat), 30);
-    //        value += ownersBonus;
-    //    }
-    //}
-
     // @dh-begin
     FIRE_ID(
         GetCreatureTemplate()->events.id
@@ -1693,10 +1632,6 @@ void Guardian::UpdateResistances(uint32 school)
     {
         float value = GetTotalAuraModValue(UnitMods(UNIT_MOD_RESISTANCE_START + school));
 
-        // // hunter and warlock pets gain 40% of owner's resistance
-        // if (IsPet())
-        //     value += float(CalculatePct(m_owner->GetResistance(SpellSchools(school)), 40));
-
         // @tswow-begin
         FIRE_ID(
             GetCreatureTemplate()->events.id
@@ -1717,18 +1652,6 @@ void Guardian::UpdateResistances(uint32 school)
 void Guardian::UpdateArmor()
 {
     float value = 0.0f;
-    // float bonus_armor = 0.0f;
-    // UnitMods unitMod = UNIT_MOD_ARMOR;
-
-    // // hunter and warlock pets gain 35% of owner's armor value
-    // if (IsPet())
-    //     bonus_armor = float(CalculatePct(m_owner->GetArmor(), 35));
-
-    // value  = GetFlatModifierValue(unitMod, BASE_VALUE);
-    // value *= GetPctModifierValue(unitMod, BASE_PCT);
-    // value += GetStat(STAT_AGILITY) * 2.0f;
-    // value += GetFlatModifierValue(unitMod, TOTAL_VALUE) + bonus_armor;
-    // value *= GetPctModifierValue(unitMod, TOTAL_PCT);
 
     // @tswow-begin
     FIRE_ID(
@@ -1745,30 +1668,7 @@ void Guardian::UpdateArmor()
 
 void Guardian::UpdateMaxHealth()
 {
-    // UnitMods unitMod = UNIT_MOD_HEALTH;
-    // float stamina = GetStat(STAT_STAMINA) - GetCreateStat(STAT_STAMINA);
-
-    // float multiplicator;
-    // switch (GetEntry())
-    // {
-    //     case ENTRY_IMP:
-    //     case ENTRY_IMP_GRIMOIRE:        multiplicator = 8.4f;   break;
-    //     case ENTRY_VOIDWALKER:
-    //     case ENTRY_VOIDWALKER_GRIMOIRE: multiplicator = 11.0f;  break;
-    //     case ENTRY_SUCCUBUS:
-    //     case ENTRY_SUCCUBUS_GRIMOIRE:   multiplicator = 9.1f;   break;
-    //     case ENTRY_FELHUNTER:
-    //     case ENTRY_FELHUNTER_GRIMOIRE:  multiplicator = 9.5f;   break;
-    //     case ENTRY_FELGUARD:
-    //     case ENTRY_FELGUARD_GRIMOIRE:   multiplicator = 11.0f;  break;
-    //     case ENTRY_BLOODWORM:           multiplicator = 1.0f;   break;
-    //     default:                        multiplicator = 10.0f;  break;
-    // }
-
-    float value = 0 ;// GetFlatModifierValue(unitMod, BASE_VALUE) + GetCreateHealth();
-    // value *= GetPctModifierValue(unitMod, BASE_PCT);
-    // value += GetFlatModifierValue(unitMod, TOTAL_VALUE) + stamina * multiplicator;
-    // value *= GetPctModifierValue(unitMod, TOTAL_PCT);
+    float value = 0 ;
 
     // @tswow-begin
     FIRE_ID(
@@ -1785,30 +1685,7 @@ void Guardian::UpdateMaxHealth()
 
 void Guardian::UpdateMaxPower(Powers power)
 {
-    // UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + AsUnderlyingType(power));
-
-    // float addValue = (power == POWER_MANA) ? GetStat(STAT_INTELLECT) - GetCreateStat(STAT_INTELLECT) : 0.0f;
-    // float multiplicator = 15.0f;
-
-    // switch (GetEntry())
-    // {
-    //     case ENTRY_IMP:
-    //     case ENTRY_IMP_GRIMOIRE:        multiplicator = 4.95f;  break;
-    //     case ENTRY_VOIDWALKER:
-    //     case ENTRY_VOIDWALKER_GRIMOIRE:
-    //     case ENTRY_SUCCUBUS:
-    //     case ENTRY_SUCCUBUS_GRIMOIRE:
-    //     case ENTRY_FELHUNTER:
-    //     case ENTRY_FELHUNTER_GRIMOIRE:
-    //     case ENTRY_FELGUARD:
-    //     case ENTRY_FELGUARD_GRIMOIRE:   multiplicator = 11.5f;  break;
-    //     default:                        multiplicator = 15.0f;  break;
-    // }
-
-    float value = 0; // = GetFlatModifierValue(unitMod, BASE_VALUE) + GetCreatePowerValue(power);
-    // value *= GetPctModifierValue(unitMod, BASE_PCT);
-    // value += GetFlatModifierValue(unitMod, TOTAL_VALUE) + addValue * multiplicator;
-    // value *= GetPctModifierValue(unitMod, TOTAL_PCT);
+    float value = 0;
 
     // @tswow-begin
     FIRE_ID(
@@ -1891,40 +1768,6 @@ void Guardian::UpdateDamagePhysical(WeaponAttackType attType)
             , uint8(attType)
         );
 
-        //force of nature
-        // if (GetEntry() == ENTRY_TREANT)
-        // {
-        //     int32 spellDmg = m_owner->GetInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_POS + AsUnderlyingType(SPELL_SCHOOL_NATURE)) - m_owner->GetInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_NEG + AsUnderlyingType(SPELL_SCHOOL_NATURE));
-        //     if (spellDmg > 0)
-        //         bonusDamage = spellDmg * 0.5f;
-        // }
-        //greater fire elemental
-        // else if (GetEntry() == ENTRY_FIRE_ELEMENTAL)
-        // {
-        //     int32 spellDmg = m_owner->GetInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_POS + AsUnderlyingType(SPELL_SCHOOL_FIRE)) - m_owner->GetInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_NEG + AsUnderlyingType(SPELL_SCHOOL_FIRE));
-        //     if (spellDmg > 0)
-        //         bonusDamage = spellDmg * 0.4f;
-        // }
-            //  Pet's base damage changes depending on happiness
-        // if (IsHunterPet())
-        // {
-        //     switch (ToPet()->GetHappinessState())
-        //     {
-        //         case HAPPY:
-        //             // 125% of normal damage
-        //             mindamage = mindamage * 1.25f;
-        //             maxdamage = maxdamage * 1.25f;
-        //             break;
-        //         case CONTENT:
-        //             // 100% of normal damage, nothing to modify
-        //             break;
-        //         case UNHAPPY:
-        //             // 75% of normal damage
-        //             mindamage = mindamage * 0.75f;
-        //             maxdamage = maxdamage * 0.75f;
-        //             break;
-        //     }
-        // }
         // @tswow-begin
         FIRE_ID(
               GetCreatureTemplate()->events.id
@@ -1953,24 +1796,6 @@ void Guardian::UpdateDamagePhysical(WeaponAttackType attType)
         maxdamage = ((base_value + weapon_maxdamage) * base_pct + total_value) * total_pct;
     }
 
-
-
-    // /// @todo: remove this
-    // Unit::AuraEffectList const& mDummy = GetAuraEffectsByType(SPELL_AURA_MOD_ATTACKSPEED);
-    // for (Unit::AuraEffectList::const_iterator itr = mDummy.begin(); itr != mDummy.end(); ++itr)
-    // {
-    //     switch ((*itr)->GetSpellInfo()->Id)
-    //     {
-    //         case 61682:
-    //         case 61683:
-    //             AddPct(mindamage, -(*itr)->GetAmount());
-    //             AddPct(maxdamage, -(*itr)->GetAmount());
-    //             break;
-    //         default:
-    //             break;
-    //     }
-    // }
-
     SetStatFloatValue(UNIT_FIELD_MINDAMAGE, mindamage);
     SetStatFloatValue(UNIT_FIELD_MAXDAMAGE, maxdamage);
 }
@@ -1984,7 +1809,7 @@ void Guardian::UpdateSpellDamageAndHealingBonus() {
         , TSPlayer(m_owner->ToPlayer())
         , TSMutableNumber<int32>(&bonus)
     );
-
+    
     SetBonusDamage(bonus);
 }
 
