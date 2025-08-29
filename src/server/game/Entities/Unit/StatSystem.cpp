@@ -446,35 +446,46 @@ void Player::UpdateArmor()
         pet->UpdateArmor();
 }
 
-float Player::GetHealthBonusFromStamina()
+float Player::GetHealthBonusFromStats()
 {
-    float stamina = GetStat(STAT_STAMINA);
+    float baseStamina = 20.0f;
+    float healthFromStats = 0.0f;
+
+    AuraEffectList const& healthByStat = GetAuraEffectsByType(SPELL_AURA_MOD_MANA_OR_HEALTH_FROM_STAT_PERCENT);
+    for (AuraEffect const* aurEff : healthByStat)
+    {
+        
+        if (aurEff->GetMiscValue() == ItemModType::ITEM_MOD_HEALTH) {
+            float stat = GetStat(Stats(aurEff->GetMiscValueB()));
+            float healthPerStat = aurEff->GetAmount();
+            healthFromStats += stat * healthPerStat;
+        }
+    }
+
     // @tswow-begin
-    float health = 20.0f + (stamina*10.0f);
-    FIRE(Player,OnCalcStaminaHealthBonus
-        , TSPlayer(this)
-        , TSMutableNumber<float>(&health)
-        , stamina
-    );
+    float health = baseStamina + healthFromStats;
     return health;
     // @tswow-end
 }
 
-float Player::GetManaBonusFromIntellect()
+float Player::GetManaBonusFromStats()
 {
-    float intellect = GetStat(STAT_INTELLECT);
+    float baseInt                  = 20.0f;
+    float manaFromStats              = 0.0f;
 
-    float baseInt = std::min(20.0f, intellect);
-    float moreInt = intellect - baseInt;
+    AuraEffectList const& healthByStat = GetAuraEffectsByType(SPELL_AURA_MOD_MANA_OR_HEALTH_FROM_STAT_PERCENT);
+    for (AuraEffect const* aurEff : healthByStat)
+    {
+        if (aurEff->GetMiscValue() == ItemModType::ITEM_MOD_MANA)
+        {
+            float stat = GetStat(Stats(aurEff->GetMiscValueB()));
+            float manaPerStat = aurEff->GetAmount();
+            manaFromStats += stat * manaPerStat;
+        }
+    }
 
     // @tswow-begin
-    float mana = baseInt + (moreInt * 15.0f);
-    FIRE(Player,OnCalcIntellectManaBonus
-        ,TSPlayer(this)
-        ,TSMutableNumber<float>(&mana)
-        ,baseInt
-        ,moreInt
-    );
+    float mana = baseInt + manaFromStats;
     // @tswow-end
     return mana;
 }
@@ -485,7 +496,7 @@ void Player::UpdateMaxHealth()
 
     float value = GetFlatModifierValue(unitMod, BASE_VALUE) + GetCreateHealth();
     value *= GetPctModifierValue(unitMod, BASE_PCT);
-    value += GetFlatModifierValue(unitMod, TOTAL_VALUE) + GetHealthBonusFromStamina();
+    value += GetFlatModifierValue(unitMod, TOTAL_VALUE) + GetHealthBonusFromStats();
     value *= GetPctModifierValue(unitMod, TOTAL_PCT);
     // @tswow-begin
     FIRE(Player,OnUpdateMaxHealth
@@ -501,7 +512,7 @@ void Player::UpdateMaxPower(Powers power)
 {
     UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + AsUnderlyingType(power));
 
-    float bonusPower = (power == POWER_MANA && GetCreatePowerValue(power) > 0) ? GetManaBonusFromIntellect() : 0;
+    float bonusPower = (power == POWER_MANA && GetCreatePowerValue(power) > 0) ? GetManaBonusFromStats() : 0;
 
     float value = GetFlatModifierValue(unitMod, BASE_VALUE) + GetCreatePowerValue(power);
     value *= GetPctModifierValue(unitMod, BASE_PCT);

@@ -1717,8 +1717,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         uint32 GetBaseDefenseSkillValue() const { return GetBaseSkillValue(SKILL_DEFENSE); }
         uint32 GetBaseWeaponSkillValue(WeaponAttackType attType) const;
 
-        float GetHealthBonusFromStamina();
-        float GetManaBonusFromIntellect();
+        float GetHealthBonusFromStats();
+        float GetManaBonusFromStats();
 
         float StatChanged(Stats stat, float val);
         bool UpdateStats(Stats stat) override;

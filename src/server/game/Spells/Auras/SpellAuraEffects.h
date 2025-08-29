@@ -329,7 +329,6 @@ class TC_GAME_API AuraEffect
         void HandleModArmorFromMainStat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleModBlockValueScaling(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const;
         void HandleModTriggerSpellOnStacks(AuraApplication const* aurApp, uint8 mode, bool apply) const;
-        void HandleAuraModForgeStat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleModRatingPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleModRatingFromRating(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraModSpellPower(AuraApplication const* aurApp, uint8 mode, bool apply) const;
@@ -341,6 +340,7 @@ class TC_GAME_API AuraEffect
         void HandleAuraAddCharges(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleCreateAreaTrigger(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandlePeriodicCooldownRecoveryTick(AuraApplication* aurApp, Unit* caster) const;
+        void HandleModHealthOrManaFromStatPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
 
         void HandleCombatMount(AuraApplication const* aurApp, uint8 mode, bool) const;
         void HandleModStatFromMaxHealthPct(AuraApplication const* aurApp, uint8 mode, bool apply) const;

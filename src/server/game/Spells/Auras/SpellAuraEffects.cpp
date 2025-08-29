@@ -405,22 +405,22 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleCreateAreaTrigger,                         //338 SPELL_AURA_AREA_TRIGGER
     &AuraEffect::HandleNoImmediateEffect,                         //339 SPELL_AURA_MOD_ARMOR_PENETRATION
     &AuraEffect::HandleNoImmediateEffect,                         //340 SPELL_AURA_KNOCKBACK_IMMUNITY
-    &AuraEffect::HandleNoImmediateEffect,                         //341 SPELL_AURA_ADD_MASTERY_PCT_TO_SPELL_EFFECT implemented in AuraEffect::CalculateSpellMod()
+    &AuraEffect::HandleNULL,                                      //341
     &AuraEffect::HandleModRatingPercent,                          //342 SPELL_AURA_MOD_RATING_FROM_ALL_SOURCES_BY_PCT visual only, implemented in Player::UpdateRating()
     &AuraEffect::HandleNoImmediateEffect,                         //343 SPELL_AURA_MOD_RECOVERY_RATE implemented in AuraEffect::PeriodicTick
-    &AuraEffect::HandleNoImmediateEffect,                         //344 SPELL_AURA_ADD_MASTERY_RATING_TO_SPELL_EFFECT implemented in AuraEffect::CalculateSpellMod()
-    &AuraEffect::HandleNoImmediateEffect,                         //345 SPELL_AURA_MOD_REMOVE_AURA
+    &AuraEffect::HandleNULL,                                      //344
+    &AuraEffect::HandleNULL,                                      //345
     &AuraEffect::HandleNoImmediateEffect,                         //346 SPELL_AURA_CAN_DOUBLE_JUMP
     &AuraEffect::HandleNoImmediateEffect,                         //347 SPELL_AURA_CAN_GLIDE
     &AuraEffect::HandleNoImmediateEffect,                         //348 SPELL_AURA_MOD_SCHOOL_MASK_HEALING_FROM_CASTER
     &AuraEffect::HandleNoImmediateEffect,                         //349 SPELL_AURA_MOD_MONEY_GAIN
     &AuraEffect::HandleNoImmediateEffect,                         //350 SPELL_AURA_MOD_TAXI_FLIGHT_SPEED
-    &AuraEffect::HandleAuraModForgeStat,                          //351 SPELL_AURA_MOD_FORGE_STAT
+    &AuraEffect::HandleNULL,                                      //351
     &AuraEffect::HandleNoImmediateEffect,                         //352 SPELL_AURA_MOD_RESTED_XP_MAX_AMOUNT implemented in Player::SetRestBonus, Spell::EffectGiveRestedExperience
     &AuraEffect::HandleNoImmediateEffect,                         //353 SPELL_AURA_MOD_RESTED_XP_RECOVERY_RATE implemented in Player::Update
-    &AuraEffect::HandleNoImmediateEffect,                         //354 
-    &AuraEffect::HandleNoImmediateEffect,                         //355 SPELL_AURA_ADD_COMBAT_RATING_PCT_TO_SPELL_EFFECT implemented in AuraEffect::CalculateSpellMod()
-    &AuraEffect::HandleNoImmediateEffect,                         //356 SPELL_AURA_ADD_COMBAT_RATING_TO_SPELL_EFFECT implemented in AuraEffect::CalculateSpellMod()
+    &AuraEffect::HandleModHealthOrManaFromStatPercent,            //354 SPELL_AURA_MOD_MANA_OR_HEALTH_FROM_STAT_PERCENT
+    &AuraEffect::HandleNULL,                                      //355
+    &AuraEffect::HandleNULL,                                      //356
 };
 
 AuraEffect::AuraEffect(Aura* base, SpellEffectInfo const& spellEfffectInfo, int32 const* baseAmount, Unit* caster):
@@ -702,178 +702,6 @@ void AuraEffect::CalculateSpellMod()
                 m_spellmod->mask = GetSpellEffectInfo().SpellClassMask;
             }
             m_spellmod->value = GetAmount();
-            break;
-        case SPELL_AURA_ADD_MASTERY_PCT_TO_SPELL_EFFECT:
-            // if (!m_spellmod)
-            // {
-            //     m_spellmod = new SpellModifier(GetBase());
-
-            //     m_spellmod->type = SPELLMOD_FLAT;
-            //     m_spellmod->spellId = GetId();
-            //     m_spellmod->mask = GetSpellInfo()->GetEffect(GetEffIndex()).SpellClassMask;
-            //     m_spellmod->charges = GetBase()->GetCharges();
-
-            //     int32 tempMisc = GetMiscValue();
-
-            //     switch (tempMisc)
-            //     {
-            //         case 2:
-            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-            //             break;
-            //         case 3:
-            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-            //             break;
-            //         case 4:
-            //             m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
-            //             break;
-            //         case 5:
-            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-            //             break;
-            //         case 6:
-            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-            //             break;
-            //         case 7:
-            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-            //             break;
-            //         case 1:
-            //         default:
-            //             m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-            //             break;
-            //     }
-            // }
-            // m_spellmod->value = int32(GetCaster()->ToPlayer()->GetRatingBonusValue(CR_MASTERY) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
-            break;
-        case SPELL_AURA_ADD_MASTERY_RATING_TO_SPELL_EFFECT:
-            if (!m_spellmod)
-            {
-                m_spellmod = new SpellModifier(GetBase());
-
-                m_spellmod->type = SPELLMOD_FLAT;
-                m_spellmod->spellId = GetId();
-                m_spellmod->mask = GetSpellInfo()->GetEffect(GetEffIndex()).SpellClassMask;
-                m_spellmod->charges = GetBase()->GetCharges();
-
-                int32 tempMisc = GetMiscValue();
-
-                switch (tempMisc)
-                {
-                    case 2:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                        break;
-                    case 3:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                        break;
-                    case 4:
-                        m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
-                        break;
-                    case 5:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                        break;
-                    case 6:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                        break;
-                    case 7:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                        break;
-                    case 1:
-                    default:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                        break;
-                }
-            }
-            m_spellmod->value = int32(GetCaster()->GetUInt32Value(static_cast<uint16>(PLAYER_FIELD_COMBAT_RATING_1) + CR_MASTERY) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
-            break;
-        case SPELL_AURA_ADD_COMBAT_RATING_PCT_TO_SPELL_EFFECT:
-            if (!m_spellmod)
-            {
-                m_spellmod = new SpellModifier(GetBase());
-
-                m_spellmod->type = SPELLMOD_FLAT;
-                m_spellmod->spellId = GetId();
-                m_spellmod->mask = GetSpellInfo()->GetEffect(GetEffIndex()).SpellClassMask;
-                m_spellmod->charges = GetBase()->GetCharges();
-
-                int32 tempMisc = GetMiscValue();
-
-                switch (tempMisc)
-                {
-                    case 2:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                        break;
-                    case 3:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                        break;
-                    case 4:
-                        m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
-                        break;
-                    case 5:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                        break;
-                    case 6:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                        break;
-                    case 7:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                        break;
-                    case 1:
-                    default:
-                        m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                        break;
-                }
-            }
-            m_spellmod->value = int32(GetCaster()->ToPlayer()->GetRatingBonusValue(CombatRating(GetMiscValueB())) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
-            break;
-        case SPELL_AURA_ADD_COMBAT_RATING_TO_SPELL_EFFECT:
-            if (!m_spellmod)
-            {
-                m_spellmod = new SpellModifier(GetBase());
-
-                m_spellmod->type = SPELLMOD_FLAT;
-                m_spellmod->spellId = GetId();
-                m_spellmod->mask = GetSpellInfo()->GetEffect(GetEffIndex()).SpellClassMask;
-                m_spellmod->charges = GetBase()->GetCharges();
-
-                int32 tempMisc = GetMiscValue();
-
-                switch (tempMisc)
-                {
-                case 2:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                    break;
-                case 3:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                    break;
-                case 4:
-                    m_spellmod->op = SpellModOp(SPELLMOD_ALL_EFFECTS);
-                    break;
-                case 5:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                    break;
-                case 6:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                    break;
-                case 7:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT2);
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT3);
-                    break;
-                case 1:
-                default:
-                    m_spellmod->op = SpellModOp(SPELLMOD_EFFECT1);
-                    break;
-                }
-            }
-            m_spellmod->value = int32(GetCaster()->GetUInt32Value(static_cast<uint16>(PLAYER_FIELD_COMBAT_RATING_1) + CombatRating(GetMiscValueB())) * float(GetSpellInfo()->GetEffect(GetEffIndex()).CalcValue() / 100));
             break;
         default:
             break;
@@ -6208,21 +6036,6 @@ void AuraEffect::HandleModTriggerSpellOnStacks(AuraApplication const* aurApp, ui
         return;
 }
 
-void AuraEffect::HandleAuraModForgeStat(AuraApplication const* aurApp, uint8 mode, bool apply) const
-{
-    if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
-        return;
-
-    Unit* target = aurApp->GetTarget();
-    if (!target->IsPlayer())
-        return;
-
-    auto Stat = GetMiscValue();
-    auto Type = GetMiscValueB();
-    auto Amount = GetAmount();
-    FIRE(Player, OnCustomStatAura, TSPlayer(target->ToPlayer()), apply, TSSpellInfo(m_spellInfo), TSNumber<uint8>(Stat), TSNumber<uint8>(Type), TSNumber<float>(Amount));
-}
-
 void AuraEffect::HandleModRatingPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const
 {
     if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
@@ -6282,6 +6095,23 @@ void AuraEffect::HandleAuraModSpellPowerOfStatPercent(AuraApplication const* aur
         return;
 
     target->ToPlayer()->UpdateSpellDamageAndHealingBonus();
+}
+
+void AuraEffect::HandleModHealthOrManaFromStatPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const
+{
+    if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
+        return;
+
+    Unit* target = aurApp->GetTarget();
+
+    if (target->GetTypeId() != TYPEID_PLAYER)
+        return;
+
+    auto isHealth = GetMiscValue();
+    if (isHealth)
+        target->ToPlayer()->UpdateMaxHealth();
+    else
+        target->ToPlayer()->UpdateMaxPower(POWER_MANA);
 }
 
 void AuraEffect::HandleAuraModSpellPowerOfCombatRatingPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const
