@@ -820,7 +820,7 @@ TC_API_EXPORT EnumText EnumUtils<SpellAttr4>::ToString(SpellAttr4 value)
         case SPELL_ATTR4_DONT_REMOVE_IN_ARENA: return { "SPELL_ATTR4_DONT_REMOVE_IN_ARENA", "Keep when entering arena", "" };
         case SPELL_ATTR4_UNK22: return { "SPELL_ATTR4_UNK22", "Unknown attribute 22@Attr4", "" };
         case SPELL_ATTR4_CANT_TRIGGER_ITEM_SPELLS: return { "SPELL_ATTR4_CANT_TRIGGER_ITEM_SPELLS", "Cannot trigger item spells", "" };
-        case SPELL_ATTR4_UNK24: return { "SPELL_ATTR4_UNK24", "Unknown attribute 24@Attr4", "Shoot-type spell?" };
+        case SPELL_ATTR4_AUTO_RANGED_COMBAT: return { "SPELL_ATTR4_AUTO_RANGED_COMBAT", "Start auto shooting", "" };
         case SPELL_ATTR4_IS_PET_SCALING: return { "SPELL_ATTR4_IS_PET_SCALING", "Pet Scaling aura", "" };
         case SPELL_ATTR4_CAST_ONLY_IN_OUTLAND: return { "SPELL_ATTR4_CAST_ONLY_IN_OUTLAND", "Only in Outland/Northrend", "" };
         case SPELL_ATTR4_FORCE_DISPLAY_CASTBAR: return { "SPELL_ATTR4_FORCE_DISPLAY_CASTBAR", "Force Display Castbar", "" };
@@ -864,7 +864,7 @@ TC_API_EXPORT SpellAttr4 EnumUtils<SpellAttr4>::FromIndex(size_t index)
         case 21: return SPELL_ATTR4_DONT_REMOVE_IN_ARENA;
         case 22: return SPELL_ATTR4_UNK22;
         case 23: return SPELL_ATTR4_CANT_TRIGGER_ITEM_SPELLS;
-        case 24: return SPELL_ATTR4_UNK24;
+        case 24: return SPELL_ATTR4_AUTO_RANGED_COMBAT;
         case 25: return SPELL_ATTR4_IS_PET_SCALING;
         case 26: return SPELL_ATTR4_CAST_ONLY_IN_OUTLAND;
         case 27: return SPELL_ATTR4_FORCE_DISPLAY_CASTBAR;
@@ -905,7 +905,7 @@ TC_API_EXPORT size_t EnumUtils<SpellAttr4>::ToIndex(SpellAttr4 value)
         case SPELL_ATTR4_DONT_REMOVE_IN_ARENA: return 21;
         case SPELL_ATTR4_UNK22: return 22;
         case SPELL_ATTR4_CANT_TRIGGER_ITEM_SPELLS: return 23;
-        case SPELL_ATTR4_UNK24: return 24;
+        case SPELL_ATTR4_AUTO_RANGED_COMBAT: return 24;
         case SPELL_ATTR4_IS_PET_SCALING: return 25;
         case SPELL_ATTR4_CAST_ONLY_IN_OUTLAND: return 26;
         case SPELL_ATTR4_FORCE_DISPLAY_CASTBAR: return 27;

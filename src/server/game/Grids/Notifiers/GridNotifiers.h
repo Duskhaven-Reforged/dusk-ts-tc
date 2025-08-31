@@ -760,7 +760,7 @@ namespace Trinity
     {
         public:
             AnyDeadUnitSpellTargetInRangeCheck(WorldObject* searchObj, float range, SpellInfo const* spellInfo, SpellTargetCheckTypes check)
-                : AnyDeadUnitObjectInRangeCheck(searchObj, range), WorldObjectSpellTargetCheck(searchObj, searchObj, spellInfo, check, nullptr)
+                : AnyDeadUnitObjectInRangeCheck(searchObj, range), WorldObjectSpellTargetCheck(searchObj, searchObj, spellInfo, check, nullptr, SpellTargetObjectTypes::TARGET_OBJECT_TYPE_CORPSE)
             { }
             bool operator()(Player* u);
             bool operator()(Corpse* u);

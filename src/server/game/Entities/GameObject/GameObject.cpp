@@ -689,7 +689,7 @@ void GameObject::Update(uint32 diff)
                         if (SpellInfo const* trapSpell = sSpellMgr->GetSpellInfo(goInfo->trap.spellId))
                         {
                             WorldObject* worldObjectTarget = nullptr;
-                            Trinity::WorldObjectSpellNearbyTargetCheck checker(radius, this, trapSpell, m_goValue.Trap.TargetSearcherCheckType, nullptr);
+                            Trinity::WorldObjectSpellNearbyTargetCheck checker(radius, this, trapSpell, m_goValue.Trap.TargetSearcherCheckType, nullptr, SpellTargetObjectTypes::TARGET_OBJECT_TYPE_UNIT);
                             Trinity::WorldObjectLastSearcher searcher(this, worldObjectTarget, checker, GRID_MAP_TYPE_MASK_CREATURE | GRID_MAP_TYPE_MASK_PLAYER);
                             Cell::VisitAllObjects(this, searcher, radius);
                             target = Object::ToUnit(worldObjectTarget);
