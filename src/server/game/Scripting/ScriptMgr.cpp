@@ -1319,9 +1319,7 @@ void ScriptMgr::OnPacketReceive(WorldSession* session, WorldPacket const& packet
     if (SCR_REG_LST(ServerScript).empty())
         return;
 
-    WorldPacket copy(packet);
-
-    FOREACH_SCRIPT(ServerScript)->OnPacketReceive(session, copy);
+    FOREACH_SCRIPT(ServerScript)->OnPacketReceive(session, packet);
 }
 
 void ScriptMgr::OnPacketSend(WorldSession* session, WorldPacket const& packet)
@@ -1331,8 +1329,7 @@ void ScriptMgr::OnPacketSend(WorldSession* session, WorldPacket const& packet)
     if (SCR_REG_LST(ServerScript).empty())
         return;
 
-    WorldPacket copy(packet);
-    FOREACH_SCRIPT(ServerScript)->OnPacketSend(session, copy);
+    FOREACH_SCRIPT(ServerScript)->OnPacketSend(session, packet);
     // @tswow-begin
     FIRE_ID(
           packet.GetOpcode()
@@ -2283,11 +2280,11 @@ void ServerScript::OnSocketClose(std::shared_ptr<WorldSocket> /*socket*/)
 {
 }
 
-void ServerScript::OnPacketSend(WorldSession* /*session*/, WorldPacket& /*packet*/)
+void ServerScript::OnPacketSend(WorldSession* /*session*/, WorldPacket const& /*packet*/)
 {
 }
 
-void ServerScript::OnPacketReceive(WorldSession* /*session*/, WorldPacket& /*packet*/)
+void ServerScript::OnPacketReceive(WorldSession* /*session*/, WorldPacket const& /*packet*/)
 {
 }
 
