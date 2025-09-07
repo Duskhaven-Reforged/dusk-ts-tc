@@ -897,6 +897,7 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
             damageforleech = health;
 
         float leechPct = pAttacker->GetFloatValue(PLAYER_FIELD_LEECH);
+        TC_LOG_INFO("server.worldserver", "Leech: {} of {}", leechPct, damageforleech);
         if (leechPct) {
             CastSpellExtraArgs args;
             args.AddSpellMod(SPELLVALUE_BASE_POINT0, CalculatePct(damageforleech, leechPct));
@@ -13173,11 +13174,13 @@ bool Unit::CanApplyResilience() const
 int32 Unit::CalculateAOEAvoidance(int32 damage, uint32 schoolMask, ObjectGuid const& casterGuid) const
 {
     damage = int32(float(damage) * GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_AOE_DAMAGE_AVOIDANCE, schoolMask));
-    // 1.n
     if (casterGuid.IsAnyTypeCreature())
         damage = int32(float(damage) * GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE, schoolMask));
     else if (Player const* pMe = ToPlayer()) {
-        float avoidance = 1.0 - pMe->GetFloatValue(PLAYER_FIELD_AVOIDANCE)/100.0f;
+        float BaseAvoidance = pMe->GetFloatValue(PLAYER_FIELD_AVOIDANCE);
+        float avoidanceAsPct = BaseAvoidance / 100.0f;
+        TC_LOG_INFO("server.worldserver", "Avoidance: {} as {}", BaseAvoidance, avoidanceAsPct);
+        float avoidance = 1.0 - avoidanceAsPct;
         damage = int32(float(damage) * avoidance);
     }
 
