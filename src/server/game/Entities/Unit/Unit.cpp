@@ -887,9 +887,23 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
     }
 
     /* @dh-begin */
-        // Aleist3r: main reason for this to exist, we want to prevent unit's (player's) death by changing damage
-        FIRE(Unit, OnCustomDamageTaken, TSUnit(victim), TSUnit(attacker), TSMutableNumber<uint32>(&damage))
+    // Aleist3r: main reason for this to exist, we want to prevent unit's (player's) death by changing damage
+    FIRE(Unit, OnCustomDamageTaken, TSUnit(victim), TSUnit(attacker), TSMutableNumber<uint32>(&damage))
     /* @dh-end */
+
+    if (Player* pAttacker = attacker->ToPlayer()) {
+        int32 damageforleech = damage;
+        if (health < damage)
+            damageforleech = health;
+
+        float leechPct = pAttacker->GetFloatValue(PLAYER_FIELD_LEECH);
+        if (leechPct) {
+            CastSpellExtraArgs args;
+            args.AddSpellMod(SPELLVALUE_BASE_POINT0, CalculatePct(damageforleech, leechPct));
+            uint32 const LeechSpell = 18;
+            pAttacker->CastSpell(pAttacker, LeechSpell, args);
+        }
+    }
 
     if (health <= damage)
     {
@@ -1128,22 +1142,6 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
         , effectMask
     );
     // @tswow-end
-
-    // @dh-begin
-    // TODO: move to this FIRE
-    // Aleist3r: this is much cleaner
-    //Unit* casterUnit = damageInfo->attacker;
-    //if (casterUnit->GetTypeId() == TYPEID_PLAYER)
-    //{
-    //    int32 leechRating = int32(casterUnit->ToPlayer()->GetRatingBonusValue(CR_LIFESTEAL));
-
-    //    if (leechRating > 0)
-    //    {
-    //        int32 leechAmount = round(CalculatePct((damageInfo->damage - damageInfo->overkill), leechRating));
-    //        casterUnit->CastCustomSpell(1570000, SPELLVALUE_BASE_POINT0, leechAmount, casterUnit, TRIGGERED_FULL_MASK);
-    //    }
-    //}
-    // @dh-end
 }
 
 void Unit::DealSpellDamage(SpellNonMeleeDamage const* damageInfo, bool durabilityLoss)
@@ -9082,8 +9080,8 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
                 stack_bonus     = GetTotalAuraMultiplier(SPELL_AURA_MOD_SPEED_ALWAYS);
                 non_stack_bonus += GetMaxPositiveAuraModifier(SPELL_AURA_MOD_SPEED_NOT_STACK) / 100.0f;
 
-                if (IsPlayer())
-                    main_speed_mod += round(ToPlayer()->GetRatingBonusValue(CR_SPEED));
+                if (Player* player = ToPlayer())
+                    main_speed_mod += round(player->GetFloatValue(PLAYER_FIELD_SPEED));
 
             }
             break;
@@ -11290,7 +11288,7 @@ void Unit::SendComboPoints()
         return;
 
     // DISABLE DEFAULT PLAYER SEND - HATER
-    PackedGuid const packGUID = m_comboTarget ? m_comboTarget->GetPackGUID() : PackedGuid();
+    // PackedGuid const packGUID = m_comboTarget ? m_comboTarget->GetPackGUID() : PackedGuid();
     // if (Player* playerMe = ToPlayer())
     // {
     //     WorldPacket data;
@@ -13175,8 +13173,13 @@ bool Unit::CanApplyResilience() const
 int32 Unit::CalculateAOEAvoidance(int32 damage, uint32 schoolMask, ObjectGuid const& casterGuid) const
 {
     damage = int32(float(damage) * GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_AOE_DAMAGE_AVOIDANCE, schoolMask));
+    // 1.n
     if (casterGuid.IsAnyTypeCreature())
         damage = int32(float(damage) * GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE, schoolMask));
+    else if (Player const* pMe = ToPlayer()) {
+        float avoidance = 1.0 - pMe->GetFloatValue(PLAYER_FIELD_AVOIDANCE)/100.0f;
+        damage = int32(float(damage) * avoidance);
+    }
 
     return damage;
 }

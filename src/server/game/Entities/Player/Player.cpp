@@ -4012,7 +4012,7 @@ bool Player::ResetTalents(bool involuntarily /*= false*/)
 void Player::SetFreeTalentPoints(uint32 points)
 {
     sScriptMgr->OnPlayerFreeTalentPointsChanged(this, points);
-    SetUInt32Value(PLAYER_CHARACTER_POINTS1, points);
+    // SetUInt32Value(PLAYER_CHARACTER_POINTS1, points);
 }
 
 Mail* Player::GetMail(uint32 id)
@@ -5648,8 +5648,15 @@ void Player::UpdateRating(CombatRating cr)
             }
             break;
         case CR_SPEED:
+                SetFloatValue(PLAYER_FIELD_SPEED, GetRatingBonusValue(cr));
                 UpdateSpeed(MOVE_RUN);
                 UpdateSpeed(MOVE_WALK);
+            break;
+        case CR_LIFESTEAL:
+            SetFloatValue(PLAYER_FIELD_LEECH, GetRatingBonusValue(cr));
+            break;
+        case CR_AVOIDANCE:
+            SetFloatValue(PLAYER_FIELD_AVOIDANCE, GetRatingBonusValue(cr));
             break;
         default:
             break;
