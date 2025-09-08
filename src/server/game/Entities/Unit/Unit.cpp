@@ -824,10 +824,25 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
         attacker->RewardRage(rage);
     }
 
+    uint32 health = victim->GetHealth();
+
     if (!damage)
         return 0;
 
-    uint32 health = victim->GetHealth();
+    if (attacker && attacker->GetTypeId() == TYPEID_PLAYER) {
+        auto pAttacker = attacker->ToPlayer();
+        int32 damageforleech = damage;
+        if (health < damage)
+            damageforleech = health;
+
+        float leechPct = pAttacker->GetFloatValue(PLAYER_FIELD_LEECH);
+        if (leechPct) {
+            CastSpellExtraArgs args;
+            args.AddSpellMod(SPELLVALUE_BASE_POINT0, CalculatePct(damageforleech, leechPct));
+            uint32 const LeechSpell = 18;
+            pAttacker->CastSpell(pAttacker, LeechSpell, args);
+        }
+    }
 
     // duel ends when player has 1 or less hp
     bool duel_hasEnded = false;
@@ -890,21 +905,6 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
     // Aleist3r: main reason for this to exist, we want to prevent unit's (player's) death by changing damage
     FIRE(Unit, OnCustomDamageTaken, TSUnit(victim), TSUnit(attacker), TSMutableNumber<uint32>(&damage))
     /* @dh-end */
-
-    if (Player* pAttacker = attacker->ToPlayer()) {
-        int32 damageforleech = damage;
-        if (health < damage)
-            damageforleech = health;
-
-        float leechPct = pAttacker->GetFloatValue(PLAYER_FIELD_LEECH);
-        TC_LOG_INFO("server.worldserver", "Leech: {} of {}", leechPct, damageforleech);
-        if (leechPct) {
-            CastSpellExtraArgs args;
-            args.AddSpellMod(SPELLVALUE_BASE_POINT0, CalculatePct(damageforleech, leechPct));
-            uint32 const LeechSpell = 18;
-            pAttacker->CastSpell(pAttacker, LeechSpell, args);
-        }
-    }
 
     if (health <= damage)
     {
@@ -13179,7 +13179,6 @@ int32 Unit::CalculateAOEAvoidance(int32 damage, uint32 schoolMask, ObjectGuid co
     else if (Player const* pMe = ToPlayer()) {
         float BaseAvoidance = pMe->GetFloatValue(PLAYER_FIELD_AVOIDANCE);
         float avoidanceAsPct = BaseAvoidance / 100.0f;
-        TC_LOG_INFO("server.worldserver", "Avoidance: {} as {}", BaseAvoidance, avoidanceAsPct);
         float avoidance = 1.0 - avoidanceAsPct;
         damage = int32(float(damage) * avoidance);
     }
