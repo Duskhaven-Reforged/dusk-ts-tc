@@ -312,7 +312,7 @@ Unit::Unit(bool isWorldObject) :
     m_removedAurasCount(0), m_charmer(nullptr), m_charmed(nullptr),
     i_motionMaster(new MotionMaster(this)), m_regenTimer(0), m_vehicle(nullptr), m_vehicleKit(nullptr),
     m_unitTypeMask(UNIT_MASK_NONE), m_Diminishing(), m_combatManager(this), m_threatManager(this),
-    m_aiLocked(false), m_comboTarget(nullptr), m_comboPoints(0), _spellHistory(new SpellHistory(this))
+    m_aiLocked(false), _spellHistory(new SpellHistory(this))
 {
     m_objectType |= TYPEMASK_UNIT;
     m_objectTypeId = TYPEID_UNIT;
@@ -5973,8 +5973,6 @@ bool Unit::Attack(Unit* victim, bool meleeAttack)
             // @tswow-end
     }
 
-    AddComboPoints(0);
-
     return true;
 }
 
@@ -6033,8 +6031,6 @@ void Unit::CombatStop(bool includingCast, bool mutualPvP)
     RemoveAllAttackers();
     if (GetTypeId() == TYPEID_PLAYER)
         ToPlayer()->SendAttackSwingCancelAttack();     // melee and ranged forced attack cancel
-
-    AddComboPoints(0);
 
     if (mutualPvP)
         ClearInCombat();
@@ -6822,8 +6818,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
 
     if (IsPlayer()) {
         FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(victim), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSNumber<uint8>(WeaponAttackType::MAX_ATTACK), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), false);
-    }
-    else if (IsPet() && GetOwner()) {
+    } else if (IsPet() && GetOwner()) {
         if (GetOwner()->IsPlayer())
             FIRE(Player, OnCustomScriptedDamageDoneMod, TSPlayer(const_cast<Player*>(GetOwner()->ToPlayer())), TSUnit(victim), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSNumber<uint8>(WeaponAttackType::MAX_ATTACK), TSMutableNumber<float>(&DoneTotalMod), TSMutableNumber<uint32>(&pdamage), true);
     }
@@ -6901,6 +6896,14 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
     }
 
     float tmpDamage = float(int32(pdamage) + DoneTotal) * DoneTotalMod;
+    if (Player const* pCaster = ToPlayer()) {
+        if (spellProto->HasAttribute(SPELL_ATTR1_CU_COMBODAMAGE)) {
+            float comboBonus = spellEffectInfo.PointsPerComboPoint;
+            if (comboBonus)
+                if (uint8 combos = pCaster->GetPower(POWER_COMBO))
+                    tmpDamage *= combos * comboBonus;
+        }
+    }
 
     // apply spellmod to Done damage (flat and pct)
     if (Player* modOwner = GetSpellModOwner())
@@ -9270,7 +9273,6 @@ void Unit::setDeathState(DeathState s)
     if (s != ALIVE && s != JUST_RESPAWNED)
     {
         CombatStop();
-        // ClearComboPointHolders();                           // any combo points pointed to unit lost at it death
 
         if (IsNonMeleeSpellCast(false))
             InterruptNonMeleeSpells(false);
@@ -9881,7 +9883,7 @@ void Unit::UpdateUnitMod(UnitMods unitMod)
         case UNIT_MOD_RAGE:
         case UNIT_MOD_FOCUS:
         case UNIT_MOD_ENERGY:
-        case UNIT_MOD_HAPPINESS:
+        case UNIT_MOD_COMBO:
         case UNIT_MOD_RUNE:
         case UNIT_MOD_RUNIC_POWER:          UpdateMaxPower(GetPowerTypeByAuraGroup(unitMod));          break;
 
@@ -10059,7 +10061,7 @@ Powers Unit::GetPowerTypeByAuraGroup(UnitMods unitMod) const
         case UNIT_MOD_RAGE:        return POWER_RAGE;
         case UNIT_MOD_FOCUS:       return POWER_FOCUS;
         case UNIT_MOD_ENERGY:      return POWER_ENERGY;
-        case UNIT_MOD_HAPPINESS:   return POWER_HAPPINESS;
+        case UNIT_MOD_COMBO:       return POWER_COMBO;
         case UNIT_MOD_RUNE:        return POWER_RUNE;
         case UNIT_MOD_RUNIC_POWER: return POWER_RUNIC_POWER;
         default:
@@ -10220,10 +10222,6 @@ void Unit::SetPower(Powers power, uint32 val, bool withPowerUpdate /*= true*/, b
             if (owner && (owner->GetTypeId() == TYPEID_PLAYER) && owner->ToPlayer()->GetGroup())
                 owner->ToPlayer()->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_CUR_POWER);
         }
-
-        // Update the pet's character sheet with happiness damage bonus
-        // if (pet->getPetType() == HUNTER_PET && power == POWER_HAPPINESS)
-        //     pet->UpdateDamagePhysical(BASE_ATTACK);
     }
 }
 
@@ -10254,7 +10252,6 @@ void Unit::SetMaxPower(Powers power, uint32 val)
 
 uint32 Unit::GetCreatePowerValue(Powers power) const
 {
-    // Only hunter pets have POWER_FOCUS and POWER_HAPPINESS
     switch (power)
     {
         case POWER_MANA:
@@ -10265,8 +10262,8 @@ uint32 Unit::GetCreatePowerValue(Powers power) const
             return 100;
         case POWER_ENERGY:
             return 100;
-        case POWER_HAPPINESS:
-            return 1050000;
+        case POWER_COMBO:
+            return 5;
         case POWER_RUNIC_POWER:
             return 1000;
         case POWER_RUNE:
@@ -10449,8 +10446,6 @@ void Unit::CleanupBeforeRemoveFromMap(bool finalCleanup)
 
     m_Events.KillAllEvents(false);                      // non-delatable (currently cast spells) will not deleted now but it will deleted at call in Map::RemoveAllObjectsInRemoveList
     CombatStop();
-    ClearComboPoints();
-    // ClearComboPointHolders();
 }
 
 void Unit::CleanupsBeforeDelete(bool finalCleanup)
@@ -10926,20 +10921,6 @@ void Unit::ProcSkillsAndReactives(bool isVictim, Unit* procTarget, uint32 typeMa
                     StartReactiveTimer(REACTIVE_DEFENSE);
                 }
             }
-            else // For attacker
-            {
-                // Overpower on victim dodge
-                if ((hitMask & PROC_HIT_DODGE) && GetTypeId() == TYPEID_PLAYER && GetClass() == CLASS_WARRIOR)
-                {
-                    AddComboPoints(procTarget, 1);
-                    StartReactiveTimer(REACTIVE_OVERPOWER);
-                }
-                else if ((hitMask & PROC_HIT_CRITICAL) && IsHunterPet())
-                {
-                    AddComboPoints(procTarget, 1);
-                    StartReactiveTimer(REACTIVE_WOLVERINE_BITE);
-                }
-            }
         }
     }
 }
@@ -11245,88 +11226,6 @@ void Unit::RestoreDisplayId()
     SetDisplayId(GetNativeDisplayId());
 }
 
-void Unit::AddComboPoints(Unit* target, int8 count)
-{
-    if (!count)
-        return;
-
-    if (target && target != m_comboTarget)
-    {
-        // if (m_comboTarget)
-        //     m_comboTarget->RemoveComboPointHolder(this);
-        m_comboTarget = target;
-        m_comboPoints = count;
-        //target->AddComboPointHolder(this);
-
-        m_ComboPointDegenTimer = 0;
-
-        return;
-    }
-    else
-        m_comboPoints = std::max<int8>(std::min<int8>(m_comboPoints + count, 5),0);
-
-    SendComboPoints();
-}
-
-void Unit::ClearComboPoints()
-{
-    if (!m_comboTarget)
-        return;
-
-    // remove Premed-like effects
-    // (NB: this Aura retains the CP while it's active - now that CP have reset, it shouldn't be there anymore)
-    RemoveAurasByType(SPELL_AURA_RETAIN_COMBO_POINTS);
-
-    m_comboPoints = 0;
-    SendComboPoints();
-    // m_comboTarget->RemoveComboPointHolder(this);
-    m_comboTarget = nullptr;
-}
-
-void Unit::SendComboPoints()
-{
-    if (m_cleanupDone)
-        return;
-
-    // DISABLE DEFAULT PLAYER SEND - HATER
-    // PackedGuid const packGUID = m_comboTarget ? m_comboTarget->GetPackGUID() : PackedGuid();
-    // if (Player* playerMe = ToPlayer())
-    // {
-    //     WorldPacket data;
-    //     data.Initialize(SMSG_UPDATE_COMBO_POINTS, packGUID.size() + 1);
-    //     data << packGUID;
-    //     data << uint8(m_comboPoints);
-    //     playerMe->SendDirectMessage(&data);
-    // }
-    //Player* movingMe = GetCharmerOrSelfPlayer();
-    //ObjectGuid ownerGuid = GetCharmerOrOwnerGUID();
-    //Player* owner = nullptr;
-    //if (ownerGuid.IsPlayer())
-    //    owner = ObjectAccessor::GetPlayer(*this, ownerGuid);
-    //if (movingMe || owner)
-    //{
-    //    WorldPacket data;
-    //    data.Initialize(SMSG_PET_UPDATE_COMBO_POINTS, GetPackGUID().size() + packGUID.size() + 1);
-    //    data << GetPackGUID();
-    //    data << packGUID;
-    //    data << uint8(m_comboPoints);
-    //    if (movingMe)
-    //        movingMe->SendDirectMessage(&data);
-    //    if (owner && owner != movingMe)
-    //        owner->SendDirectMessage(&data);
-    //}
-}
-
-void Unit::ClearComboPointHolders()
-{
-    if (this->IsPlayer()) {
-        FIRE(Player, ClearComboPoints, TSPlayer(this->ToPlayer()));
-    } else {
-        while (!m_ComboPointHolders.empty())
-            (*m_ComboPointHolders.begin())->ClearComboPoints(); // this also removes it from m_comboPointHolders
-    }
-}
-
 void Unit::ClearAllReactives()
 {
     for (uint8 i = 0; i < MAX_REACTIVE; ++i)
@@ -11336,10 +11235,6 @@ void Unit::ClearAllReactives()
         ModifyAuraState(AURA_STATE_DEFENSE, false);
     if (GetClass() == CLASS_HUNTER && HasAuraState(AURA_STATE_HUNTER_PARRY))
         ModifyAuraState(AURA_STATE_HUNTER_PARRY, false);
-    if (GetClass() == CLASS_WARRIOR && GetTypeId() == TYPEID_PLAYER)
-        ClearComboPoints();
-    if (IsHunterPet())
-        ClearComboPoints();
 }
 
 void Unit::UpdateReactives(uint32 p_time)
@@ -11364,14 +11259,6 @@ void Unit::UpdateReactives(uint32 p_time)
                 case REACTIVE_HUNTER_PARRY:
                     if (GetClass() == CLASS_HUNTER && HasAuraState(AURA_STATE_HUNTER_PARRY))
                         ModifyAuraState(AURA_STATE_HUNTER_PARRY, false);
-                    break;
-                case REACTIVE_OVERPOWER:
-                    if (GetClass() == CLASS_WARRIOR && GetTypeId() == TYPEID_PLAYER)
-                        ClearComboPoints();
-                    break;
-                case REACTIVE_WOLVERINE_BITE:
-                    if (IsHunterPet())
-                        ClearComboPoints();
                     break;
                 default:
                     break;

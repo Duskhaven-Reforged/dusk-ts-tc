@@ -225,7 +225,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_PET_TALENT_POINTS                        = 145,
     SPELL_AURA_ALLOW_TAME_PET_TYPE                          = 146,
     SPELL_AURA_MECHANIC_IMMUNITY_MASK                       = 147,
-    SPELL_AURA_RETAIN_COMBO_POINTS                          = 148,
+    UNUSED148                                               = 148,
     SPELL_AURA_REDUCE_PUSHBACK                              = 149,  //    Reduce Pushback
     SPELL_AURA_MOD_SHIELD_BLOCKVALUE_PCT                    = 150,
     SPELL_AURA_TRACK_STEALTHED                              = 151,  //    Track Stealthed

@@ -164,7 +164,7 @@ enum UnitMods
     UNIT_MOD_RAGE,
     UNIT_MOD_FOCUS,
     UNIT_MOD_ENERGY,
-    UNIT_MOD_HAPPINESS,
+    UNIT_MOD_COMBO,
     UNIT_MOD_RUNE,
     UNIT_MOD_RUNIC_POWER,
     UNIT_MOD_ARMOR,                                         // UNIT_MOD_ARMOR..UNIT_MOD_RESISTANCE_ARCANE must be in existed order, it's accessed by index values of SpellSchools enum.
@@ -1766,21 +1766,6 @@ class TC_GAME_API Unit : public WorldObject
         void SetControlled(bool apply, UnitState state);
         void ApplyControlStatesIfNeeded();
 
-        ///-----------Combo point system-------------------
-        // This unit having CP on other units
-        uint8 GetComboPoints(Unit const* who = nullptr) const { return (who && m_comboTarget != who) ? 0 : m_comboPoints; }
-        uint8 GetComboPoints(ObjectGuid const& guid) const { return (m_comboTarget && m_comboTarget->GetGUID() == guid) ? m_comboPoints : 0; }
-        Unit* GetComboTarget() const { return m_comboTarget; }
-        ObjectGuid GetComboTargetGUID() const { return m_comboTarget ? m_comboTarget->GetGUID() : ObjectGuid::Empty; }
-        void AddComboPoints(Unit* target, int8 count);
-        void AddComboPoints(int8 count) { AddComboPoints(nullptr, count); }
-        void ClearComboPoints();
-        void SendComboPoints();
-        // Other units having CP on this unit
-        void AddComboPointHolder(Unit* unit) { m_ComboPointHolders.insert(unit); }
-        void RemoveComboPointHolder(Unit* unit) { m_ComboPointHolders.erase(unit); }
-        void ClearComboPointHolders();
-
         ///----------Pet responses methods-----------------
         void SendPetActionFeedback(uint8 msg);
         void SendPetTalk(uint32 pettalk);
@@ -2036,10 +2021,6 @@ class TC_GAME_API Unit : public WorldObject
         bool m_aiLocked;
 
         std::unordered_set<AbstractFollower*> m_followingMe;
-
-        Unit* m_comboTarget;
-        int8 m_comboPoints;
-        std::unordered_set<Unit*> m_ComboPointHolders;
 
         uint32 _lastExtraAttackSpell;
         std::unordered_map<ObjectGuid /*guid*/, uint32 /*count*/> extraAttacksTargets;

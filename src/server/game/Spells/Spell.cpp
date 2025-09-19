@@ -528,9 +528,6 @@ m_caster((info->HasAttribute(SPELL_ATTR6_CAST_BY_CHARMER) && caster->GetCharmerO
     m_selfContainer = nullptr;
     m_referencedFromCurrentSpell = false;
     m_executedCurrently = false;
-    m_needComboPoints = m_spellInfo->NeedsComboPoints();
-    m_comboTarget = nullptr;
-    m_comboPointGain = 0;
     m_delayStart = 0;
     m_delayAtDamageCount = 0;
 
@@ -2748,10 +2745,6 @@ void Spell::TargetInfo::DoDamageAndTriggers(Spell* spell)
         // set hitmask for finish procs
         spell->m_hitMask |= hitMask;
 
-        // Do not take combo points on dodge and miss
-        if (MissCondition != SPELL_MISS_NONE && spell->m_needComboPoints && spell->m_targets.GetUnitTargetGUID() == TargetGUID)
-            spell->m_needComboPoints = false;
-
         // _spellHitTarget can be null if spell is missed in DoSpellHitOnUnit
         if (MissCondition != SPELL_MISS_EVADE && _spellHitTarget && !spell->m_caster->IsFriendlyTo(unit) && (!spell->IsPositive() || spell->m_spellInfo->HasEffect(SPELL_EFFECT_DISPEL)))
         {
@@ -3254,10 +3247,6 @@ SpellCastResult Spell::prepare(SpellCastTargets const& targets, AuraEffect const
 
     // Fill cost data (do not use power for item casts)
     m_powerCost = m_CastItem ? 0 : m_spellInfo->CalcPowerCost(m_caster, m_spellSchoolMask, this);
-
-    // Set combo point requirement
-    if ((_triggeredCastFlags & TRIGGERED_IGNORE_COMBO_POINTS) || m_CastItem)
-        m_needComboPoints = false;
 
     uint32 param1 = 0, param2 = 0;
     SpellCastResult result = CheckCast(true, &param1, &param2);
@@ -3926,18 +3915,8 @@ void Spell::_handle_finish_phase()
     if (Unit* unitCaster = m_caster->ToUnit())
     {
         // Take for real after all targets are processed
-        if (m_needComboPoints)
-            unitCaster->ClearComboPoints();
-
-        // Real add combo points from effects
-        if (m_comboTarget && m_comboPointGain)
-        {
-            // remove Premed-like effects unless they were caused by ourselves
-            // (this Aura removes the already-added CP when it expires from duration - now that we've added CP, this shouldn't happen anymore!)
-            if (!m_spellInfo->HasAura(SPELL_AURA_RETAIN_COMBO_POINTS))
-                unitCaster->RemoveAurasByType(SPELL_AURA_RETAIN_COMBO_POINTS);
-            unitCaster->AddComboPoints(m_comboTarget, m_comboPointGain);
-        }
+        if (m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODAMAGE) || m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODURATION))
+            unitCaster->SetPower(POWER_COMBO, 0, true);
 
         if (m_spellInfo->HasEffect(SPELL_EFFECT_ADD_EXTRA_ATTACKS))
             unitCaster->SetLastExtraAttackSpell(m_spellInfo->Id);
@@ -5489,7 +5468,6 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
         {
             if ((*j)->IsAffectedOnSpell(m_spellInfo))
             {
-                m_needComboPoints = false;
                 if ((*j)->GetMiscValue() == 1)
                 {
                     reqCombat = false;
@@ -6393,16 +6371,6 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
                 return SPELL_FAILED_ITEM_ALREADY_ENCHANTED;
     }
 
-    // // check if caster has at least 1 combo point on target for spells that require combo points
-    // if (m_needComboPoints)
-    // {
-    //     if (Unit* unitCaster = m_caster->ToUnit())
-    //     {
-    //         if (!unitCaster->GetComboPoints() && !unitCaster->IsPlayer())
-    //             return SPELL_FAILED_NO_COMBO_POINTS;
-    //     }
-    // }
-
     // @dh-begin
     // TODO: add FIRE for custom checks like
     //if (m_spellInfo->HasAttribute(SPELL_ATTR1_CU_NOT_USABLE_IN_INSTANCES))
@@ -6906,6 +6874,10 @@ SpellCastResult Spell::CheckPower() const
     Powers powerType = m_spellInfo->PowerType;
     if (int32(unitCaster->GetPower(powerType)) < m_powerCost)
         return SPELL_FAILED_NO_POWER;
+    else if ((m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODAMAGE)
+        || m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODURATION))
+        && !unitCaster->GetPower(POWER_COMBO))
+        return SPELL_FAILED_NO_COMBO_POINTS;
     else
         return SPELL_CAST_OK;
 }

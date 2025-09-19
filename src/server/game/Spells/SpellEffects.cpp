@@ -3309,8 +3309,6 @@ void Spell::EffectAddComboPoints()
     if (Player* caster = m_caster->ToPlayer()) {
         FIRE(Player, GainComboPoint, TSPlayer(caster), TSNumber<int8>(damage));
     }
-    
-    AddComboPointGain(unitTarget, damage);
 }
 
 void Spell::EffectDuel()

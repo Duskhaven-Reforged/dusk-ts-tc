@@ -1400,8 +1400,6 @@ void Player::setDeathState(DeathState s)
 
         // drunken state is cleared on death
         SetDrunkValue(0);
-        // lost combo points at any target (targeted combo points clear in Unit::setDeathState)
-        ClearComboPoints();
 
         ClearResurrectRequestData();
 
@@ -1970,8 +1968,6 @@ void Player::RemoveFromWorld()
         StopCastingCharm();
         StopCastingBindSight();
         UnsummonPetTemporaryIfAny();
-        ClearComboPoints();
-        // ClearComboPointHolders();
         ObjectGuid lootGuid = GetLootGUID();
         if (!lootGuid.IsEmpty())
             m_session->DoLootRelease(lootGuid);
@@ -2874,7 +2870,7 @@ void Player::InitStatsForLevel(bool reapplyMods)
     if (GetPower(POWER_RAGE) > GetMaxPower(POWER_RAGE))
         SetFullPower(POWER_RAGE);
     SetFullPower(POWER_FOCUS);
-    SetPower(POWER_HAPPINESS, 0);
+    SetPower(POWER_COMBO, 0);
     SetPower(POWER_RUNIC_POWER, 0);
 
     // update level to hunter/summon pet
@@ -7391,13 +7387,6 @@ void Player::DuelComplete(DuelCompleteType type)
         else
             ++i;
     }
-
-    // cleanup combo points
-    if (GetComboTarget() && GetComboTarget()->GetControllingPlayer() == opponent)
-        ClearComboPoints();
-
-    if (opponent->GetComboTarget() && opponent->GetComboTarget()->GetControllingPlayer() == this)
-        opponent->ClearComboPoints();
 
     //cleanups
     SetGuidValue(PLAYER_DUEL_ARBITER, ObjectGuid::Empty);

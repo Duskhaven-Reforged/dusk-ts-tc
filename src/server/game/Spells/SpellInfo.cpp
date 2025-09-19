@@ -490,15 +490,7 @@ int32 SpellEffectInfo::CalcValue(WorldObject const* caster /*= nullptr*/, int32 
     }
 
     float value = float(basePoints);
-
-    // random damage
-    if (casterUnit)
-    {
-        // bonus amount from combo points
-        if (uint8 comboPoints = casterUnit->GetComboPoints() && !casterUnit->IsPlayer())
-            value += PointsPerComboPoint * comboPoints;
-    }
-
+    
     if (caster)
         value = caster->ApplyEffectModifiers(_spellInfo, EffectIndex, value);
 
@@ -1459,11 +1451,6 @@ bool SpellInfo::IsChanneled() const
 bool SpellInfo::IsMoveAllowedChannel() const
 {
     return IsChanneled() && (HasAttribute(SPELL_ATTR5_CAN_CHANNEL_WHEN_MOVING) || (!(ChannelInterruptFlags & (AURA_INTERRUPT_FLAG_MOVE | AURA_INTERRUPT_FLAG_TURNING))));
-}
-
-bool SpellInfo::NeedsComboPoints() const
-{
-    return HasAttribute(SpellAttr1(SPELL_ATTR1_REQ_COMBO_POINTS1 | SPELL_ATTR1_REQ_COMBO_POINTS2));
 }
 
 bool SpellInfo::IsNextMeleeSwingSpell() const
@@ -3537,10 +3524,9 @@ int32 SpellInfo::CalcPowerCost(WorldObject const* caster, SpellSchoolMask school
             case POWER_RAGE:
             case POWER_FOCUS:
             case POWER_ENERGY:
-            case POWER_HAPPINESS:
-                powerCost += int32(CalculatePct(unitCaster->GetMaxPower(PowerType), ManaCostPercentage));
                 break;
             case POWER_RUNE:
+            case POWER_COMBO:
             case POWER_RUNIC_POWER:
                 TC_LOG_DEBUG("spells", "CalculateManaCost: Not implemented yet!");
                 break;

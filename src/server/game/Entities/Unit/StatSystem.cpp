@@ -1145,7 +1145,7 @@ static std::pair<float, Optional<Rates>> const powerRegenInfo[MAX_POWERS] =
     { -12.5f,   RATE_POWER_RAGE_LOSS        }, // POWER_RAGE,           -1.25 rage per second
     { 5.f,     RATE_POWER_FOCUS            }, // POWER_FOCUS
     { 10.f,     RATE_POWER_ENERGY           }, // POWER_ENERGY,         +10 energy per second
-    { 0.f,      std::nullopt                }, // POWER_HAPPINESS
+    { 0.f,      std::nullopt                }, // POWER_COMBO
     { 0.f,      std::nullopt                }, // POWER_RUNE
     { -12.5f,   RATE_POWER_RUNICPOWER_LOSS  }  // POWER_RUNIC_POWER,    -1.25 runic power per second
 };

@@ -174,7 +174,7 @@ TC_API_EXPORT EnumText EnumUtils<Powers>::ToString(Powers value)
         case POWER_RAGE: return { "POWER_RAGE", "Rage", "" };
         case POWER_FOCUS: return { "POWER_FOCUS", "Focus", "" };
         case POWER_ENERGY: return { "POWER_ENERGY", "Energy", "" };
-        case POWER_HAPPINESS: return { "POWER_HAPPINESS", "Happiness", "" };
+        case POWER_COMBO: return { "POWER_COMBO", "Combo Points", "" };
         case POWER_RUNE: return { "POWER_RUNE", "Runes", "" };
         case POWER_RUNIC_POWER: return { "POWER_RUNIC_POWER", "Runic Power", "" };
         default: throw std::out_of_range("value");
@@ -194,7 +194,7 @@ TC_API_EXPORT Powers EnumUtils<Powers>::FromIndex(size_t index)
         case 2: return POWER_RAGE;
         case 3: return POWER_FOCUS;
         case 4: return POWER_ENERGY;
-        case 5: return POWER_HAPPINESS;
+        case 5: return POWER_COMBO;
         case 6: return POWER_RUNE;
         case 7: return POWER_RUNIC_POWER;
         default: throw std::out_of_range("index");
@@ -211,7 +211,7 @@ TC_API_EXPORT size_t EnumUtils<Powers>::ToIndex(Powers value)
         case POWER_RAGE: return 2;
         case POWER_FOCUS: return 3;
         case POWER_ENERGY: return 4;
-        case POWER_HAPPINESS: return 5;
+        case POWER_COMBO: return 5;
         case POWER_RUNE: return 6;
         case POWER_RUNIC_POWER: return 7;
         default: throw std::out_of_range("value");

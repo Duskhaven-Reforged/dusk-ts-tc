@@ -271,8 +271,6 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
             SetSheath(SHEATH_STATE_MELEE);
             ReplaceAllPetFlags(petInfo->WasRenamed ? UNIT_PET_FLAG_CAN_BE_ABANDONED : (UNIT_PET_FLAG_CAN_BE_RENAMED | UNIT_PET_FLAG_CAN_BE_ABANDONED));
             ReplaceAllUnitFlags(UNIT_FLAG_PLAYER_CONTROLLED); // this enables popup window (pet abandon, cancel)
-            SetMaxPower(POWER_HAPPINESS, GetCreatePowerValue(POWER_HAPPINESS));
-            SetFullPower(POWER_HAPPINESS);
             break;
         default:
             if (!IsPetGhoul())
@@ -524,7 +522,7 @@ void Pet::SavePetToDB(PetSaveMode mode)
         stmt->setUInt8(9, HasPetFlag(UNIT_PET_FLAG_CAN_BE_RENAMED) ? 0 : 1);
         stmt->setUInt32(10, curhealth);
         stmt->setUInt32(11, curmana);
-        stmt->setUInt32(12, GetPower(POWER_HAPPINESS));
+        stmt->setUInt32(12, 166500);
         stmt->setString(13, actionBar);
         stmt->setUInt32(14, GameTime::GetGameTime());
         stmt->setUInt32(15, GetUInt32Value(UNIT_CREATED_BY_SPELL));
@@ -553,7 +551,7 @@ void Pet::FillPetInfo(PetStable::PetInfo* petInfo) const
     petInfo->WasRenamed = !HasPetFlag(UNIT_PET_FLAG_CAN_BE_RENAMED);
     petInfo->Health = GetHealth();
     petInfo->Mana = GetPower(POWER_MANA);
-    petInfo->Happiness = GetPower(POWER_HAPPINESS);
+    petInfo->Happiness = 166500;
     petInfo->ActionBar = GenerateActionBarData();
     petInfo->LastSaveTime = GameTime::GetGameTime();
     petInfo->CreatedBySpellId = GetUInt32Value(UNIT_CREATED_BY_SPELL);
@@ -597,10 +595,6 @@ void Pet::setDeathState(DeathState s)                       // overwrite virtual
             // pet corpse non lootable and non skinnable
             ReplaceAllDynamicFlags(UNIT_DYNFLAG_NONE);
             RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
-
-            // lose happiness when died and not in BG/Arena
-            // if (!GetMap()->IsBattlegroundOrArena())
-            //     ModifyPower(POWER_HAPPINESS, -HAPPINESS_LEVEL_SIZE);
 
             //SetUnitFlag(UNIT_FLAG_STUNNED);
         }
@@ -718,13 +712,7 @@ void Pet::Update(uint32 diff)
 
 void Pet::LoseHappiness()
 {
-    // uint32 curValue = GetPower(POWER_HAPPINESS);
-    // if (curValue <= 0)
-    //     return;
-    // int32 addvalue = 670;                                   //value is 70/35/17/8/4 (per min) * 1000 / 8 (timer 7.5 secs)
-    // if (IsInCombat())                                        //we know in combat happiness fades faster, multiplier guess
-    //     addvalue = int32(addvalue * 1.5f);
-    // ModifyPower(POWER_HAPPINESS, -addvalue);
+
 }
 
 HappinessState Pet::GetHappinessState()
@@ -844,8 +832,6 @@ bool Pet::CreateBaseAtTamed(CreatureTemplate const* cinfo, Map* map, uint32 phas
     if (!Create(guid, map, phaseMask, cinfo->Entry, petId))
         return false;
 
-    SetMaxPower(POWER_HAPPINESS, GetCreatePowerValue(POWER_HAPPINESS));
-    SetPower(POWER_HAPPINESS, 166500);
     SetFullPower(POWER_FOCUS);
     SetPetNameTimestamp(0);
     SetPetExperience(0);
