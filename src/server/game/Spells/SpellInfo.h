@@ -22,6 +22,7 @@
 #include "Util.h"
 #include "DBCStructure.h"
 #include "Object.h"
+#include "Log.h"
 #include "SpellAuraDefines.h"
 // @tswow-begin
 #include "TSEvents.h"
@@ -341,8 +342,12 @@ class TC_GAME_API SpellInfo
         uint32 AttributesEx5;
         uint32 AttributesEx6;
         uint32 AttributesEx7;
-        uint32 AttributesCu;
-        uint32 AttributesExCu;
+
+        uint32 AttributesCu0;
+        uint32 AttributesCu1;
+        uint32 AttributesCu2;
+        uint32 AttributesCu3;
+
         uint64 Stances;
         uint64 StancesNot;
         uint32 Targets;
@@ -443,8 +448,12 @@ class TC_GAME_API SpellInfo
         inline bool HasAttribute(SpellAttr5 attribute) const { return !!(AttributesEx5 & attribute); }
         inline bool HasAttribute(SpellAttr6 attribute) const { return !!(AttributesEx6 & attribute); }
         inline bool HasAttribute(SpellAttr7 attribute) const { return !!(AttributesEx7 & attribute); }
-        inline bool HasAttribute(SpellCustomAttributes customAttribute) const { return !!(AttributesCu & customAttribute); }
-        inline bool HasAttribute(SpellCustomAttributes2 customAttribute) const { return !!(AttributesExCu & customAttribute); }
+        inline bool HasAttribute(SpellCustomAttributes customAttribute) const {
+            return !!(AttributesCu0 & customAttribute);
+        }
+        inline bool HasAttribute(SpellCustomAttributes2 customAttribute) const {
+            return !!(AttributesCu1 & customAttribute);
+        }
 
         bool IsExplicitDiscovery() const;
         bool IsLootCrafting() const;

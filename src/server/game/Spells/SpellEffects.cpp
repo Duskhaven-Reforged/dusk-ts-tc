@@ -1483,51 +1483,9 @@ void Spell::EffectEnergize()
     //     && !m_spellInfo->HasAttribute(SPELL_ATTR7_CAN_RESTORE_SECONDARY_POWER))
     //     return;
 
-    if (unitTarget->GetMaxPower(power) == 0)
+    auto maxpower = unitTarget->GetMaxPower(power);
+    if (maxpower == 0)
         return;
-
-    // Some level depends spells
-    ///@todo: move this to scripts
-    int32 level_multiplier = 0;
-    int32 level_diff = 0;
-    switch (m_spellInfo->Id)
-    {
-        case 9512:                                          // Restore Energy
-            level_diff = unitCaster->GetLevel() - 40;
-            level_multiplier = 2;
-            break;
-        case 24571:                                         // Blood Fury
-            level_diff = unitCaster->GetLevel() - 60;
-            level_multiplier = 10;
-            break;
-        case 24532:                                         // Burst of Energy
-            level_diff = unitCaster->GetLevel() - 60;
-            level_multiplier = 4;
-            break;
-        case 31930:                                         // Judgements of the Wise
-        case 63375:                                         // Improved Stormstrike
-        case 68082:                                         // Glyph of Seal of Command
-            damage = int32(CalculatePct(unitTarget->GetCreateMana(), damage));
-            break;
-        case 48542:                                         // Revitalize
-            damage = int32(CalculatePct(unitTarget->GetMaxPower(power), damage));
-            break;
-        case 67490:                                         // Runic Mana Injector (mana gain increased by 25% for engineers - 3.2.0 patch change)
-        {
-            if (Player* player = unitCaster->ToPlayer())
-                if (player->HasSkill(SKILL_ENGINEERING))
-                    AddPct(damage, 25);
-            break;
-        }
-        case 71132:                                         // Glyph of Shadow Word: Pain
-            damage = int32(CalculatePct(unitTarget->GetCreateMana(), 1));  // set 1 as value, missing in dbc
-            break;
-        default:
-            break;
-    }
-
-    if (level_diff > 0)
-        damage -= level_multiplier * level_diff;
 
     if (damage < 0)
         return;

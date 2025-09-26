@@ -3916,7 +3916,7 @@ void Spell::_handle_finish_phase()
     {
         // Take for real after all targets are processed
         if (m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODAMAGE) || m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODURATION))
-            unitCaster->SetPower(POWER_COMBO, 0, true);
+            unitCaster->ModifyPower(POWER_COMBO, -5, true);
 
         if (m_spellInfo->HasEffect(SPELL_EFFECT_ADD_EXTRA_ATTACKS))
             unitCaster->SetLastExtraAttackSpell(m_spellInfo->Id);
@@ -6646,7 +6646,7 @@ SpellCastResult Spell::CheckMovement() const
     {
         if (m_casttime > 0)
         {
-            if (m_casttime <= 250 && Spell::GetSpellInfo()->AttributesExCu & SPELL_ATTR1_CU_LOW_CAST_TIME_DONT_INTERRUPT)
+            if (m_casttime <= 250 && Spell::GetSpellInfo()->AttributesCu1 & SPELL_ATTR1_CU_LOW_CAST_TIME_DONT_INTERRUPT)
                 return SPELL_CAST_OK;
 
             if (m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT)
@@ -6874,9 +6874,7 @@ SpellCastResult Spell::CheckPower() const
     Powers powerType = m_spellInfo->PowerType;
     if (int32(unitCaster->GetPower(powerType)) < m_powerCost)
         return SPELL_FAILED_NO_POWER;
-    else if ((m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODAMAGE)
-        || m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODURATION))
-        && !unitCaster->GetPower(POWER_COMBO))
+    else if ((m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODAMAGE) || m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODURATION)) && !unitCaster->GetPower(POWER_COMBO))
         return SPELL_FAILED_NO_COMBO_POINTS;
     else
         return SPELL_CAST_OK;

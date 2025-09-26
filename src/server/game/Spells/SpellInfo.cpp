@@ -827,8 +827,12 @@ SpellInfo::SpellInfo(SpellEntry const* spellEntry)
     AttributesEx5 = spellEntry->AttributesExE;
     AttributesEx6 = spellEntry->AttributesExF;
     AttributesEx7 = spellEntry->AttributesExG;
-    AttributesCu = 0;
-    AttributesExCu = 0;
+
+    AttributesCu0 = 0;
+    AttributesCu1 = 0;
+    AttributesCu2 = 0;
+    AttributesCu3 = 0;
+
     Stances = MAKE_PAIR64(spellEntry->ShapeshiftMask[0], spellEntry->ShapeshiftMask[1]);
     StancesNot = MAKE_PAIR64(spellEntry->ShapeshiftExclude[0], spellEntry->ShapeshiftExclude[1]);
     Targets = spellEntry->Targets;
@@ -936,7 +940,7 @@ bool SpellInfo::RequiresCombat() const
 
 bool SpellInfo::CanScaleDamagingOrHealing() const
 {
-    return (AttributesExCu & SPELL_ATTR1_CU_SCALE_DAMAGE_EFFECTS_ONLY) || (AttributesExCu & SPELL_ATTR1_CU_SCALE_HEALING_EFFECTS_ONLY);
+    return (AttributesCu1 & SPELL_ATTR1_CU_SCALE_DAMAGE_EFFECTS_ONLY) || (AttributesCu1 & SPELL_ATTR1_CU_SCALE_HEALING_EFFECTS_ONLY);
 }
 
 bool SpellInfo::ComputeIsDamagingOrHealingEffect() const
@@ -4187,7 +4191,7 @@ void SpellInfo::_InitializeSpellPositivity()
 
     for (SpellEffectInfo const& effect : GetEffects())
         if (!_isPositiveEffectImpl(this, effect, visited))
-            AttributesCu |= (SPELL_ATTR0_CU_NEGATIVE_EFF0 << effect.EffectIndex);
+            AttributesCu0 |= (SPELL_ATTR0_CU_NEGATIVE_EFF0 << effect.EffectIndex);
 
     // additional checks after effects marked
     for (SpellEffectInfo const& effect : GetEffects())
@@ -4211,7 +4215,7 @@ void SpellInfo::_InitializeSpellPositivity()
                     if (!IsPositiveEffect(j)
                         && effect.TargetA.GetTarget() == GetEffect(SpellEffIndex(j)).TargetA.GetTarget()
                         && effect.TargetB.GetTarget() == GetEffect(SpellEffIndex(j)).TargetB.GetTarget())
-                        AttributesCu |= (SPELL_ATTR0_CU_NEGATIVE_EFF0 << effect.EffectIndex);
+                        AttributesCu0 |= (SPELL_ATTR0_CU_NEGATIVE_EFF0 << effect.EffectIndex);
                 break;
             }
             default:
