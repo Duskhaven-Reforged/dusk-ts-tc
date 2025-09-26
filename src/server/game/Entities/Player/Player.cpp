@@ -3537,7 +3537,7 @@ bool Player::HandlePassiveSpellLearn(SpellInfo const* spellInfo)
     return need_cast && (!spellInfo->CasterAuraState || HasAuraState(AuraStateType(spellInfo->CasterAuraState)));
 }
 
-void Player::LearnSpell(uint32 spell_id, bool dependent, uint32 fromSkill /*= 0*/)
+void Player::LearnSpell(uint32 spell_id, bool dependent, uint32 fromSkill /*= 0*/, bool announce /*= true*/)
 {
     PlayerSpellMap::iterator itr = m_spells.find(spell_id);
 
@@ -3551,7 +3551,7 @@ void Player::LearnSpell(uint32 spell_id, bool dependent, uint32 fromSkill /*= 0*
     {
         WorldPacket data(SMSG_LEARNED_SPELL, 6);
         data << uint32(spell_id);
-        data << uint16(0);
+        data << uint16(announce ? 1 : 0);
         SendDirectMessage(&data);
     }
 
@@ -3575,7 +3575,7 @@ void Player::LearnSpell(uint32 spell_id, bool dependent, uint32 fromSkill /*= 0*
     }
 }
 
-void Player::RemoveSpell(uint32 spell_id, bool disabled, bool learn_low_rank)
+void Player::RemoveSpell(uint32 spell_id, bool disabled, bool learn_low_rank, bool announce /*= true*/)
 {
     PlayerSpellMap::iterator itr = m_spells.find(spell_id);
     if (itr == m_spells.end())
