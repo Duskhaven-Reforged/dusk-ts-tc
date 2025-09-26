@@ -9069,7 +9069,6 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
         case MOVE_SWIM_BACK:
             break;
         case MOVE_WALK:
-            return;
         case MOVE_RUN:
         {
             if (IsMounted()) // Use on mount auras
