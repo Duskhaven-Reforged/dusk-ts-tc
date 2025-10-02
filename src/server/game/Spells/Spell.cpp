@@ -3334,6 +3334,7 @@ SpellCastResult Spell::prepare(SpellCastTargets const& targets, AuraEffect const
     {
         if (Unit* unitCaster = m_caster->ToUnit())
         {
+            FIRE_ID(m_spellInfo->events.id, Spell, OnPrepared, TSSpell(this), unitCaster->HasStealthAura());
             // stealth must be removed at cast starting (at show channel bar)
             // skip triggered spell (item equip spell casting and other not explicit character casts/item uses)
             if (!(_triggeredCastFlags & TRIGGERED_IGNORE_AURA_INTERRUPT_FLAGS) && m_spellInfo->IsBreakingStealth())
@@ -3915,8 +3916,11 @@ void Spell::_handle_finish_phase()
     if (Unit* unitCaster = m_caster->ToUnit())
     {
         // Take for real after all targets are processed
-        if (m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODAMAGE) || m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODURATION))
+        if (m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODAMAGE) || m_spellInfo->HasAttribute(SPELL_ATTR1_CU_COMBODURATION)) {
             unitCaster->ModifyPower(POWER_COMBO, -5, true);
+            if (Player* player = unitCaster->ToPlayer())
+                FIRE(Player, OnComboPointsSpent, TSPlayer(player), player->GetPower(POWER_COMBO));
+        }
 
         if (m_spellInfo->HasEffect(SPELL_EFFECT_ADD_EXTRA_ATTACKS))
             unitCaster->SetLastExtraAttackSpell(m_spellInfo->Id);

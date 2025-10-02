@@ -68,7 +68,7 @@ void DynamicObject::RemoveFromWorld()
         if (_isViewpoint)
             RemoveCasterViewpoint();
 
-        FIRE_ID(GetSpellInfo()->events.id, Spell, OnPersistentAARemoved, TSUnit(GetCaster()), TSSpellDestination(new SpellDestination(GetPosition())));
+        FIRE_ID(GetSpellInfo()->events.id, Spell, OnDynObjectRemove, TSUnit(GetCaster()), TSSpellDestination(new SpellDestination(GetPosition())));
 
         if (_aura)
             RemoveAura();

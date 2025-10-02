@@ -1385,7 +1385,7 @@ void AuraEffect::HandleShapeshiftBoosts(Unit* target, bool apply) const
             uint64 newStance = newAura ? (UI64LIT(1) << (newAura->GetMiscValue() - 1)) : 0;
 
             // If the stances are not compatible with the spell, remove it
-            if (itr->second->GetBase()->IsRemovedOnShapeLost(target) && !(itr->second->GetBase()->GetSpellInfo()->Stances & newStance))
+            if ((itr->second->GetBase()->IsRemovedOnShapeLost(target) && !(itr->second->GetBase()->GetSpellInfo()->Stances & newStance) || (itr->second->GetBase()->GetSpellInfo()->StancesNot & newStance)))
                 target->RemoveAura(itr);
             else
                 ++itr;

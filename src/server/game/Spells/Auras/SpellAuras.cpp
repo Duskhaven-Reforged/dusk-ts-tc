@@ -37,8 +37,10 @@
 #include "Vehicle.h"
 #include "World.h"
 #include "WorldPacket.h"
+
 // @tswow-begin
 #include "TSAura.h"
+#include "TSDynObj.h"
 // @tswow-end
 
 AuraCreateInfo::AuraCreateInfo(SpellInfo const* spellInfo, uint8 auraEffMask, WorldObject* owner) :
@@ -735,9 +737,13 @@ void Aura::UpdateTargetMap(Unit* caster, bool apply)
     }
 
     // remove auras from units no longer needing them
-    for (Unit* unit : targetsToRemove)
+    for (Unit* unit : targetsToRemove) {
+        if (auto DynAura = ToDynObjAura())
+            FIRE_ID(m_spellInfo->events.id, Spell, OnPAARemoved, TSUnit(unit), TSUnit(caster), TSDynObj(DynAura->GetDynobjOwner()));
+
         if (AuraApplication* aurApp = GetApplicationOfTarget(unit->GetGUID()))
             unit->_UnapplyAura(aurApp, AURA_REMOVE_BY_DEFAULT);
+    }
 
     if (!apply)
         return;
