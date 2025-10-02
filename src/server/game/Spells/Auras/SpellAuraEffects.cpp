@@ -1348,6 +1348,20 @@ void AuraEffect::HandleShapeshiftBoosts(Unit* target, bool apply) const
                     break;
             }
         }
+
+        Unit::AuraApplicationMap& tAuras = target->GetAppliedAuras();
+        for (auto itr = tAuras.begin(); itr != tAuras.end();)
+        {
+            // Use the new aura to see on what stance the target will be
+            uint64 newStance = (UI64LIT(1) << (GetMiscValue() - 1));
+
+            bool ExcludedStance = itr->second->GetBase()->GetSpellInfo()->StancesNot & newStance;
+            // If the stances are not compatible with the spell, remove it
+            if (ExcludedStance)
+                target->RemoveAura(itr);
+            else
+                ++itr;
+        }
     }
     else
     {
@@ -1378,14 +1392,30 @@ void AuraEffect::HandleShapeshiftBoosts(Unit* target, bool apply) const
             }
         }
 
+        PlayerSpellMap const& sp_list = target->ToPlayer()->GetSpellMap();
+        for (auto itr = sp_list.begin(); itr != sp_list.end(); ++itr)
+        {
+            if (itr->second.state == PLAYERSPELL_REMOVED || itr->second.disabled)
+                continue;
+
+            if (itr->first == spellId || itr->first == spellId2)
+                continue;
+
+            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(itr->first);
+            if (!spellInfo || !(spellInfo->IsPassive() || spellInfo->HasAttribute(SPELL_ATTR0_HIDDEN_CLIENTSIDE)))
+                continue;
+
+            if (spellInfo->StancesNot && (spellInfo->StancesNot & (UI64LIT(1) << (GetMiscValue() - 1))))
+                target->CastSpell(target, itr->first, this);
+        }
+
         Unit::AuraApplicationMap& tAuras = target->GetAppliedAuras();
         for (auto itr = tAuras.begin(); itr != tAuras.end();)
         {
             // Use the new aura to see on what stance the target will be
             uint64 newStance = newAura ? (UI64LIT(1) << (newAura->GetMiscValue() - 1)) : 0;
-
             // If the stances are not compatible with the spell, remove it
-            if ((itr->second->GetBase()->IsRemovedOnShapeLost(target) && !(itr->second->GetBase()->GetSpellInfo()->Stances & newStance) || (itr->second->GetBase()->GetSpellInfo()->StancesNot & newStance)))
+            if (itr->second->GetBase()->IsRemovedOnShapeLost(target) && !(itr->second->GetBase()->GetSpellInfo()->Stances & newStance))
                 target->RemoveAura(itr);
             else
                 ++itr;
