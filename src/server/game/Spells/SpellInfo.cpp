@@ -1225,6 +1225,27 @@ bool SpellInfo::IsPrimaryProfessionFirstRank() const
     return IsPrimaryProfession() && GetRank() == 1;
 }
 
+
+bool SpellInfo::IsGatheringProfession() const
+{
+    for (SpellEffectInfo const& effect : GetEffects())
+    {
+        if (effect.Effect == SPELL_EFFECT_SKILL)
+        {
+            uint32 skill = effect.MiscValue;
+
+            if (IsGatheringProfessionSkill(skill))
+                return true;
+        }
+    }
+    return false;
+}
+
+bool SpellInfo::IsGatheringProfessionFirstRank() const
+{
+    return IsGatheringProfession() && GetRank() == 1;
+}
+
 bool SpellInfo::IsAbilityLearnedWithProfession() const
 {
     SkillLineAbilityMapBounds bounds = sSpellMgr->GetSkillLineAbilityMapBounds(Id);

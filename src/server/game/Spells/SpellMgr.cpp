@@ -44,6 +44,18 @@ bool IsPrimaryProfessionSkill(uint32 skill)
     return true;
 }
 
+bool IsGatheringProfessionSkill(uint32 skill)
+{
+    SkillLineEntry const* pSkill = sSkillLineStore.LookupEntry(skill);
+    if (!pSkill)
+        return false;
+
+    if (pSkill->CategoryID != SKILL_CATEGORY_GATHERING)
+        return false;
+
+    return true;
+}
+
 bool IsPartOfSkillLine(uint32 skillId, uint32 spellId)
 {
     SkillLineAbilityMapBounds skillBounds = sSpellMgr->GetSkillLineAbilityMapBounds(spellId);

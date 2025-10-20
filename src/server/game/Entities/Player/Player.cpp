@@ -2673,42 +2673,41 @@ bool Player::IsMaxLevel() const
 
 void Player::InitTalentForLevel()
 {
-    uint8 level = GetLevel();
-    // talents base at level diff (talents = level - 9 but some can be used already)
-    if (level < 10)
-    {
-        // Remove all talent points
-        if (m_usedTalentCount > 0)                           // Free any used talents
-        {
-            ResetTalents(true);
-            SetFreeTalentPoints(0);
-        }
-    }
-    else
-    {
-        if (level < sWorld->getIntConfig(CONFIG_MIN_DUALSPEC_LEVEL) || m_specsCount == 0)
-        {
-            m_specsCount = 1;
-            m_activeSpec = 0;
-        }
+    // uint8 level = GetLevel();
+    // // talents base at level diff (talents = level - 9 but some can be used already)
+    // if (level < 10)
+    // {
+    //     // Remove all talent points
+    //     if (m_usedTalentCount > 0)                           // Free any used talents
+    //     {
+    //         ResetTalents(true);
+    //     }
+    // }
+    // else
+    // {
+    //     if (level < sWorld->getIntConfig(CONFIG_MIN_DUALSPEC_LEVEL) || m_specsCount == 0)
+    //     {
+    //         m_specsCount = 1;
+    //         m_activeSpec = 0;
+    //     }
 
-        uint32 talentPointsForLevel = CalculateTalentsPoints();
+    //     uint32 talentPointsForLevel = CalculateTalentsPoints();
 
-        // if used more that have then reset
-        if (m_usedTalentCount > talentPointsForLevel)
-        {
-            if (!GetSession()->HasPermission(rbac::RBAC_PERM_SKIP_CHECK_MORE_TALENTS_THAN_ALLOWED))
-                ResetTalents(true);
-            else
-                SetFreeTalentPoints(0);
-        }
-        // else update amount of free points
-        else
-            SetFreeTalentPoints(talentPointsForLevel - m_usedTalentCount);
-    }
+    //     // if used more that have then reset
+    //     if (m_usedTalentCount > talentPointsForLevel)
+    //     {
+    //         if (!GetSession()->HasPermission(rbac::RBAC_PERM_SKIP_CHECK_MORE_TALENTS_THAN_ALLOWED))
+    //             ResetTalents(true);
+    //         else
+    //             SetFreeTalentPoints(0);
+    //     }
+    //     // else update amount of free points
+    //     else
+    //         SetFreeTalentPoints(talentPointsForLevel - m_usedTalentCount);
+    // }
 
-    if (!GetSession()->PlayerLoading())
-        SendTalentsInfoData(false);                         // update at client
+    // if (!GetSession()->PlayerLoading())
+    //     SendTalentsInfoData(false);                         // update at client
 }
 
 void Player::InitStatsForLevel(bool reapplyMods)
@@ -3402,6 +3401,13 @@ bool Player::AddSpell(uint32 spellId, bool active, bool learning, bool dependent
             SetFreePrimaryProfessions(freeProfs-1);
     }
 
+    // update free primary prof.points (if any, can be none in case GM .learn prof. learning)
+    if (uint32 freeProfs = GetFreeGatheringProfessionPoints())
+    {
+        if (spellInfo->IsGatheringProfessionFirstRank())
+            SetFreeGatheringProfessionPoints(freeProfs-1);
+    }
+
     SkillLineAbilityMapBounds skill_bounds = sSpellMgr->GetSkillLineAbilityMapBounds(spellId);
 
     if (SpellLearnSkillNode const* spellLearnSkill = sSpellMgr->GetSpellLearnSkill(spellId))
@@ -3638,11 +3644,16 @@ void Player::RemoveSpell(uint32 spell_id, bool disabled, bool learn_low_rank, bo
 
     // update free primary prof.points (if not overflow setting, can be in case GM use before .learn prof. learning)
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spell_id);
-    if (spellInfo && spellInfo->IsPrimaryProfessionFirstRank())
-    {
-        uint32 freeProfs = GetFreePrimaryProfessionPoints()+1;
-        if (freeProfs <= sWorld->getIntConfig(CONFIG_MAX_PRIMARY_TRADE_SKILL))
-            SetFreePrimaryProfessions(freeProfs);
+    if (spellInfo) {
+        if (spellInfo->IsPrimaryProfessionFirstRank()) {
+            uint32 freeProfs = GetFreePrimaryProfessionPoints() + 1;
+            if (freeProfs <= sWorld->getIntConfig(CONFIG_MAX_PRIMARY_TRADE_SKILL))
+                SetFreePrimaryProfessions(freeProfs);
+        } else if (spellInfo->IsGatheringProfessionFirstRank()) {
+            uint32 freeProfs = GetFreeGatheringProfessionPoints() + 1;
+            if (freeProfs <= sWorld->getIntConfig(CONFIG_MAX_GATHERING_PROFS))
+                SetFreeGatheringProfessionPoints(freeProfs);
+        }
     }
 
     // remove dependent skill
@@ -3914,101 +3925,95 @@ void Player::IncreaseResetTalentsCostAndCounters(uint32 lastResetTalentsCost)
 bool Player::ResetTalents(bool involuntarily /*= false*/)
 {
         // @tswow-begin
-    FIRE(
-        Player, OnTalentsResetEarly
-        , TSPlayer(this)
-        , TSMutable<bool, bool>(&involuntarily)
-    );
-    // @tswow-end
-    sScriptMgr->OnPlayerTalentsReset(this, involuntarily);
+    // FIRE(
+    //     Player, OnTalentsResetEarly
+    //     , TSPlayer(this)
+    //     , TSMutable<bool, bool>(&involuntarily)
+    // );
+    // // @tswow-end
+    // sScriptMgr->OnPlayerTalentsReset(this, involuntarily);
 
-    // not need after this call
-    if (HasAtLoginFlag(AT_LOGIN_RESET_TALENTS))
-        RemoveAtLoginFlag(AT_LOGIN_RESET_TALENTS, true);
+    // // not need after this call
+    // if (HasAtLoginFlag(AT_LOGIN_RESET_TALENTS))
+    //     RemoveAtLoginFlag(AT_LOGIN_RESET_TALENTS, true);
 
-    uint32 talentPointsForLevel = CalculateTalentsPoints();
+    // uint32 talentPointsForLevel = CalculateTalentsPoints();
 
-    if (m_usedTalentCount == 0)
-    {
-        SetFreeTalentPoints(talentPointsForLevel);
-        return false;
-    }
+    // if (m_usedTalentCount == 0)
+    // {
+    //     // SetFreeTalentPoints(talentPointsForLevel);
+    //     return false;
+    // }
 
-    RemovePet(nullptr, PET_SAVE_NOT_IN_SLOT, true);
+    // RemovePet(nullptr, PET_SAVE_NOT_IN_SLOT, true);
 
-    for (uint32 talentId = 0; talentId < sTalentStore.GetNumRows(); ++talentId)
-    {
-        TalentEntry const* talentInfo = sTalentStore.LookupEntry(talentId);
+    // for (uint32 talentId = 0; talentId < sTalentStore.GetNumRows(); ++talentId)
+    // {
+    //     TalentEntry const* talentInfo = sTalentStore.LookupEntry(talentId);
 
-        if (!talentInfo)
-            continue;
+    //     if (!talentInfo)
+    //         continue;
 
-        TalentTabEntry const* talentTabInfo = sTalentTabStore.LookupEntry(talentInfo->TabID);
+    //     TalentTabEntry const* talentTabInfo = sTalentTabStore.LookupEntry(talentInfo->TabID);
 
-        if (!talentTabInfo)
-            continue;
+    //     if (!talentTabInfo)
+    //         continue;
 
-        // unlearn only talents for character class
-        // some spell learned by one class as normal spells or know at creation but another class learn it as talent,
-        // to prevent unexpected lost normal learned spell skip another class talents
-        if ((GetClassMask() & talentTabInfo->ClassMask) == 0)
-            continue;
+    //     // unlearn only talents for character class
+    //     // some spell learned by one class as normal spells or know at creation but another class learn it as talent,
+    //     // to prevent unexpected lost normal learned spell skip another class talents
+    //     if ((GetClassMask() & talentTabInfo->ClassMask) == 0)
+    //         continue;
 
-        for (int8 rank = MAX_TALENT_RANK - 1; rank >= 0; --rank)
-        {
-            // skip non-existing talent ranks
-            if (talentInfo->SpellRank[rank] == 0)
-                continue;
-            SpellInfo const* _spellEntry = sSpellMgr->GetSpellInfo(talentInfo->SpellRank[rank]);
-            if (!_spellEntry)
-                continue;
+    //     for (int8 rank = MAX_TALENT_RANK - 1; rank >= 0; --rank)
+    //     {
+    //         // skip non-existing talent ranks
+    //         if (talentInfo->SpellRank[rank] == 0)
+    //             continue;
+    //         SpellInfo const* _spellEntry = sSpellMgr->GetSpellInfo(talentInfo->SpellRank[rank]);
+    //         if (!_spellEntry)
+    //             continue;
 
-            // @tswow-begin
-            FIRE_ID(_spellEntry->events.id, Spell, OnUnlearnTalent, TSSpellInfo(_spellEntry), TSPlayer(this), talentTabInfo->OrderIndex, talentInfo->TierID, talentInfo->ColumnIndex, rank, true);
-            // @tswow-end
-            RemoveSpell(talentInfo->SpellRank[rank], true);
+    //         // @tswow-begin
+    //         FIRE_ID(_spellEntry->events.id, Spell, OnUnlearnTalent, TSSpellInfo(_spellEntry), TSPlayer(this), talentTabInfo->OrderIndex, talentInfo->TierID, talentInfo->ColumnIndex, rank, true);
+    //         // @tswow-end
+    //         RemoveSpell(talentInfo->SpellRank[rank], true);
 
-            // search for spells that the talent teaches and unlearn them
-            for (SpellEffectInfo const& spellEffectInfo : _spellEntry->GetEffects())
-                if (spellEffectInfo.IsEffect(SPELL_EFFECT_LEARN_SPELL) && spellEffectInfo.TriggerSpell > 0)
-                // @tswow-begin
-                {
-                    FIRE_ID(_spellEntry->events.id, Spell, OnUnlearnTalent, TSSpellInfo(_spellEntry), TSPlayer(this), talentTabInfo->OrderIndex, talentInfo->TierID, talentInfo->ColumnIndex, rank, false);
-                    RemoveSpell(spellEffectInfo.TriggerSpell, true);
-                }
-                // @tswow-end
-            // if this talent rank can be found in the PlayerTalentMap, mark the talent as removed so it gets deleted
-            PlayerTalentMap::iterator plrTalent = m_talents[m_activeSpec]->find(talentInfo->SpellRank[rank]);
-            if (plrTalent != m_talents[m_activeSpec]->end())
-                plrTalent->second->state = PLAYERSPELL_REMOVED;
-        }
-    }
+    //         // search for spells that the talent teaches and unlearn them
+    //         for (SpellEffectInfo const& spellEffectInfo : _spellEntry->GetEffects())
+    //             if (spellEffectInfo.IsEffect(SPELL_EFFECT_LEARN_SPELL) && spellEffectInfo.TriggerSpell > 0)
+    //             // @tswow-begin
+    //             {
+    //                 FIRE_ID(_spellEntry->events.id, Spell, OnUnlearnTalent, TSSpellInfo(_spellEntry), TSPlayer(this), talentTabInfo->OrderIndex, talentInfo->TierID, talentInfo->ColumnIndex, rank, false);
+    //                 RemoveSpell(spellEffectInfo.TriggerSpell, true);
+    //             }
+    //             // @tswow-end
+    //         // if this talent rank can be found in the PlayerTalentMap, mark the talent as removed so it gets deleted
+    //         PlayerTalentMap::iterator plrTalent = m_talents[m_activeSpec]->find(talentInfo->SpellRank[rank]);
+    //         if (plrTalent != m_talents[m_activeSpec]->end())
+    //             plrTalent->second->state = PLAYERSPELL_REMOVED;
+    //     }
+    // }
 
-    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
-    _SaveTalents(trans);
-    _SaveSpells(trans);
-    CharacterDatabase.CommitTransaction(trans);
+    // CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    // _SaveTalents(trans);
+    // _SaveSpells(trans);
+    // CharacterDatabase.CommitTransaction(trans);
 
-    SetFreeTalentPoints(talentPointsForLevel);
+    // // SetFreeTalentPoints(talentPointsForLevel);
 
-    if (involuntarily)
-        SendDirectMessage(WorldPackets::Talents::InvoluntarilyReset(false).Write());
+    // if (involuntarily)
+    //     SendDirectMessage(WorldPackets::Talents::InvoluntarilyReset(false).Write());
 
-    // @tswow-begin
-    FIRE(
-          Player,OnTalentsResetLate
-        , TSPlayer(this)
-        , involuntarily
-    );
-    // @tswow-end
+    // // @tswow-begin
+    // FIRE(
+    //       Player,OnTalentsResetLate
+    //     , TSPlayer(this)
+    //     , involuntarily
+    // );
+    // // @tswow-end
 
     return true;
-}
-
-void Player::SetFreeTalentPoints(uint32 points)
-{
-    sScriptMgr->OnPlayerFreeTalentPointsChanged(this, points);
-    // SetUInt32Value(PLAYER_CHARACTER_POINTS1, points);
 }
 
 Mail* Player::GetMail(uint32 id)
@@ -14461,15 +14466,10 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId /*= 0*/, bool 
                     // @tswow-begin (Using Rochet2/Multitrainer)
                     Trainer::Trainer const* trainer = sObjectMgr->GetTrainer(itr->second.ActionMenuID ? itr->second.ActionMenuID : creature->GetEntry());
                     if (trainer)
-                        canTalk = trainer->GetTrainerType() == Trainer::Type::Mount;
-                    // // @tswow-end
-                    // if (!trainer || !trainer->IsTrainerValidForPlayer(this))
-                    // {
-                    //     // suppressing error, we don't really care
-                    //     // TC_LOG_ERROR("sql.sql", "GOSSIP_OPTION_TRAINER:: Player {} {} requested wrong gossip menu: {} at Creature: {} (Entry: {})",
-                    //     //     GetName(), GetGUID().ToString(), menu->GetGossipMenu().GetMenuId(), creature->GetName(), creature->GetEntry());
-                    //     canTalk = false;
-                    // }
+                        canTalk = trainer->GetTrainerType() == Trainer::Type::Mount || trainer->GetTrainerType() == Trainer::Type::Tradeskill;
+                    
+                    if (!trainer || !trainer->IsTrainerValidForPlayer(this))
+                        canTalk = false;
                     [[fallthrough]];
                 }
                 case GOSSIP_OPTION_GOSSIP:
@@ -15482,6 +15482,8 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
 
     if (!IsMaxLevel())
         GiveXP(XP, nullptr);
+    else
+        FIRE(Player, CompletedQuestAtMaxLevel, TSQuest(quest), TSPlayer(this));
 
     // Give player extra money if GetRewOrReqMoney > 0 and get ReqMoney if negative
     if (int32 moneyRew = quest->GetRewOrReqMoney(this))
@@ -17647,6 +17649,7 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
         return false;
 
     InitPrimaryProfessions();                               // to max set before any spell loaded
+    InitGatheringProfessions();
 
     // init saved position, and fix it later if problematic
     ObjectGuid::LowType transLowGUID = fields[35].GetUInt32();
@@ -23000,6 +23003,10 @@ void Player::InitPrimaryProfessions()
     SetFreePrimaryProfessions(sWorld->getIntConfig(CONFIG_MAX_PRIMARY_TRADE_SKILL));
 }
 
+void Player::InitGatheringProfessions() {
+    SetFreeGatheringProfessionPoints(sWorld->getIntConfig(CONFIG_MAX_GATHERING_PROFS));
+}
+
 bool Player::ModifyMoney(int32 amount, bool sendError /*= true*/)
 {
     if (!amount)
@@ -25737,105 +25744,105 @@ uint32 Player::GetTalentPointsInTree(uint32 tabId)
 
 void Player::LearnTalent(uint32 talentId, uint32 talentRank)
 {
-    uint32 CurTalentPoints = GetFreeTalentPoints();
+    // uint32 CurTalentPoints = GetFreeTalentPoints();
 
-    if (CurTalentPoints == 0)
-        return;
+    // if (CurTalentPoints == 0)
+    //     return;
 
-    if (talentRank >= MAX_TALENT_RANK)
-        return;
+    // if (talentRank >= MAX_TALENT_RANK)
+    //     return;
 
-    TalentEntry const* talentInfo = sTalentStore.LookupEntry(talentId);
+    // TalentEntry const* talentInfo = sTalentStore.LookupEntry(talentId);
 
-    if (!talentInfo)
-        return;
+    // if (!talentInfo)
+    //     return;
 
-    TalentTabEntry const* talentTabInfo = sTalentTabStore.LookupEntry(talentInfo->TabID);
+    // TalentTabEntry const* talentTabInfo = sTalentTabStore.LookupEntry(talentInfo->TabID);
 
-    if (!talentTabInfo)
-        return;
+    // if (!talentTabInfo)
+    //     return;
 
-    // prevent learn talent for different class (cheating)
-    if ((GetClassMask() & talentTabInfo->ClassMask) == 0)
-        return;
+    // // prevent learn talent for different class (cheating)
+    // if ((GetClassMask() & talentTabInfo->ClassMask) == 0)
+    //     return;
 
-    // find current max talent rank (0~5)
-    uint8 curtalent_maxrank = 0; // 0 = not learned any rank
-    for (int8 rank = MAX_TALENT_RANK-1; rank >= 0; --rank)
-    {
-        if (talentInfo->SpellRank[rank] && HasSpell(talentInfo->SpellRank[rank]))
-        {
-            curtalent_maxrank = (rank + 1);
-            break;
-        }
-    }
+    // // find current max talent rank (0~5)
+    // uint8 curtalent_maxrank = 0; // 0 = not learned any rank
+    // for (int8 rank = MAX_TALENT_RANK-1; rank >= 0; --rank)
+    // {
+    //     if (talentInfo->SpellRank[rank] && HasSpell(talentInfo->SpellRank[rank]))
+    //     {
+    //         curtalent_maxrank = (rank + 1);
+    //         break;
+    //     }
+    // }
 
-    // we already have same or higher talent rank learned
-    if (curtalent_maxrank >= (talentRank + 1))
-        return;
+    // // we already have same or higher talent rank learned
+    // if (curtalent_maxrank >= (talentRank + 1))
+    //     return;
 
-    // check if we have enough talent points
-    if (CurTalentPoints < (talentRank - curtalent_maxrank + 1))
-        return;
+    // // check if we have enough talent points
+    // if (CurTalentPoints < (talentRank - curtalent_maxrank + 1))
+    //     return;
 
-    // Check if it requires another talent
-    if (talentInfo->PrereqTalent > 0)
-    {
-        if (TalentEntry const* depTalentInfo = sTalentStore.LookupEntry(talentInfo->PrereqTalent))
-        {
-            bool hasEnoughRank = false;
-            for (uint8 rank = talentInfo->PrereqRank; rank < MAX_TALENT_RANK; rank++)
-            {
-                if (depTalentInfo->SpellRank[rank] != 0)
-                    if (HasSpell(depTalentInfo->SpellRank[rank]))
-                        hasEnoughRank = true;
-            }
-            if (!hasEnoughRank)
-                return;
-        }
-    }
+    // // Check if it requires another talent
+    // if (talentInfo->PrereqTalent > 0)
+    // {
+    //     if (TalentEntry const* depTalentInfo = sTalentStore.LookupEntry(talentInfo->PrereqTalent))
+    //     {
+    //         bool hasEnoughRank = false;
+    //         for (uint8 rank = talentInfo->PrereqRank; rank < MAX_TALENT_RANK; rank++)
+    //         {
+    //             if (depTalentInfo->SpellRank[rank] != 0)
+    //                 if (HasSpell(depTalentInfo->SpellRank[rank]))
+    //                     hasEnoughRank = true;
+    //         }
+    //         if (!hasEnoughRank)
+    //             return;
+    //     }
+    // }
 
-    // Find out how many points we have in this field
-    // @tswow-begin move to function
-    // not have required min points spent in talent tree
-    if (talentInfo->TierID > 0 && GetTalentPointsInTree(talentInfo->TabID) < (talentInfo->TierID * MAX_TALENT_RANK))
-    // @tswow-end
-        return;
+    // // Find out how many points we have in this field
+    // // @tswow-begin move to function
+    // // not have required min points spent in talent tree
+    // if (talentInfo->TierID > 0 && GetTalentPointsInTree(talentInfo->TabID) < (talentInfo->TierID * MAX_TALENT_RANK))
+    // // @tswow-end
+    //     return;
 
-    // spell not set in talent.dbc
-    uint32 spellid = talentInfo->SpellRank[talentRank];
-    if (spellid == 0)
-    {
-        TC_LOG_ERROR("entities.player", "Player::LearnTalent: Talent.dbc has no spellInfo for talent: {} (spell id = 0)", talentId);
-        return;
-    }
+    // // spell not set in talent.dbc
+    // uint32 spellid = talentInfo->SpellRank[talentRank];
+    // if (spellid == 0)
+    // {
+    //     TC_LOG_ERROR("entities.player", "Player::LearnTalent: Talent.dbc has no spellInfo for talent: {} (spell id = 0)", talentId);
+    //     return;
+    // }
 
-    // already known
-    if (HasSpell(spellid))
-        return;
+    // // already known
+    // if (HasSpell(spellid))
+    //     return;
 
-    // @tswow-begin
-    bool cancel = false;
-    FIRE(Player,OnLearnTalent, TSPlayer(this), talentInfo->TabID, talentId, talentRank, spellid, TSMutable<bool,bool>(&cancel));
-    SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellid);
-    if (spellInfo)
-    {
-        FIRE_ID(spellInfo->events.id,Spell,OnLearnTalent, TSSpellInfo(spellInfo), TSPlayer(this), talentInfo->TabID, talentId, talentRank, spellid, TSMutable<bool, bool>(&cancel));
-    }
-    if (cancel)
-    {
-        return;
-    }
-    // @tswow-end
+    // // @tswow-begin
+    // bool cancel = false;
+    // FIRE(Player,OnLearnTalent, TSPlayer(this), talentInfo->TabID, talentId, talentRank, spellid, TSMutable<bool,bool>(&cancel));
+    // SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellid);
+    // if (spellInfo)
+    // {
+    //     FIRE_ID(spellInfo->events.id,Spell,OnLearnTalent, TSSpellInfo(spellInfo), TSPlayer(this), talentInfo->TabID, talentId, talentRank, spellid, TSMutable<bool, bool>(&cancel));
+    // }
+    // if (cancel)
+    // {
+    //     return;
+    // }
+    // // @tswow-end
 
-    // learn! (other talent ranks will unlearned at learning)
-    LearnSpell(spellid, false);
-    AddTalent(spellid, m_activeSpec, true);
+    // // learn! (other talent ranks will unlearned at learning)
+    // LearnSpell(spellid, false);
+    // AddTalent(spellid, m_activeSpec, true);
 
-    TC_LOG_DEBUG("misc", "Player::LearnTalent: TalentID: {} Spell: {} Group: {}\n", talentId, spellid, uint32(m_activeSpec));
+    // TC_LOG_DEBUG("misc", "Player::LearnTalent: TalentID: {} Spell: {} Group: {}\n", talentId, spellid, uint32(m_activeSpec));
 
-    // update free talent points
-    SetFreeTalentPoints(CurTalentPoints - (talentRank - curtalent_maxrank + 1));
+    // // update free talent points
+    // SetFreeTalentPoints(CurTalentPoints - (talentRank - curtalent_maxrank + 1));
 }
 
 void Player::LearnPetTalent(ObjectGuid petGuid, uint32 talentId, uint32 talentRank)
@@ -26047,7 +26054,7 @@ bool Player::CanSeeSpellClickOn(Creature const* c) const
 
 void Player::BuildPlayerTalentsInfoData(WorldPacket* data)
 {
-    *data << uint32(GetFreeTalentPoints());                 // unspentTalentPoints
+    *data << uint32(0);                 // unspentTalentPoints
     *data << uint8(m_specsCount);                           // talent group count (0, 1 or 2)
     *data << uint8(m_activeSpec);                           // talent group index (0 or 1)
 

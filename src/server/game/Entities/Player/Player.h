@@ -1498,8 +1498,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetReputation(uint32 factionentry, uint32 value);
         uint32 GetReputation(uint32 factionentry) const;
         std::string const& GetGuildName() const;
-        uint32 GetFreeTalentPoints() const { return GetUInt32Value(PLAYER_CHARACTER_POINTS1); }
-        void SetFreeTalentPoints(uint32 points);
         bool ResetTalents(bool involuntarily = false);
         uint32 ResetTalentsCost() const;
         void IncreaseResetTalentsCostAndCounters(uint32 lastResetTalentsCost);
@@ -1537,6 +1535,10 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         uint32 GetFreePrimaryProfessionPoints() const { return GetUInt32Value(PLAYER_CHARACTER_POINTS2); }
         void SetFreePrimaryProfessions(uint16 profs) { SetUInt32Value(PLAYER_CHARACTER_POINTS2, profs); }
         void InitPrimaryProfessions();
+        void InitGatheringProfessions();
+
+        uint32 GetFreeGatheringProfessionPoints() const { return GetUInt32Value(PLAYER_CHARACTER_POINTS1); }
+        void SetFreeGatheringProfessionPoints(uint32 profs) { SetUInt32Value(PLAYER_CHARACTER_POINTS1, profs); }
 
         PlayerSpellMap const& GetSpellMap() const { return m_spells; }
         PlayerSpellMap      & GetSpellMap()       { return m_spells; }

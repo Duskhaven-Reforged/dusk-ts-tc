@@ -3154,7 +3154,8 @@ enum SkillCategory
     SKILL_CATEGORY_SECONDARY     = 9,                       // secondary professions
     SKILL_CATEGORY_LANGUAGES     = 10,
     SKILL_CATEGORY_PROFESSION    = 11,                      // primary professions
-    SKILL_CATEGORY_GENERIC       = 12
+    SKILL_CATEGORY_GENERIC       = 12,
+    SKILL_CATEGORY_GATHERING     = 13,
 };
 
 enum TotemCategory

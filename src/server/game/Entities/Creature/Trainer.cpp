@@ -195,6 +195,9 @@ namespace Trainer
             SpellInfo const* learnedSpellInfo = sSpellMgr->GetSpellInfo(spellEffectInfo.TriggerSpell);
             if (learnedSpellInfo && learnedSpellInfo->IsPrimaryProfessionFirstRank() && !player->GetFreePrimaryProfessionPoints())
                 return false;
+
+            if (learnedSpellInfo && learnedSpellInfo->IsGatheringProfessionFirstRank() && !player->GetFreeGatheringProfessionPoints())
+                return false;
         }
 
         return true;

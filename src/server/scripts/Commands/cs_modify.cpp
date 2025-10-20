@@ -308,46 +308,6 @@ public:
     //Edit Player TP
     static bool HandleModifyTalentCommand (ChatHandler* handler, char const* args)
     {
-        if (!*args)
-            return false;
-
-        int tp = atoi((char*)args);
-        if (tp < 0)
-            return false;
-
-        Unit* target = handler->getSelectedUnit();
-        if (!target)
-        {
-            handler->SendSysMessage(LANG_NO_CHAR_SELECTED);
-            handler->SetSentErrorMessage(true);
-            return false;
-        }
-
-        if (target->GetTypeId() == TYPEID_PLAYER)
-        {
-            // check online security
-            if (handler->HasLowerSecurity(target->ToPlayer(), ObjectGuid::Empty))
-                return false;
-            target->ToPlayer()->SetFreeTalentPoints(tp);
-            target->ToPlayer()->SendTalentsInfoData(false);
-            return true;
-        }
-        else if (target->IsPet())
-        {
-            Unit* owner = target->GetOwner();
-            if (owner && owner->GetTypeId() == TYPEID_PLAYER && ((Pet*)target)->IsPermanentPetFor(owner->ToPlayer()))
-            {
-                // check online security
-                if (handler->HasLowerSecurity(owner->ToPlayer(), ObjectGuid::Empty))
-                    return false;
-                ((Pet*)target)->SetFreeTalentPoints(tp);
-                owner->ToPlayer()->SendTalentsInfoData(true);
-                return true;
-            }
-        }
-
-        handler->SendSysMessage(LANG_NO_CHAR_SELECTED);
-        handler->SetSentErrorMessage(true);
         return false;
     }
 

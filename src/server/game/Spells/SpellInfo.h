@@ -461,6 +461,10 @@ class TC_GAME_API SpellInfo
         bool IsProfession() const;
         bool IsPrimaryProfession() const;
         bool IsPrimaryProfessionFirstRank() const;
+        
+        bool IsGatheringProfession() const;
+        bool IsGatheringProfessionFirstRank() const;
+
         bool IsAbilityLearnedWithProfession() const;
         bool IsAbilityOfSkillType(uint32 skillType) const;
 
