@@ -2336,11 +2336,10 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     // 4. GLANCING
     // Max 40% chance to score a glancing blow against mobs of the same or higher level (only players and pets, not for ranged weapons).
     if ((GetTypeId() == TYPEID_PLAYER || IsPet()) &&
-        victim->GetTypeId() != TYPEID_PLAYER && !victim->IsPet() &&
-        attackerLevel + 3 < victimLevel)
+        victim->GetTypeId() != TYPEID_PLAYER && !victim->IsPet())
     {
-        // cap possible value (with bonuses > max skill)
-        tmp = (10 + 10 * (victimLevel - attackerLevel)) * 100;
+        auto diff = std::max(0.0f, 2*victim->GetLevel() - GetStat(STAT_AGILITY));
+        tmp = ( 10 * (diff)) * 100;
         if (tmp > 0 && roll < (sum += tmp))
             return MELEE_HIT_GLANCING;
     }
@@ -2359,19 +2358,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     if (tmp > 0 && roll < (sum += tmp))
         return MELEE_HIT_CRIT;
 
-    // 7. CRUSHING
-    // mobs can score crushing blows if they're 4 or more levels above victim
-    if (attackerLevel >= victimLevel + 4 &&
-        // can be from by creature (if can) or from controlled player that considered as creature
-        !IsControlledByPlayer() &&
-        !(GetTypeId() == TYPEID_UNIT && ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_CRUSHING_BLOWS))
-    {
-        tmp = attackerLevel - victimLevel * 1000 - 1500;
-        if (tmp > 0 && roll < (sum += tmp))
-            return MELEE_HIT_CRUSHING;
-    }
-
-    // 8. HIT
+    // 7. HIT
     return MELEE_HIT_NORMAL;
 }
 
@@ -8603,6 +8590,18 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
     } else { // auto attack
         if (IsPlayer())
             FIRE(Player, OnCustomScriptedAutoattackDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(attacker)), TSMutableNumber<float>(&TakenTotalMod), TSMutableNumber<uint32>(&pdamage));
+    }
+
+    // CRUSHING
+    // mobs can score crushing blows if player lacks agility
+    if (IsPlayer() && attacker->IsCreature())
+    {
+        if ((ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_CRUSHING_BLOWS) != 0) {
+            float diff = std::max(0.f, attacker->GetLevel() - GetStat(STAT_AGILITY));
+            float chance = 2.0f * diff;
+            if (roll_chance_f(chance))
+                TakenTotalMod += .5;
+        }
     }
 
     // .. taken pct: dummy auras
