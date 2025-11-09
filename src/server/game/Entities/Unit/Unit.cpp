@@ -8592,11 +8592,10 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
             FIRE(Player, OnCustomScriptedAutoattackDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(attacker)), TSMutableNumber<float>(&TakenTotalMod), TSMutableNumber<uint32>(&pdamage));
     }
 
-    // CRUSHING
     // mobs can score crushing blows if player lacks agility
     if (IsPlayer() && attacker->IsCreature())
     {
-        if ((ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_CRUSHING_BLOWS) != 0) {
+        if ((attacker->ToCreature()->GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_NO_CRUSHING_BLOWS) != 0) {
             float diff = std::max(0.f, attacker->GetLevel() - GetStat(STAT_AGILITY));
             float chance = 2.0f * diff;
             if (roll_chance_f(chance))

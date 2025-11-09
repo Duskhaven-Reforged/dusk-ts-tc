@@ -1,1 +1,1 @@
-ALTER TABLE \`account\` ADD COLUMN IF NOT EXISTS donation_points INT DEFAULT 0;
+ALTER TABLE `account` ADD COLUMN donation_points INT DEFAULT 0;
