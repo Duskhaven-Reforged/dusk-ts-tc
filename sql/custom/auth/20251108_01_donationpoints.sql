@@ -1,0 +1,2 @@
+ALTER TABLE `account` ADD COLUMN donation_points INT DEFAULT 0;
+
