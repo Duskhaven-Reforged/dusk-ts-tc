@@ -1130,6 +1130,31 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
     if (damageInfo->resist)
         damageInfo->HitInfo |= (damageInfo->damage - damageInfo->resist == 0 ? HITINFO_FULL_RESIST : HITINFO_PARTIAL_RESIST);
 
+    // Apply glancing hit mask for physical/ranged spells: players/pets attacking creatures
+    // Check if creature is same or higher level and player has insufficient agility
+    if (damageInfo->attacker && (damageInfo->attacker->GetTypeId() == TYPEID_PLAYER || damageInfo->attacker->IsPet()) &&
+        damageInfo->target->GetTypeId() == TYPEID_UNIT && !damageInfo->target->IsPet() &&
+        spellInfo &&
+        (spellInfo->GetAttackType() == RANGED_ATTACK || 
+         spellInfo->DmgClass == SPELL_DAMAGE_CLASS_RANGED ||
+         (spellInfo->IsRangedWeaponSpell() && spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MELEE) ||
+         (spellInfo->GetSchoolMask() & SPELL_SCHOOL_MASK_NORMAL)))
+    {
+        int32 levelDiff = damageInfo->target->GetLevel() - damageInfo->attacker->GetLevel();
+        if (levelDiff >= 0)
+        {
+            // Check if player has insufficient agility (penalty applies)
+            float agilityThreshold = 2.0f * damageInfo->target->GetLevel();
+            float playerAgility = damageInfo->attacker->GetStat(STAT_AGILITY);
+            
+            // If agility is below threshold, glancing applies (penalty may be reduced but still applies)
+            if (playerAgility < agilityThreshold)
+            {
+                damageInfo->HitInfo |= HITINFO_GLANCING;
+            }
+        }
+    }
+
     damageInfo->damage = dmgInfo.GetDamage();
     // @tswow-begin
     FIRE_ID(
@@ -1389,33 +1414,10 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
             break;
         }
         case MELEE_HIT_GLANCING:
-        {
-            damageInfo->HitInfo     |= HITINFO_GLANCING;
-            damageInfo->TargetState  = VICTIMSTATE_HIT;
-            int32 leveldif = int32(victim->GetLevelForTarget(this)) - int32(GetLevel());
-            if (leveldif < 0)
-            {
-                TC_LOG_DEBUG("entities.unit", "Unit::CalculateMeleeDamage: (Player) {} attacked {}. Glancing should never happen against lower level target", GetGUID().ToString(), victim->GetGUID().ToString());
-                break;
-            }
-            if (leveldif == 0)
-                leveldif = 1;
-
-            // against boss-level targets - 24% chance of 25% average damage reduction (damage reduction range : 20-30%)
-            // against level 82 elites - 18% chance of 15% average damage reduction (damage reduction range : 10-20%)
-            int32 const reductionMax = leveldif * 10;
-            int32 const reductionMin = std::max(1, reductionMax - 10);
-
-            float reducePercent = 1.f - irand(reductionMin, reductionMax) / 100.0f;
-
-            for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
-            {
-                uint32 reducedDamage = uint32(reducePercent * damageInfo->Damages[i].Damage);
-                damageInfo->CleanDamage += damageInfo->Damages[i].Damage - reducedDamage;
-                damageInfo->Damages[i].Damage = reducedDamage;
-            }
+            // Glancing is now handled as a damage modifier in MeleeDamageBonusTaken
+            // This case should rarely occur, but if it does, treat as normal hit
+            damageInfo->TargetState = VICTIMSTATE_HIT;
             break;
-        }
         case MELEE_HIT_CRUSHING:
             damageInfo->HitInfo     |= HITINFO_CRUSHING;
             damageInfo->TargetState  = VICTIMSTATE_HIT;
@@ -1431,6 +1433,33 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
     // Always apply HITINFO_AFFECTS_VICTIM in case its not a miss
     if (!(damageInfo->HitInfo & HITINFO_MISS))
         damageInfo->HitInfo |= HITINFO_AFFECTS_VICTIM;
+
+    // Apply glancing hit mask if creature is same or higher level than player/pet (damage reduction already applied in MeleeDamageBonusTaken)
+    // Only apply to hits that actually connect (not miss/dodge/parry/evade)
+    if (damageInfo->HitOutCome != MELEE_HIT_MISS &&
+        damageInfo->HitOutCome != MELEE_HIT_DODGE &&
+        damageInfo->HitOutCome != MELEE_HIT_PARRY &&
+        damageInfo->HitOutCome != MELEE_HIT_EVADE)
+    {
+        if ((GetTypeId() == TYPEID_PLAYER || IsPet()) &&
+            victim->GetTypeId() != TYPEID_PLAYER && !victim->IsPet())
+        {
+            // Check if creature is same or higher level for glancing effect
+            int32 levelDiff = victim->GetLevel() - GetLevel();
+            if (levelDiff >= 0)
+            {
+                // Check if player has insufficient agility (penalty applies)
+                float agilityThreshold = 2.0f * victim->GetLevel();
+                float playerAgility = GetStat(STAT_AGILITY);
+                
+                // If agility is below threshold, glancing applies (penalty may be reduced but still applies)
+                if (playerAgility < agilityThreshold)
+                {
+                    damageInfo->HitInfo |= HITINFO_GLANCING;
+                }
+            }
+        }
+    }
 
     uint32 tmpHitInfo[MAX_ITEM_PROTO_DAMAGES] = { };
 
@@ -1743,6 +1772,55 @@ void Unit::HandleEmoteCommand(Emote emoteId)
             return 0;
     }
 
+    // Level-based resistance for player/pet casters attacking creatures (non-physical schools only)
+    // Always 40% baseline, +5% per level above 3, penalty amount reduced by spirit
+    // This replaces the normal resistance calculation for player casters
+    if (attacker && (attacker->GetTypeId() == TYPEID_PLAYER || attacker->IsPet()) &&
+        victim->GetTypeId() == TYPEID_UNIT && !victim->IsPet() &&
+        !(schoolMask & SPELL_SCHOOL_MASK_NORMAL))
+    {
+        int32 levelDiff = victim->GetLevel() - attacker->GetLevel();
+        
+        // Calculate penalty: 40% baseline + 5% per level above 3
+        float resistPercent = 40.0f;
+        if (levelDiff > 3)
+            resistPercent += (levelDiff - 3) * 5.0f;
+        resistPercent = std::min(resistPercent, 90.0f);
+        
+        // Reduce penalty amount by spirit proportional to mob_level * 2
+        float spiritThreshold = 2.0f * victim->GetLevel();
+        float playerSpirit = attacker->GetStat(STAT_SPIRIT);
+        
+        // Reduce penalty proportionally: spirit = 0 → full penalty, spirit = threshold → 0 penalty
+        float spiritRatio = playerSpirit / spiritThreshold;
+        resistPercent = resistPercent * (1.0f - spiritRatio);
+        resistPercent = std::max(0.0f, resistPercent);
+        
+        // Apply as fixed resistance if any remains (always partial resist if any, never full)
+        if (resistPercent > 0.0f)
+        {
+            float damageResisted = damage * resistPercent / 100.0f;
+            
+            // Apply resistance ignore modifiers
+            int32 ignoredResistance = 0;
+            ignoredResistance += attacker->GetTotalAuraModifier(SPELL_AURA_MOD_ABILITY_IGNORE_TARGET_RESIST, [schoolMask, spellInfo](AuraEffect const* aurEff) -> bool
+            {
+                if ((aurEff->GetMiscValue() & schoolMask) && aurEff->IsAffectedOnSpell(spellInfo))
+                    return true;
+                return false;
+            });
+            ignoredResistance += attacker->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_IGNORE_TARGET_RESIST, schoolMask);
+            ignoredResistance = std::min<int32>(ignoredResistance, 100);
+            ApplyPct(damageResisted, 100 - ignoredResistance);
+            
+            return uint32(std::max(damageResisted, 0.f));
+        }
+        
+        // No resistance if penalty was reduced to 0
+        return 0;
+    }
+
+    // Normal resistance calculation for other cases
     float const averageResist = Unit::CalculateAverageResistReduction(attacker, schoolMask, victim, spellInfo);
     float discreteResistProbability[11] = { };
     if (averageResist <= 0.1f)
@@ -2334,15 +2412,8 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(Unit const* victim, WeaponAttackTy
     }
 
     // 4. GLANCING
-    // Max 40% chance to score a glancing blow against mobs of the same or higher level (only players and pets, not for ranged weapons).
-    if ((GetTypeId() == TYPEID_PLAYER || IsPet()) &&
-        victim->GetTypeId() != TYPEID_PLAYER && !victim->IsPet())
-    {
-        auto diff = std::max(0.0f, 2*victim->GetLevel() - GetStat(STAT_AGILITY));
-        tmp = ( 10 * (diff)) * 100;
-        if (tmp > 0 && roll < (sum += tmp))
-            return MELEE_HIT_GLANCING;
-    }
+    // Glancing is now handled as a damage modifier, not an outcome type
+    // This allows crits to occur while still applying glancing damage reduction
 
     // 5. BLOCK
     if (canParryOrBlock)
@@ -2713,8 +2784,9 @@ float Unit::GetUnitDodgeChance(WeaponAttackType attType, Unit const* victim) con
         {
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
 
-            if (levelDiff > 3)
-                levelBonus = 5.0f * levelDiff;
+            // Level-based dodge bonus: 3% per level difference (only for melee attacks, only if levelDiff > 3)
+            if (levelDiff > 3 && attType != RANGED_ATTACK)
+                levelBonus = 3.0f * (levelDiff - 3);
         }
     }
 
@@ -2758,9 +2830,10 @@ float Unit::GetUnitParryChance(WeaponAttackType attType, Unit const* victim) con
         {
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
 
+            // Level-based parry bonus: 3% per level for melee, 6% per level for ranged (only if levelDiff > 3)
             if (levelDiff > 3) {
-                float rangeMod = attType == RANGED_ATTACK ? 2.0 : 1.0;
-                levelBonus = 5.0f * levelDiff * rangeMod;
+                float parryPerLevel = attType == RANGED_ATTACK ? 6.0f : 3.0f;
+                levelBonus = parryPerLevel * (levelDiff - 3);
             }
         }
     }
@@ -2813,8 +2886,8 @@ float Unit::GetUnitBlockChance(WeaponAttackType attType, Unit const* victim) con
             chance = 3.0f;
             chance += victim->GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT);
 
-            if (levelDiff > 3)
-                levelBonus = 10.0f * levelDiff;
+            // Level-based block bonus removed - no longer scales with level difference
+            levelBonus = 0.0f;
         }
     }
 
@@ -7319,6 +7392,41 @@ uint32 Unit::SpellDamageBonusTaken(Unit* caster, SpellInfo const* spellProto, ui
     if (caster && IsPlayer())
         FIRE(Player, OnCustomScriptedDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(caster)), TSSpellInfo(spellProto), TSNumber<uint8>(damagetype), TSNumber<uint8>(WeaponAttackType::MAX_ATTACK), TSMutableNumber<float>(&TakenTotalMod), TSNumber<uint8>(1 << damagetype));
 
+    // Glancing blow damage reduction for physical/ranged spells: players/pets attacking creatures
+    // Always 40% baseline, +5% per level above 3, penalty amount reduced by agility
+    // Applies to physical school spells, ranged weapon-based spells, and ranged damage class spells
+    if (caster && (caster->GetTypeId() == TYPEID_PLAYER || caster->IsPet()) &&
+        GetTypeId() == TYPEID_UNIT && !IsPet() &&
+        (spellProto->GetAttackType() == RANGED_ATTACK || 
+         spellProto->DmgClass == SPELL_DAMAGE_CLASS_RANGED ||
+         (spellProto->IsRangedWeaponSpell() && spellProto->DmgClass == SPELL_DAMAGE_CLASS_MELEE) ||
+         (spellProto->GetSchoolMask() & SPELL_SCHOOL_MASK_NORMAL)))
+    {
+        // Calculate level difference: creature level - caster level
+        int32 levelDiff = GetLevel() - caster->GetLevel();
+        
+        // Calculate penalty: 40% baseline + 5% per level above 3
+        float penaltyPercent = 40.0f;
+        if (levelDiff > 3)
+            penaltyPercent += (levelDiff - 3) * 5.0f;
+        penaltyPercent = std::min(penaltyPercent, 90.0f);
+        
+        // Reduce penalty amount by agility proportional to mob_level * 2
+        float agilityThreshold = 2.0f * GetLevel();
+        float playerAgility = caster->GetStat(STAT_AGILITY);
+        
+        // Reduce penalty proportionally: agility = 0 → full penalty, agility = threshold → 0 penalty
+        float agilityRatio = playerAgility / agilityThreshold;
+        penaltyPercent = penaltyPercent * (1.0f - agilityRatio);
+        penaltyPercent = std::max(0.0f, penaltyPercent);
+        
+        // Apply penalty if any remains
+        if (penaltyPercent > 0.0f)
+        {
+            TakenTotalMod *= (1.0f - penaltyPercent / 100.0f);
+        }
+    }
+
     // Sanctified Wrath (bypass damage reduction)
     if (caster && TakenTotalMod < 1.0f)
     {
@@ -8590,6 +8698,37 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
     } else { // auto attack
         if (IsPlayer())
             FIRE(Player, OnCustomScriptedAutoattackDamageTakenMod, TSPlayer(const_cast<Player*>(this->ToPlayer())), TSUnit(const_cast<Unit*>(attacker)), TSMutableNumber<float>(&TakenTotalMod), TSMutableNumber<uint32>(&pdamage));
+    }
+
+    // Glancing blow damage reduction: players/pets attacking creatures
+    // Always 40% baseline, +5% per level above 3, penalty amount reduced by agility
+    // Applies to both melee and ranged attacks
+    if ((attacker->GetTypeId() == TYPEID_PLAYER || attacker->IsPet()) &&
+        IsCreature() && !IsPet())
+    {
+        // Calculate level difference: creature level - attacker level
+        int32 levelDiff = GetLevel() - attacker->GetLevel();
+        
+        // Calculate penalty: 40% baseline + 5% per level above 3
+        float penaltyPercent = 40.0f;
+        if (levelDiff > 3)
+            penaltyPercent += (levelDiff - 3) * 5.0f;
+        penaltyPercent = std::min(penaltyPercent, 90.0f);
+        
+        // Reduce penalty amount by agility proportional to mob_level * 2
+        float agilityThreshold = 2.0f * GetLevel();
+        float playerAgility = attacker->GetStat(STAT_AGILITY);
+        
+        // Reduce penalty proportionally: agility = 0 → full penalty, agility = threshold → 0 penalty
+        float agilityRatio = playerAgility / agilityThreshold;
+        penaltyPercent = penaltyPercent * (1.0f - agilityRatio);
+        penaltyPercent = std::max(0.0f, penaltyPercent);
+        
+        // Apply penalty if any remains
+        if (penaltyPercent > 0.0f)
+        {
+            TakenTotalMod *= (1.0f - penaltyPercent / 100.0f);
+        }
     }
 
     // mobs can score crushing blows if player lacks agility
