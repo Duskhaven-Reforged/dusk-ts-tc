@@ -281,7 +281,7 @@ namespace Trainer
                 return player->GetRace() == GetTrainerRequirement();
             case Type::Tradeskill:
                 // check spell for profession trainers
-                return false;// return player->HasSpell(GetTrainerRequirement());
+                return player->HasSpell(GetTrainerRequirement());
             default:
                 break;
         }
