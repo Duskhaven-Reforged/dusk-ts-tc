@@ -2003,15 +2003,9 @@ float Pet::GetNativeObjectScale() const
     CreatureFamilyEntry const* creatureFamily = sCreatureFamilyStore.LookupEntry(GetCreatureTemplate()->family);
     if (creatureFamily && creatureFamily->MinScale > 0.0f && getPetType() == HUNTER_PET)
     {
-        float scale;
-        if (GetLevel() >= creatureFamily->MaxScaleLevel)
-            scale = creatureFamily->MaxScale;
-        else if (GetLevel() <= creatureFamily->MinScaleLevel)
-            scale = creatureFamily->MinScale;
-        else
-            scale = creatureFamily->MinScale + float(GetLevel() - creatureFamily->MinScaleLevel) / creatureFamily->MaxScaleLevel * (creatureFamily->MaxScale - creatureFamily->MinScale);
-
-        return scale;
+        // Disabled: Pet size scaling based on level
+        // Return constant scale (using MinScale as the base constant size)
+        return creatureFamily->MinScale;
     }
 
     return Guardian::GetNativeObjectScale();
