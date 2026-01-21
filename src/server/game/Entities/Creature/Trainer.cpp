@@ -281,7 +281,19 @@ namespace Trainer
                 return player->GetRace() == GetTrainerRequirement();
             case Type::Tradeskill:
                 // check spell for profession trainers
-                return player->HasSpell(GetTrainerRequirement());
+                {
+                    uint32 requirement = GetTrainerRequirement();
+                    SpellInfo const* reqSpellInfo = sSpellMgr->GetSpellInfo(requirement);
+                    // If the requirement is a first-rank profession spell (primary or gathering),
+                    // allow players without it (they're entry-level players who can learn from this trainer)
+                    if (reqSpellInfo && (reqSpellInfo->IsPrimaryProfessionFirstRank() || reqSpellInfo->IsGatheringProfessionFirstRank()))
+                    {
+                        // Allow access if player has the spell OR doesn't have it (entry point)
+                        return true;
+                    }
+                    // For higher-rank requirements, player must have the spell
+                    return player->HasSpell(requirement);
+                }
             default:
                 break;
         }
