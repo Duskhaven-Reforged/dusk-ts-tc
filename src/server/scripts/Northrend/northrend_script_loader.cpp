@@ -15,6 +15,8 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "Config.h"
+
  // This is where scripts' loading functions should be declared:
  // Gundrak
 void AddSC_boss_slad_ran();
@@ -214,6 +216,9 @@ void AddSC_crystalsong_forest();
 // void Add${NameOfDirectory}Scripts()
 void AddNorthrendScripts()
 {
+    if (sConfigMgr->GetBoolDefault("DuskHaven.VanillaScriptMode", false))
+        return;
+
     // Gundrak
     AddSC_boss_slad_ran();
     AddSC_boss_moorabi();

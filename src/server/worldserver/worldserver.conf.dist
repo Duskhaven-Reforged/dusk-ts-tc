@@ -3116,6 +3116,18 @@ CharDelete.KeepDays = 30
 ###################################################################################################
 # CUSTOM SERVER OPTIONS
 #
+#    DuskHaven.VanillaScriptMode
+#        Description: If enabled, disables out-of-scope script registration to focus development
+#                     on vanilla content (EK/Kalimdor outdoor + TS-migrated dungeons).
+#                     - Disables all Northrend scripts (instances + outdoor).
+#                     - Disables all Outland scripts.
+#                     - Disables EK/Kalimdor dungeon/raid/battleground scripts (outdoor remains).
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+DuskHaven.VanillaScriptMode = 0
+
 #     AllowTrackBothResources
 #        Description: Allows players to track herbs and minerals at the same time (if they have the skills)
 #        Default:     0 - (Do not allow)

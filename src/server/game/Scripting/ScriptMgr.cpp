@@ -53,6 +53,10 @@
 #include "TSPlayer.h"
 // @tswow-end
 
+#include <algorithm>
+#include <unordered_map>
+#include <vector>
+
 // Trait which indicates whether this script type
 // must be assigned in the database.
 template<typename>
@@ -1557,13 +1561,194 @@ void ScriptMgr::OnMapUpdate(Map* map, uint32 diff)
 #undef SCR_MAP_END
 
 // @tswow-begin
-class TC_GAME_API CustomInstance : public InstanceScript{
+class TC_GAME_API CustomInstance : public InstanceScript
+{
 public:
-    CustomInstance(InstanceMap * map): InstanceScript(map) {
+    CustomInstance(InstanceMap* map) : InstanceScript(map)
+    {
         // Real loading in respective function
         SetBossNumber(0);
         LoadBossBoundaries({});
         LoadDoorData(nullptr);
+    }
+
+    // Persisted instance data store for TS livescripts (and generic custom_script instances).
+    // Stored inside the standard instance save string via Read/WriteSaveDataMore.
+    uint32 GetData(uint32 id) const override
+    {
+        auto itr = _data32.find(id);
+        return itr == _data32.end() ? 0u : itr->second;
+    }
+
+    void SetData(uint32 id, uint32 value) override
+    {
+        uint32 prev = GetData(id);
+        if (prev == value)
+            return;
+
+        if (value == 0)
+            _data32.erase(id);
+        else
+            _data32[id] = value;
+
+        SaveToDB();
+    }
+
+    uint64 GetData64(uint32 id) const override
+    {
+        auto itr = _data64.find(id);
+        return itr == _data64.end() ? 0ull : itr->second;
+    }
+
+    void SetData64(uint32 id, uint64 value) override
+    {
+        uint64 prev = GetData64(id);
+        if (prev == value)
+            return;
+
+        if (value == 0)
+            _data64.erase(id);
+        else
+            _data64[id] = value;
+
+        SaveToDB();
+    }
+
+    ObjectGuid GetGuidData(uint32 id) const override
+    {
+        auto itr = _guidData.find(id);
+        return itr == _guidData.end() ? ObjectGuid::Empty : itr->second;
+    }
+
+    void SetGuidData(uint32 id, ObjectGuid value) override
+    {
+        ObjectGuid prev = GetGuidData(id);
+        if (prev == value)
+            return;
+
+        if (value.IsEmpty())
+            _guidData.erase(id);
+        else
+            _guidData[id] = value;
+
+        SaveToDB();
+    }
+
+protected:
+    void ReadSaveDataMore(std::istringstream& data) override
+    {
+        // We want to be backward compatible with savestrings that have no TSWoW section.
+        std::streampos pos = data.tellg();
+        std::string token;
+        if (!(data >> token))
+            return;
+
+        if (token != _sentinel)
+        {
+            data.seekg(pos);
+            return;
+        }
+
+        _data32.clear();
+        _data64.clear();
+        _guidData.clear();
+
+        uint32 count32 = 0;
+        uint32 count64 = 0;
+        uint32 countGuid = 0;
+
+        if (!(data >> count32))
+            return;
+        for (uint32 i = 0; i < count32; ++i)
+        {
+            uint32 id = 0, value = 0;
+            if (!(data >> id >> value))
+                return;
+            if (value != 0)
+                _data32[id] = value;
+        }
+
+        if (!(data >> count64))
+            return;
+        for (uint32 i = 0; i < count64; ++i)
+        {
+            uint32 id = 0;
+            uint64 value = 0;
+            if (!(data >> id >> value))
+                return;
+            if (value != 0)
+                _data64[id] = value;
+        }
+
+        if (!(data >> countGuid))
+            return;
+        for (uint32 i = 0; i < countGuid; ++i)
+        {
+            uint32 id = 0;
+            uint64 raw = 0;
+            if (!(data >> id >> raw))
+                return;
+            if (raw != 0)
+                _guidData[id] = ObjectGuid(raw);
+        }
+    }
+
+    void WriteSaveDataMore(std::ostringstream& data) override
+    {
+        if (_data32.empty() && _data64.empty() && _guidData.empty())
+            return;
+
+        data << _sentinel << ' ';
+
+        auto sorted32 = _SortedPairs(_data32);
+        auto sorted64 = _SortedPairs(_data64);
+        auto sortedGuid = _SortedPairs(_guidData);
+
+        data << uint32(sorted32.size()) << ' ';
+        for (auto const& kv : sorted32)
+            data << kv.first << ' ' << kv.second << ' ';
+
+        data << uint32(sorted64.size()) << ' ';
+        for (auto const& kv : sorted64)
+            data << kv.first << ' ' << kv.second << ' ';
+
+        data << uint32(sortedGuid.size()) << ' ';
+        for (auto const& kv : sortedGuid)
+            data << kv.first << ' ' << kv.second.GetRawValue() << ' ';
+    }
+
+private:
+    static constexpr char const* _sentinel = "TSWOW_V1";
+
+    std::unordered_map<uint32, uint32> _data32;
+    std::unordered_map<uint32, uint64> _data64;
+    std::unordered_map<uint32, ObjectGuid> _guidData;
+
+    template <typename K, typename V>
+    static std::vector<std::pair<K, V>> _SortedPairs(std::unordered_map<K, V> const& map)
+    {
+        std::vector<std::pair<K, V>> out;
+        out.reserve(map.size());
+        for (auto const& kv : map)
+            out.push_back(kv);
+        std::sort(out.begin(), out.end(), [](auto const& a, auto const& b) { return a.first < b.first; });
+        return out;
+    }
+};
+// @tswow-end
+
+// @tswow-begin
+class TC_GAME_API CustomCreature : public CreatureScript
+{
+public:
+    CustomCreature() : CreatureScript("custom_creature") { }
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        // Return SmartAI as a flexible default that won't interfere with TSWoW entry-based hooks.
+        // TSWoW livescripts can hook creature events by entry ID, so this provides basic AI behavior
+        // for creatures that may not have explicit hooks yet.
+        return new SmartAI(creature);
     }
 };
 // @tswow-end
@@ -1670,6 +1855,14 @@ void ScriptMgr::OnGossipSelectCode(Player* player, Item* item, uint32 sender, ui
 CreatureAI* ScriptMgr::GetCreatureAI(Creature* creature)
 {
     ASSERT(creature);
+
+    // @tswow-begin
+    if (creature->GetScriptName() == "custom_creature")
+    {
+        static CustomCreature customCreatureScript;
+        return customCreatureScript.GetAI(creature);
+    }
+    // @tswow-end
 
     GET_SCRIPT_RET(CreatureScript, creature->GetScriptId(), tmpscript, nullptr);
     return tmpscript->GetAI(creature);

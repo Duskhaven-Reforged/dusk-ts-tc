@@ -15,6 +15,8 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "Config.h"
+
 // This is where scripts' loading functions should be declared:
 // Blackfathom Depths
 void AddSC_blackfathom_deeps();
@@ -129,6 +131,12 @@ void AddSC_winterspring();
 // void Add${NameOfDirectory}Scripts()
 void AddKalimdorScripts()
 {
+    bool vanillaMode = sConfigMgr->GetBoolDefault("DuskHaven.VanillaScriptMode", false);
+
+    // In vanilla mode we keep outdoor Kalimdor scripts enabled, but disable
+    // out-of-scope dungeon/raid scripts (they will be migrated to TS over time).
+    if (!vanillaMode)
+    {
     // Blackfathom Depths
     AddSC_blackfathom_deeps();
     AddSC_boss_gelihast();
@@ -215,6 +223,7 @@ void AddKalimdorScripts()
     AddSC_boss_zum_rah();
     AddSC_zulfarrak();
     AddSC_instance_zulfarrak();
+    }
 
     AddSC_ashenvale();
     AddSC_azshara();

@@ -15,6 +15,8 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "Config.h"
+
 // This is where scripts' loading functions should be declared:
 // Auchindoun - Auchenai Crypts
 void AddSC_boss_shirrak_the_dead_watcher();
@@ -139,6 +141,9 @@ void AddSC_terokkar_forest();
 // void Add${NameOfDirectory}Scripts()
 void AddOutlandScripts()
 {
+    if (sConfigMgr->GetBoolDefault("DuskHaven.VanillaScriptMode", false))
+        return;
+
     // Auchindoun - Auchenai Crypts
     AddSC_boss_shirrak_the_dead_watcher();
     AddSC_boss_exarch_maladaar();
