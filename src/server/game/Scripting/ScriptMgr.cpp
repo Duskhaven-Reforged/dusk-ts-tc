@@ -1634,6 +1634,129 @@ public:
         SaveToDB();
     }
 
+    void UpdateSpawnGroups() override
+    {
+        // For CustomInstance with no boss states, we need to handle spawn groups differently
+        // If there are no bosses (SetBossNumber(0)), GetBossState will return TO_BE_DECIDED for any BossStateId,
+        // which may not match the configured bossStates, causing spawn groups to remain blocked.
+        // We'll activate spawn groups that should spawn by default (have FLAG_ACTIVATE_SPAWN or no flags)
+        // and don't have FLAG_BLOCK_SPAWN, regardless of boss state requirements.
+        if (!_instanceSpawnGroups)
+            return;
+
+        // If we have no bosses, handle spawn groups specially
+        // When there are no bosses, GetBossState returns TO_BE_DECIDED (5) for any BossStateId,
+        // which won't match most spawn group configurations. Since there are no bosses to control,
+        // we should activate spawn groups that should spawn by default.
+        if (GetEncounterCount() == 0)
+        {
+            TC_LOG_INFO("scripts", "CustomInstance::UpdateSpawnGroups: Instance {} (map {}, name: {}) has no bosses, handling {} spawn groups specially", 
+                instance->GetInstanceId(), instance->GetId(), instance->GetMapName(), _instanceSpawnGroups->size());
+            
+            enum states { BLOCK, SPAWN, FORCEBLOCK };
+            std::unordered_map<uint32, states> newStates;
+            
+            for (auto it = _instanceSpawnGroups->begin(), end = _instanceSpawnGroups->end(); it != end; ++it)
+            {
+                InstanceSpawnGroupInfo const& info = *it;
+                TC_LOG_DEBUG("scripts", "CustomInstance::UpdateSpawnGroups: Processing spawn group {} (bossStateId: {}, bossStates: 0x{:02X}, flags: 0x{:02X})", 
+                    info.SpawnGroupId, info.BossStateId, info.BossStates, info.Flags);
+                
+                states& curValue = newStates[info.SpawnGroupId]; // makes sure there's a BLOCK value in the map
+                if (curValue == FORCEBLOCK) // nothing will change this
+                {
+                    TC_LOG_DEBUG("scripts", "CustomInstance::UpdateSpawnGroups: Spawn group {} already marked as FORCEBLOCK, skipping", info.SpawnGroupId);
+                    continue;
+                }
+                
+                // Skip team-specific spawns if they don't match
+                uint32 teamId = instance->GetTeamIdInInstance();
+                if (((teamId == TEAM_ALLIANCE) && (info.Flags & InstanceSpawnGroupInfo::FLAG_HORDE_ONLY))
+                    || ((teamId == TEAM_HORDE) && (info.Flags & InstanceSpawnGroupInfo::FLAG_ALLIANCE_ONLY)))
+                {
+                    TC_LOG_DEBUG("scripts", "CustomInstance::UpdateSpawnGroups: Spawn group {} skipped due to team mismatch (team: {}, flags: 0x{:02X})", 
+                        info.SpawnGroupId, teamId, info.Flags);
+                    continue;
+                }
+                
+                // When there are no bosses, activate spawn groups that should spawn by default
+                // Since there are no bosses to control, we should be permissive and activate
+                // spawn groups unless they're explicitly blocked.
+                if (info.Flags & InstanceSpawnGroupInfo::FLAG_BLOCK_SPAWN)
+                {
+                    TC_LOG_INFO("scripts", "CustomInstance::UpdateSpawnGroups: Spawn group {} blocked (FLAG_BLOCK_SPAWN set, flags: 0x{:02X})", 
+                        info.SpawnGroupId, info.Flags);
+                    curValue = FORCEBLOCK;
+                    continue;
+                }
+                else if (info.Flags & InstanceSpawnGroupInfo::FLAG_ACTIVATE_SPAWN)
+                {
+                    // Spawn groups with FLAG_ACTIVATE_SPAWN should definitely activate
+                    TC_LOG_INFO("scripts", "CustomInstance::UpdateSpawnGroups: Spawn group {} will activate (FLAG_ACTIVATE_SPAWN set, flags: 0x{:02X}, bossStateId: {}, bossStates: 0x{:02X})", 
+                        info.SpawnGroupId, info.Flags, info.BossStateId, info.BossStates);
+                    curValue = SPAWN;
+                }
+                else
+                {
+                    // For spawn groups without FLAG_ACTIVATE_SPAWN, check if they're configured
+                    // to activate when boss state is NOT_STARTED (which we treat as the default
+                    // when there are no bosses)
+                    const uint8 NOT_STARTED_BIT = (1 << NOT_STARTED);
+                    if (info.BossStates & NOT_STARTED_BIT)
+                    {
+                        // Spawn groups configured to activate when boss state is NOT_STARTED
+                        // should activate when there are no bosses (treating it as NOT_STARTED)
+                        TC_LOG_INFO("scripts", "CustomInstance::UpdateSpawnGroups: Spawn group {} will activate (NOT_STARTED in bossStates, flags: 0x{:02X}, bossStateId: {}, bossStates: 0x{:02X})", 
+                            info.SpawnGroupId, info.Flags, info.BossStateId, info.BossStates);
+                        curValue = SPAWN;
+                    }
+                    else
+                    {
+                        // Spawn groups without FLAG_ACTIVATE_SPAWN and without NOT_STARTED
+                        // in their bossStates mask will remain blocked.
+                        TC_LOG_INFO("scripts", "CustomInstance::UpdateSpawnGroups: Spawn group {} will remain blocked (no FLAG_ACTIVATE_SPAWN, NOT_STARTED not in bossStates, flags: 0x{:02X}, bossStateId: {}, bossStates: 0x{:02X})", 
+                            info.SpawnGroupId, info.Flags, info.BossStateId, info.BossStates);
+                    }
+                }
+            }
+            
+            // Apply the spawn group states
+            for (auto const& pair : newStates)
+            {
+                uint32 const groupId = pair.first;
+                bool const doSpawn = (pair.second == SPAWN);
+                bool const isCurrentlyActive = instance->IsSpawnGroupActive(groupId);
+                
+                TC_LOG_DEBUG("scripts", "CustomInstance::UpdateSpawnGroups: Spawn group {} - current state: {}, target state: {}", 
+                    groupId, isCurrentlyActive ? "active" : "inactive", doSpawn ? "active" : "inactive");
+                
+                if (isCurrentlyActive == doSpawn)
+                {
+                    TC_LOG_DEBUG("scripts", "CustomInstance::UpdateSpawnGroups: Spawn group {} already in correct state, skipping", groupId);
+                    continue; // nothing to do here
+                }
+                
+                // if we should spawn group, then spawn it...
+                if (doSpawn)
+                {
+                    TC_LOG_INFO("scripts", "CustomInstance::UpdateSpawnGroups: Activating spawn group {} for instance {} (map {}, name: {})", 
+                        groupId, instance->GetInstanceId(), instance->GetId(), instance->GetMapName());
+                    instance->SpawnGroupSpawn(groupId);
+                }
+                else // otherwise, set it as inactive so it no longer respawns (but don't despawn it)
+                {
+                    TC_LOG_DEBUG("scripts", "CustomInstance::UpdateSpawnGroups: Setting spawn group {} inactive for instance {} (map {}, name: {})", 
+                        groupId, instance->GetInstanceId(), instance->GetId(), instance->GetMapName());
+                    instance->SetSpawnGroupInactive(groupId);
+                }
+            }
+            return;
+        }
+
+        // Otherwise, use the default behavior
+        InstanceScript::UpdateSpawnGroups();
+    }
+
 protected:
     void ReadSaveDataMore(std::istringstream& data) override
     {
