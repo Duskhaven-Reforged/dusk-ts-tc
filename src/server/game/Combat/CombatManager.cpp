@@ -21,6 +21,7 @@
 #include "Unit.h"
 #include "CreatureAI.h"
 #include "Player.h"
+#include "GameTime.h"
 // @tswow-begin
 #include "TSCreature.h"
 #include "TSEvents.h"
@@ -131,6 +132,13 @@ void CombatReference::SuppressFor(Unit* who)
             ai->JustExitedCombat();
 }
 
+void CombatReference::RefreshDamageTime()
+{
+    // Only track damage time for PvE combat (PvP has its own timer system)
+    if (!_isPvP)
+        _lastDamageTime = GameTime::GetGameTime();
+}
+
 bool PvPCombatReference::Update(uint32 tdiff)
 {
     if (_combatTimer <= tdiff)
@@ -163,6 +171,45 @@ void CombatManager::Update(uint32 tdiff)
         }
         else
             ++it;
+    }
+
+    // Check PvE combat for timeout (16 seconds without damage)
+    // Only check if we're the first unit in the combat reference to avoid double-checking
+    constexpr time_t COMBAT_TIMEOUT_SECONDS = 16;
+    time_t currentTime = GameTime::GetGameTime();
+    auto it2 = _pveRefs.begin(), end2 = _pveRefs.end();
+    while (it2 != end2)
+    {
+        CombatReference* const ref = it2->second;
+        // Only process if we're the first unit (to avoid double processing)
+        if (ref->first == _owner && !ref->IsSuppressedFor(_owner))
+        {
+            Unit* other = ref->GetOther(_owner);
+            
+            // Skip if either unit is a boss
+            bool isBoss = false;
+            if (Creature* ownerCreature = _owner->ToCreature())
+                isBoss = ownerCreature->isWorldBoss();
+            if (!isBoss && other)
+            {
+                if (Creature* otherCreature = other->ToCreature())
+                    isBoss = otherCreature->isWorldBoss();
+            }
+            
+            // Check timeout only if not a boss and damage time has been initialized
+            if (!isBoss && ref->_lastDamageTime > 0)
+            {
+                time_t timeSinceDamage = currentTime - ref->_lastDamageTime;
+                if (timeSinceDamage >= COMBAT_TIMEOUT_SECONDS)
+                {
+                    // Timeout reached, end combat
+                    it2 = _pveRefs.erase(it2), end2 = _pveRefs.end();
+                    ref->EndCombat();
+                    continue;
+                }
+            }
+        }
+        ++it2;
     }
 }
 

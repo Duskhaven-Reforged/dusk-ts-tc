@@ -829,6 +829,17 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
     if (!damage)
         return 0;
 
+    // Refresh combat damage time for PvE combat when actual damage is dealt
+    // This enables the 16-second combat timeout feature
+    if (attacker && attacker != victim && damagetype != DOT)
+    {
+        // Refresh damage time on both sides of the combat reference
+        if (CombatReference* ref = Trinity::Containers::MapGetValuePtr(attacker->GetCombatManager().GetPvECombatRefs(), victim->GetGUID()))
+            ref->RefreshDamageTime();
+        if (CombatReference* ref = Trinity::Containers::MapGetValuePtr(victim->GetCombatManager().GetPvECombatRefs(), attacker->GetGUID()))
+            ref->RefreshDamageTime();
+    }
+
     if (attacker && attacker->GetTypeId() == TYPEID_PLAYER) {
         auto pAttacker = attacker->ToPlayer();
         int32 damageforleech = damage;

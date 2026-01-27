@@ -67,13 +67,15 @@ struct TC_GAME_API CombatReference
     CombatReference& operator=(CombatReference const&) = delete;
 
 protected:
-    CombatReference(Unit* a, Unit* b, bool pvp = false) : first(a), second(b), _isPvP(pvp) { }
+    CombatReference(Unit* a, Unit* b, bool pvp = false) : first(a), second(b), _isPvP(pvp), _lastDamageTime(0) { }
 
     void Refresh();
     void Suppress(Unit* who) { (who == first ? _suppressFirst : _suppressSecond) = true; }
+    void RefreshDamageTime();
 
     bool _suppressFirst = false;
     bool _suppressSecond = false;
+    time_t _lastDamageTime; // Time of last damage dealt between the two units (PvE only, 0 = not initialized)
 
     friend class CombatManager;
 };
