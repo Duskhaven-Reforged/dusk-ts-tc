@@ -63,6 +63,9 @@ struct TC_GAME_API CombatReference
     void SuppressFor(Unit* who);
     bool IsSuppressedFor(Unit const* who) const { return (who == first) ? _suppressFirst : _suppressSecond; }
 
+    // Refresh the last damage time for PvE combat timeout tracking
+    void RefreshDamageTime();
+
     CombatReference(CombatReference const&) = delete;
     CombatReference& operator=(CombatReference const&) = delete;
 
@@ -71,7 +74,6 @@ protected:
 
     void Refresh();
     void Suppress(Unit* who) { (who == first ? _suppressFirst : _suppressSecond) = true; }
-    void RefreshDamageTime();
 
     bool _suppressFirst = false;
     bool _suppressSecond = false;
