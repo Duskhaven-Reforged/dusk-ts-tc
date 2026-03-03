@@ -123,7 +123,7 @@ get_filename_component(
 )
 
 get_filename_component(
-  TSWOW_MESSAGES_INCLUDES ${CMAKE_SOURCE_DIR}/../../misc/client-extensions/CustomPackets ABSOLUTE
+  TSWOW_MESSAGES_INCLUDES ${CMAKE_SOURCE_DIR}/../../misc/client-extensions/src/CustomPackets ABSOLUTE
 )
 
 SET(TSWOW_INCLUDES
