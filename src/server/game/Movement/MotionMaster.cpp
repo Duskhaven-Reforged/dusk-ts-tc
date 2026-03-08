@@ -808,12 +808,12 @@ void MotionMaster::MoveJumpTo(float angle, float speedXY, float speedZ)
     MoveJump(x, y, z, 0.0f, speedXY, speedZ);
 }
 
-void MotionMaster::MoveJump(Position const& pos, float speedXY, float speedZ, uint32 id/* = EVENT_JUMP*/, bool hasOrientation/* = false*/)
+void MotionMaster::MoveJump(Position const& pos, float speedXY, float speedZ, uint32 id/* = EVENT_JUMP*/, bool hasOrientation/* = false*/, uint32 spellId/* = 0*/, uint32 triggerSpellId/* = 0*/)
 {
-    MoveJump(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), pos.GetOrientation(), speedXY, speedZ, id, hasOrientation);
+    MoveJump(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), pos.GetOrientation(), speedXY, speedZ, id, hasOrientation, spellId, triggerSpellId);
 }
 
-void MotionMaster::MoveJump(float x, float y, float z, float o, float speedXY, float speedZ, uint32 id, bool hasOrientation /* = false*/)
+void MotionMaster::MoveJump(float x, float y, float z, float o, float speedXY, float speedZ, uint32 id, bool hasOrientation /* = false*/, uint32 spellId /* = 0*/, uint32 triggerSpellId /* = 0*/)
 {
     TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveJump: '{}', jumps to point Id: {} (X: {}, Y: {}, Z: {})", _owner->GetGUID().ToString(), id, x, y, z);
     if (speedXY < 0.01f)
@@ -831,14 +831,14 @@ void MotionMaster::MoveJump(float x, float y, float z, float o, float speedXY, f
             init.SetFacing(o);
     };
 
-    GenericMovementGenerator* movement = new GenericMovementGenerator(std::move(initializer), EFFECT_MOTION_TYPE, id);
+    GenericMovementGenerator* movement = new GenericMovementGenerator(std::move(initializer), EFFECT_MOTION_TYPE, id, spellId, triggerSpellId);
     movement->Priority = MOTION_PRIORITY_HIGHEST;
     movement->BaseUnitState = UNIT_STATE_JUMPING;
     movement->AddFlag(MOVEMENTGENERATOR_FLAG_PERSIST_ON_DEATH);
     Add(movement);
 }
 
-void MotionMaster::MoveJumpWithGravity(Position const& pos, float speedXY, float gravity, uint32 id, Unit const* target)
+void MotionMaster::MoveJumpWithGravity(Position const& pos, float speedXY, float gravity, uint32 id, Unit const* target, uint32 spellId/* = 0*/, uint32 triggerSpellId/* = 0*/)
 {
     TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveJump: Unit '{}', jumps to point: {}", _owner->GetGUID().ToString(), pos.ToString());
     if (speedXY < 0.01f)
@@ -853,7 +853,7 @@ void MotionMaster::MoveJumpWithGravity(Position const& pos, float speedXY, float
                 init.SetFacing(target);
         };
 
-    GenericMovementGenerator* movement = new GenericMovementGenerator(std::move(initializer), EFFECT_MOTION_TYPE, id);
+    GenericMovementGenerator* movement = new GenericMovementGenerator(std::move(initializer), EFFECT_MOTION_TYPE, id, spellId, triggerSpellId);
     movement->Priority = MOTION_PRIORITY_HIGHEST;
     movement->BaseUnitState = UNIT_STATE_JUMPING;
     movement->AddFlag(MOVEMENTGENERATOR_FLAG_PERSIST_ON_DEATH);

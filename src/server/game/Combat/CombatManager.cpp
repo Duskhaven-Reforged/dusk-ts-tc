@@ -186,14 +186,14 @@ void CombatManager::Update(uint32 tdiff)
         {
             Unit* other = ref->GetOther(_owner);
             
-            // Skip if either unit is a boss
+            // Skip if either unit is a boss (world or dungeon) - bosses only reset when they have no valid target
             bool isBoss = false;
             if (Creature* ownerCreature = _owner->ToCreature())
-                isBoss = ownerCreature->isWorldBoss();
+                isBoss = ownerCreature->isWorldBoss() || ownerCreature->IsDungeonBoss();
             if (!isBoss && other)
             {
                 if (Creature* otherCreature = other->ToCreature())
-                    isBoss = otherCreature->isWorldBoss();
+                    isBoss = otherCreature->isWorldBoss() || otherCreature->IsDungeonBoss();
             }
             
             // Check timeout only if not a boss and damage time has been initialized

@@ -20,10 +20,16 @@
 #include "CreatureAI.h"
 #include "MovementDefines.h"
 #include "MoveSpline.h"
+#include "SharedDefines.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 #include "Unit.h"
 #include "TSCreature.h"
+#include "TSEvents.h"
+#include "TSSpellInfo.h"
+#include "TSUnit.h"
 
-GenericMovementGenerator::GenericMovementGenerator(std::function<void(Movement::MoveSplineInit& init)>&& initializer, MovementGeneratorType type, uint32 id) : _splineInit(std::move(initializer)), _type(type), _pointId(id), _duration(0)
+GenericMovementGenerator::GenericMovementGenerator(std::function<void(Movement::MoveSplineInit& init)>&& initializer, MovementGeneratorType type, uint32 id, uint32 spellId, uint32 triggerSpellId) : _splineInit(std::move(initializer)), _type(type), _pointId(id), _spellId(spellId), _triggerSpellId(triggerSpellId), _duration(0)
 {
     Mode = MOTION_MODE_DEFAULT;
     Priority = MOTION_PRIORITY_NORMAL;
@@ -94,4 +100,16 @@ void GenericMovementGenerator::MovementInform(Unit* owner)
         FIRE_ID(creature->GetCreatureTemplate()->events.id,Creature,OnMovementInform,TSCreature(creature),_type,_pointId);
         // @tswow-end
     }
+
+    // @tswow-begin: when a spell-driven jump (JUMP/JUMP_DEST) finishes, fire OnJumpEnd and optionally cast trigger spell
+    if (_type == EFFECT_MOTION_TYPE && _pointId == EVENT_JUMP && _spellId != 0)
+    {
+        if (SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(_spellId))
+        {
+            FIRE_ID(spellInfo->events.id, Spell, OnJumpEnd, TSSpellInfo(spellInfo), TSUnit(owner));
+            if (_triggerSpellId != 0)
+                owner->CastSpell(owner, _triggerSpellId, true);
+        }
+    }
+    // @tswow-end
 }

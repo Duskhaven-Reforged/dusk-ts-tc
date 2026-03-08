@@ -826,19 +826,18 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
 
     uint32 health = victim->GetHealth();
 
-    if (!damage)
-        return 0;
-
-    // Refresh combat damage time for PvE combat when actual damage is dealt
-    // This enables the 16-second combat timeout feature
+    // Refresh combat damage time for PvE combat when any damage event occurs (including 0 from miss/parry/absorb).
+    // This keeps combat from dropping while the mob is still attacking, even if hits do not connect.
     if (attacker && attacker != victim && damagetype != DOT)
     {
-        // Refresh damage time on both sides of the combat reference
         if (CombatReference* ref = Trinity::Containers::MapGetValuePtr(attacker->GetCombatManager().GetPvECombatRefs(), victim->GetGUID()))
             ref->RefreshDamageTime();
         if (CombatReference* ref = Trinity::Containers::MapGetValuePtr(victim->GetCombatManager().GetPvECombatRefs(), attacker->GetGUID()))
             ref->RefreshDamageTime();
     }
+
+    if (!damage)
+        return 0;
 
     if (attacker && attacker->GetTypeId() == TYPEID_PLAYER) {
         auto pAttacker = attacker->ToPlayer();

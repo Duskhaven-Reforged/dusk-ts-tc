@@ -717,7 +717,8 @@ void Spell::EffectJump()
 
     float speedXY, speedZ;
     CalculateJumpSpeeds(*effectInfo, unitCaster->GetExactDist2d(unitTarget), speedXY, speedZ);
-    unitCaster->GetMotionMaster()->MoveJump(*unitTarget, speedXY, speedZ, EVENT_JUMP, false);
+    uint32 triggerSpell = m_spellValue->EffectTriggerSpell[effectInfo->EffectIndex] ? m_spellValue->EffectTriggerSpell[effectInfo->EffectIndex] : effectInfo->TriggerSpell;
+    unitCaster->GetMotionMaster()->MoveJump(*unitTarget, speedXY, speedZ, EVENT_JUMP, false, m_spellInfo->Id, triggerSpell);
 }
 
 void Spell::EffectJumpDest()
@@ -738,7 +739,8 @@ void Spell::EffectJumpDest()
     float speedXY, speedZ;
     CalculateJumpSpeeds(*effectInfo, unitCaster->GetExactDist2d(destTarget), speedXY, speedZ);
     FIRE_ID(GetSpellInfo()->events.id, Spell, OnJumpStart, TSSpellInfo(GetSpellInfo()), TSUnit(unitCaster), TSMutableNumber<float>(&speedXY), TSMutableNumber<float>(&speedZ), TSNumber<float>(unitCaster->GetExactDist(unitTarget->GetPosition())), TSNumber<float>(destTarget->GetPositionX()), TSNumber<float>(destTarget->GetPositionY()), TSNumber<float>(destTarget->GetPositionZ()));
-    unitCaster->GetMotionMaster()->MoveJump(*destTarget, speedXY, speedZ, EVENT_JUMP, !m_targets.GetObjectTargetGUID().IsEmpty());
+    uint32 triggerSpell = m_spellValue->EffectTriggerSpell[effectInfo->EffectIndex] ? m_spellValue->EffectTriggerSpell[effectInfo->EffectIndex] : effectInfo->TriggerSpell;
+    unitCaster->GetMotionMaster()->MoveJump(*destTarget, speedXY, speedZ, EVENT_JUMP, !m_targets.GetObjectTargetGUID().IsEmpty(), m_spellInfo->Id, triggerSpell);
 
     if (Player* player = m_caster->ToPlayer())
     {

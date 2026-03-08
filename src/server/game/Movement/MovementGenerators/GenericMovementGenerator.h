@@ -30,7 +30,7 @@ enum MovementGeneratorType : uint8;
 class GenericMovementGenerator : public MovementGenerator
 {
     public:
-        explicit GenericMovementGenerator(std::function<void(Movement::MoveSplineInit& init)>&& initializer, MovementGeneratorType type, uint32 id);
+        explicit GenericMovementGenerator(std::function<void(Movement::MoveSplineInit& init)>&& initializer, MovementGeneratorType type, uint32 id, uint32 spellId = 0, uint32 triggerSpellId = 0);
 
         void Initialize(Unit*) override;
         void Reset(Unit*) override;
@@ -45,6 +45,8 @@ class GenericMovementGenerator : public MovementGenerator
         std::function<void(Movement::MoveSplineInit& init)> _splineInit;
         MovementGeneratorType _type;
         uint32 _pointId;
+        uint32 _spellId;
+        uint32 _triggerSpellId;
         TimeTracker _duration;
 };
 
