@@ -477,7 +477,7 @@ AddonChannel = 1
 #        Description: Number of threads to update maps.
 #        Default:     1
 
-MapUpdate.Threads = 1
+MapUpdate.Threads = 10
 
 #
 #    CleanCharacterDB
@@ -4674,7 +4674,7 @@ TSWoW.MessageBufferBytes = 10000
 #        Default:     false
 #
 
-TSWoW.EnableLua = true
+TSWoW.EnableLua = false
 
 #
 ###################################################################################################
