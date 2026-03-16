@@ -50,6 +50,7 @@
 #include "Weather.h"
 #include "WeatherMgr.h"
 #include "World.h"
+#include <algorithm>
 #include <boost/heap/fibonacci_heap.hpp>
 #include <unordered_set>
 #include <vector>
@@ -813,6 +814,7 @@ void Map::Update(uint32 t_diff)
     TypeContainerVisitor<Trinity::ObjectUpdater, GridTypeMapContainer  > grid_object_update(updater);
     // for pets
     TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer > world_object_update(updater);
+    float const visibilityRange = GetVisibilityRange();
 
     {
             ZoneScopedNC("EntityUpdates", MAP_UPDATE_COLOR);
@@ -839,39 +841,35 @@ void Map::Update(uint32 t_diff)
                 // Handle updates for creatures in combat with player and are more than 60 yards away
                 if (player->IsInCombat())
                 {
-                    std::vector<Unit*> toVisit;
                     for (auto const& pair : player->GetCombatManager().GetPvECombatRefs())
                         if (Creature* unit = pair.second->GetOther(player)->ToCreature())
-                            if (unit->GetMapId() == player->GetMapId() && !unit->IsWithinDistInMap(player, GetVisibilityRange(), false))
-                                toVisit.push_back(unit);
-                    for (Unit* unit : toVisit)
-                        VisitNearbyCellsOf(unit, grid_object_update, world_object_update);
+                            if (unit->GetMap() == this && !unit->IsWithinDistInMap(player, visibilityRange, false))
+                                VisitNearbyCellsOf(unit, grid_object_update, world_object_update);
                 }
 
                 { // Update any creatures that own auras the player has applications of
-                    std::unordered_set<Unit*> toVisit;
+                    std::vector<Unit*> toVisit;
+                    toVisit.reserve(player->GetAppliedAuras().size());
+
                     for (std::pair<uint32, AuraApplication*> pair : player->GetAppliedAuras())
                     {
                         if (Unit* caster = pair.second->GetBase()->GetCaster())
-                            if (caster->GetTypeId() != TYPEID_PLAYER && !caster->IsWithinDistInMap(player, GetVisibilityRange(), false))
-                                toVisit.insert(caster);
+                            if (caster->GetTypeId() != TYPEID_PLAYER && caster->GetMap() == this && !caster->IsWithinDistInMap(player, visibilityRange, false))
+                                if (std::find(toVisit.begin(), toVisit.end(), caster) == toVisit.end())
+                                    toVisit.push_back(caster);
                     }
+
                     for (Unit* unit : toVisit)
                         VisitNearbyCellsOf(unit, grid_object_update, world_object_update);
                 }
 
                 { // Update player's summons
-                    std::vector<Unit*> toVisit;
-
                     // Totems
                     for (ObjectGuid const& summonGuid : player->m_SummonSlot)
                         if (summonGuid)
                             if (Creature* unit = GetCreature(summonGuid))
-                                if (unit->GetMapId() == player->GetMapId() && !unit->IsWithinDistInMap(player, GetVisibilityRange(), false))
-                                    toVisit.push_back(unit);
-
-                    for (Unit* unit : toVisit)
-                        VisitNearbyCellsOf(unit, grid_object_update, world_object_update);
+                                if (unit->GetMap() == this && !unit->IsWithinDistInMap(player, visibilityRange, false))
+                                    VisitNearbyCellsOf(unit, grid_object_update, world_object_update);
                 }
             }
         }
