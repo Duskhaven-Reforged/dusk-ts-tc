@@ -32,47 +32,53 @@ using namespace Trinity;
 
 void VisibleNotifier::SendToSelf()
 {
-    // at this moment i_clientGUIDs have guids that not iterate at grid level checks
-    // but exist one case when this possible and object not out of range: transports
+    // Objects on the current transport are not visited by the normal nearby-object walk.
     if (GenericTransport* transport = i_player.GetTransport())
     {
         for (GenericTransport::PassengerSet::iterator itr = transport->GetPassengers().begin(); itr != transport->GetPassengers().end(); ++itr)
         {
-            if (vis_guids.find((*itr)->GetGUID()) != vis_guids.end())
-            {
-                vis_guids.erase((*itr)->GetGUID());
+            if (i_player.m_clientGUIDs.find((*itr)->GetGUID()) == i_player.m_clientGUIDs.end())
+                continue;
 
-                switch ((*itr)->GetTypeId())
-                {
-                    case TYPEID_GAMEOBJECT:
-                        i_player.UpdateVisibilityOf((*itr)->ToGameObject(), i_data, i_visibleNow);
-                        break;
-                    case TYPEID_PLAYER:
-                        i_player.UpdateVisibilityOf((*itr)->ToPlayer(), i_data, i_visibleNow);
-                        if (!(*itr)->isNeedNotify(NOTIFY_VISIBILITY_CHANGED))
-                            (*itr)->ToPlayer()->UpdateVisibilityOf(&i_player);
-                        break;
-                    case TYPEID_UNIT:
-                        i_player.UpdateVisibilityOf((*itr)->ToCreature(), i_data, i_visibleNow);
-                        break;
-                    case TYPEID_DYNAMICOBJECT:
-                        i_player.UpdateVisibilityOf((*itr)->ToDynObject(), i_data, i_visibleNow);
-                        break;
-                    default:
-                        break;
-                }
+            vis_guids.insert((*itr)->GetGUID());
+
+            switch ((*itr)->GetTypeId())
+            {
+                case TYPEID_GAMEOBJECT:
+                    i_player.UpdateVisibilityOf((*itr)->ToGameObject(), i_data, i_visibleNow);
+                    break;
+                case TYPEID_PLAYER:
+                    i_player.UpdateVisibilityOf((*itr)->ToPlayer(), i_data, i_visibleNow);
+                    if (!(*itr)->isNeedNotify(NOTIFY_VISIBILITY_CHANGED))
+                        (*itr)->ToPlayer()->UpdateVisibilityOf(&i_player);
+                    break;
+                case TYPEID_UNIT:
+                    i_player.UpdateVisibilityOf((*itr)->ToCreature(), i_data, i_visibleNow);
+                    break;
+                case TYPEID_DYNAMICOBJECT:
+                    i_player.UpdateVisibilityOf((*itr)->ToDynObject(), i_data, i_visibleNow);
+                    break;
+                default:
+                    break;
             }
         }
     }
 
-    for (auto it = vis_guids.begin(); it != vis_guids.end(); ++it)
+    for (auto it = i_player.m_clientGUIDs.begin(); it != i_player.m_clientGUIDs.end();)
     {
-        i_player.m_clientGUIDs.erase(*it);
-        i_data.AddOutOfRangeGUID(*it);
-
-        if (it->IsPlayer())
+        if (vis_guids.find(*it) != vis_guids.end())
         {
-            Player* player = ObjectAccessor::FindPlayer(*it);
+            ++it;
+            continue;
+        }
+
+        ObjectGuid guid = *it;
+        it = i_player.m_clientGUIDs.erase(it);
+        i_data.AddOutOfRangeGUID(guid);
+
+        if (guid.IsPlayer())
+        {
+            Player* player = ObjectAccessor::FindPlayer(guid);
             if (player && !player->isNeedNotify(NOTIFY_VISIBILITY_CHANGED))
                 player->UpdateVisibilityOf(&i_player);
         }
@@ -85,7 +91,7 @@ void VisibleNotifier::SendToSelf()
     i_data.BuildPacket(&packet);
     i_player.SendDirectMessage(&packet);
 
-    for (std::set<Unit*>::const_iterator it = i_visibleNow.begin(); it != i_visibleNow.end(); ++it)
+    for (std::unordered_set<Unit*>::const_iterator it = i_visibleNow.begin(); it != i_visibleNow.end(); ++it)
         i_player.SendInitialVisiblePackets(*it);
 }
 

@@ -36,10 +36,13 @@ namespace Trinity
     {
         Player &i_player;
         UpdateData i_data;
-        std::set<Unit*> i_visibleNow;
+        std::unordered_set<Unit*> i_visibleNow;
         GuidUnorderedSet vis_guids;
 
-        VisibleNotifier(Player &player) : i_player(player), vis_guids(player.m_clientGUIDs) { }
+        VisibleNotifier(Player &player) : i_player(player)
+        {
+            vis_guids.reserve(player.m_clientGUIDs.size());
+        }
         template<class T> void Visit(GridRefManager<T> &m);
         void SendToSelf(void);
     };
