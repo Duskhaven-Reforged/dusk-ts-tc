@@ -43,6 +43,7 @@
 #include "Pet.h"
 #include "PoolMgr.h"
 #include "ScriptMgr.h"
+#include "ThreadPool.h"
 #include "Transport.h"
 #include "Vehicle.h"
 #include "VMapFactory.h"
@@ -52,6 +53,7 @@
 #include "World.h"
 #include <algorithm>
 #include <boost/heap/fibonacci_heap.hpp>
+#include <future>
 #include <unordered_set>
 #include <vector>
 // @tswow-begin
@@ -63,6 +65,58 @@
 #include "TSGameObject.h"
 #include "TSMainThreadContext.h"
 // @tswow-end
+
+namespace
+{
+size_t constexpr UpdateObjectBuildBatchSize = 128;
+size_t constexpr MinParallelUpdateObjectBatchCount = 3;
+
+size_t GetMapObjectUpdateBuildWorkerCount()
+{
+    static size_t workerCount = []
+    {
+        unsigned int const hardwareThreads = std::thread::hardware_concurrency();
+        if (hardwareThreads <= 1)
+            return size_t(1);
+
+        size_t const mapUpdateThreads = std::max<uint32>(1, sWorld->getIntConfig(CONFIG_NUMTHREADS));
+        if (hardwareThreads > mapUpdateThreads)
+            return size_t(hardwareThreads - mapUpdateThreads);
+
+        return size_t(1);
+    }();
+
+    return workerCount;
+}
+
+Trinity::ThreadPool& GetMapObjectUpdateBuildPool()
+{
+    static Trinity::ThreadPool pool(GetMapObjectUpdateBuildWorkerCount());
+    return pool;
+}
+
+template <typename Work>
+auto SubmitMapObjectUpdateBuildTask(Work&& work) -> std::future<UpdateDataMapType>
+{
+    std::promise<UpdateDataMapType> promise;
+    std::future<UpdateDataMapType> future = promise.get_future();
+
+    GetMapObjectUpdateBuildPool().PostWork(
+        [promise = std::move(promise), work = std::forward<Work>(work)]() mutable
+        {
+            try
+            {
+                promise.set_value(work());
+            }
+            catch (...)
+            {
+                promise.set_exception(std::current_exception());
+            }
+        });
+
+    return future;
+}
+}
 
 u_map_magic MapMagic        = { {'M','A','P','S'} };
 uint32 MapVersionMagic      = 10;
@@ -765,6 +819,261 @@ void Map::VisitNearbyCellsOf(WorldObject* obj, TypeContainerVisitor<Trinity::Obj
     }
 }
 
+Map::PlayerSnapshot Map::CreatePlayerSnapshot() const
+{
+    PlayerSnapshot players;
+
+    for (MapRefManager::const_iterator itr = m_mapRefManager.begin(); itr != m_mapRefManager.end(); ++itr)
+        if (Player* player = itr->GetSource())
+            players.push_back(player->GetGUID());
+
+    return players;
+}
+
+Map::WorldObjectSnapshot Map::CreateActiveNonPlayersSnapshot() const
+{
+    WorldObjectSnapshot objects;
+    objects.reserve(m_activeNonPlayers.size());
+
+    for (WorldObject* obj : m_activeNonPlayers)
+        if (obj)
+            objects.push_back(obj->GetGUID());
+
+    return objects;
+}
+
+Map::TransportSnapshot Map::CreateTransportSnapshot() const
+{
+    TransportSnapshot transports;
+    transports.reserve(_transports.size());
+
+    for (Transport* transport : _transports)
+        if (transport)
+            transports.push_back(transport->GetGUID());
+
+    return transports;
+}
+
+Map::UpdateObjectSnapshot Map::DrainUpdateObjectSnapshot()
+{
+    UpdateObjectSnapshot updateObjects;
+    updateObjects.reserve(_updateObjects.size());
+
+    for (Object* obj : _updateObjects)
+        updateObjects.push_back(obj);
+
+    _updateObjects.clear();
+    return updateObjects;
+}
+
+Player* Map::ResolvePlayerSnapshot(ObjectGuid const& guid)
+{
+    return GetPlayer(guid);
+}
+
+WorldObject* Map::ResolveWorldObjectSnapshot(ObjectGuid const& guid)
+{
+    if (guid.IsPlayer())
+        return GetPlayer(guid);
+
+    if (guid.IsPet())
+        return GetPet(guid);
+
+    if (guid.IsAnyTypeCreature())
+        return GetCreature(guid);
+
+    if (guid.IsDynamicObject())
+        return GetDynamicObject(guid);
+
+    if (guid.IsCorpse())
+        return GetCorpse(guid);
+
+    if (guid.IsAnyTypeGameObject())
+    {
+        if (Transport* transport = ResolveTransportSnapshot(guid))
+            return transport;
+
+        return GetGameObject(guid);
+    }
+
+    return nullptr;
+}
+
+Transport* Map::ResolveTransportSnapshot(ObjectGuid const& guid)
+{
+    if (GenericTransport* transport = GetTransport(guid))
+        return transport->ToTransport();
+
+    return nullptr;
+}
+
+void Map::AppendEntityUpdateSource(ObjectGuid const& guid, GuidUnorderedSet& seenSources, WorldObjectSnapshot& sources)
+{
+    if (!guid)
+        return;
+
+    if (seenSources.insert(guid).second)
+        sources.push_back(guid);
+}
+
+Map::WorldObjectSnapshot Map::CollectPlayerEntityUpdateSources(Player* player, float visibilityRange)
+{
+    WorldObjectSnapshot sources;
+    GuidUnorderedSet seenSources;
+    size_t const reservedSourceCount = player->GetAppliedAuras().size() + 8;
+    sources.reserve(reservedSourceCount);
+    seenSources.reserve(reservedSourceCount);
+
+    AppendEntityUpdateSource(player->GetGUID(), seenSources, sources);
+
+    if (WorldObject* viewPoint = player->GetViewpoint())
+        AppendEntityUpdateSource(viewPoint->GetGUID(), seenSources, sources);
+
+    if (player->IsInCombat())
+    {
+        for (auto const& pair : player->GetCombatManager().GetPvECombatRefs())
+            if (Creature* unit = pair.second->GetOther(player)->ToCreature())
+                if (unit->GetMap() == this && !unit->IsWithinDistInMap(player, visibilityRange, false))
+                    AppendEntityUpdateSource(unit->GetGUID(), seenSources, sources);
+    }
+
+    for (std::pair<uint32, AuraApplication*> pair : player->GetAppliedAuras())
+    {
+        if (Unit* caster = pair.second->GetBase()->GetCaster())
+            if (caster->GetTypeId() != TYPEID_PLAYER && caster->GetMap() == this && !caster->IsWithinDistInMap(player, visibilityRange, false))
+                AppendEntityUpdateSource(caster->GetGUID(), seenSources, sources);
+    }
+
+    for (ObjectGuid const& summonGuid : player->m_SummonSlot)
+        if (summonGuid)
+            if (Creature* unit = GetCreature(summonGuid))
+                if (unit->GetMap() == this && !unit->IsWithinDistInMap(player, visibilityRange, false))
+                    AppendEntityUpdateSource(unit->GetGUID(), seenSources, sources);
+
+    return sources;
+}
+
+void Map::VisitEntityUpdateSources(WorldObjectSnapshot const& sources,
+    TypeContainerVisitor<Trinity::ObjectUpdater, GridTypeMapContainer>& gridObjectUpdate,
+    TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer>& worldObjectUpdate)
+{
+    for (ObjectGuid const& guid : sources)
+    {
+        WorldObject* obj = ResolveWorldObjectSnapshot(guid);
+        if (!obj || !obj->IsInWorld() || obj->FindMap() != this)
+            continue;
+
+        VisitNearbyCellsOf(obj, gridObjectUpdate, worldObjectUpdate);
+    }
+}
+
+Map::UpdateObjectBatches Map::CreateUpdateObjectBatches(UpdateObjectSnapshot const& updateObjects) const
+{
+    UpdateObjectBatches batches;
+    if (updateObjects.empty())
+        return batches;
+
+    size_t const batchCount = (updateObjects.size() + UpdateObjectBuildBatchSize - 1) / UpdateObjectBuildBatchSize;
+    batches.reserve(batchCount);
+
+    for (size_t offset = 0; offset < updateObjects.size(); offset += UpdateObjectBuildBatchSize)
+    {
+        size_t const batchEnd = std::min(offset + UpdateObjectBuildBatchSize, updateObjects.size());
+        UpdateObjectSnapshot batch;
+        batch.reserve(batchEnd - offset);
+        batch.insert(batch.end(), updateObjects.begin() + offset, updateObjects.begin() + batchEnd);
+        batches.push_back(std::move(batch));
+    }
+
+    return batches;
+}
+
+void Map::BuildObjectUpdateData(UpdateObjectSnapshot const& updateObjects, UpdateDataMapType& updatePlayers)
+{
+    for (Object* obj : updateObjects)
+    {
+        ASSERT(obj->IsInWorld());
+        obj->BuildUpdate(updatePlayers);
+    }
+}
+
+void Map::MergeObjectUpdateData(UpdateDataMapType&& source, UpdateDataMapType& target)
+{
+    for (auto&& pair : source)
+    {
+        Player* player = pair.first;
+        UpdateData& updateData = pair.second;
+        if (!updateData.HasData())
+            continue;
+
+        auto itr = target.find(player);
+        if (itr == target.end())
+            target.emplace(player, std::move(updateData));
+        else
+            itr->second.AppendFrom(std::move(updateData));
+    }
+}
+
+void Map::FlushObjectUpdateData(UpdateDataMapType& updatePlayers)
+{
+    WorldPacket packet;                                     // here we allocate a std::vector with a size of 0x10000
+    for (UpdateDataMapType::iterator iter = updatePlayers.begin(); iter != updatePlayers.end(); ++iter)
+    {
+        iter->second.BuildPacket(&packet);
+        iter->first->SendDirectMessage(&packet);
+        packet.clear();                                     // clean the string
+    }
+}
+
+void Map::UpdateWorldSessions(uint32 t_diff, PlayerSnapshot const& playerSnapshot)
+{
+    for (ObjectGuid const& guid : playerSnapshot)
+    {
+        Player* player = ResolvePlayerSnapshot(guid);
+        if (!player || !player->IsInWorld() || player->FindMap() != this)
+            continue;
+
+        WorldSession* session = player->GetSession();
+        if (!session)
+            continue;
+
+        MapSessionFilter updater(session);
+        session->Update(t_diff, updater);
+    }
+}
+
+void Map::UpdatePlayerCells(uint32 t_diff, float visibilityRange,
+    TypeContainerVisitor<Trinity::ObjectUpdater, GridTypeMapContainer>& gridObjectUpdate,
+    TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer>& worldObjectUpdate,
+    PlayerSnapshot const& playerSnapshot)
+{
+    for (ObjectGuid const& guid : playerSnapshot)
+    {
+        Player* player = ResolvePlayerSnapshot(guid);
+        if (!player || !player->IsInWorld() || player->FindMap() != this)
+            continue;
+
+        player->Update(t_diff);
+
+        if (!player->IsInWorld() || player->FindMap() != this)
+            continue;
+
+        VisitEntityUpdateSources(CollectPlayerEntityUpdateSources(player, visibilityRange), gridObjectUpdate, worldObjectUpdate);
+    }
+}
+
+void Map::UpdateTransports(uint32 t_diff, TransportSnapshot const& transportSnapshot)
+{
+    for (ObjectGuid const& guid : transportSnapshot)
+    {
+        Transport* obj = ResolveTransportSnapshot(guid);
+        if (!obj || !obj->IsInWorld() || obj->FindMap() != this)
+            continue;
+
+        obj->Update(t_diff);
+    }
+}
+
 // @tswow-begin tracy
 void Map::Update(uint32 t_diff)
 {
@@ -782,18 +1091,8 @@ void Map::Update(uint32 t_diff)
 
     {
         ZoneScopedNC("UpdateWorldSessions", MAP_UPDATE_COLOR)
-        /// update worldsessions for existing players
-        for (m_mapRefIter = m_mapRefManager.begin(); m_mapRefIter != m_mapRefManager.end(); ++m_mapRefIter)
-        {
-            Player* player = m_mapRefIter->GetSource();
-            if (player && player->IsInWorld())
-            {
-                //player->Update(t_diff);
-                WorldSession* session = player->GetSession();
-                MapSessionFilter updater(session);
-                session->Update(t_diff, updater);
-            }
-        }
+        PlayerSnapshot const sessionPlayers = CreatePlayerSnapshot();
+        UpdateWorldSessions(t_diff, sessionPlayers);
     }
 
     /// process any due respawns
@@ -815,93 +1114,26 @@ void Map::Update(uint32 t_diff)
     // for pets
     TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer > world_object_update(updater);
     float const visibilityRange = GetVisibilityRange();
+    PlayerSnapshot const playerSnapshot = CreatePlayerSnapshot();
+    WorldObjectSnapshot const activeNonPlayersSnapshot = CreateActiveNonPlayersSnapshot();
 
     {
             ZoneScopedNC("EntityUpdates", MAP_UPDATE_COLOR);
         {
             ZoneScopedNC("EntityUpdates(Source:Players)", MAP_UPDATE_COLOR);
-            // the player iterator is stored in the map object
-            // to make sure calls to Map::Remove don't invalidate it
-            for (m_mapRefIter = m_mapRefManager.begin(); m_mapRefIter != m_mapRefManager.end(); ++m_mapRefIter)
-            {
-                Player* player = m_mapRefIter->GetSource();
-
-                if (!player || !player->IsInWorld())
-                    continue;
-
-                // update players at tick
-                player->Update(t_diff);
-
-                VisitNearbyCellsOf(player, grid_object_update, world_object_update);
-
-                // If player is using far sight or mind vision, visit that object too
-                if (WorldObject* viewPoint = player->GetViewpoint())
-                    VisitNearbyCellsOf(viewPoint, grid_object_update, world_object_update);
-
-                // Handle updates for creatures in combat with player and are more than 60 yards away
-                if (player->IsInCombat())
-                {
-                    for (auto const& pair : player->GetCombatManager().GetPvECombatRefs())
-                        if (Creature* unit = pair.second->GetOther(player)->ToCreature())
-                            if (unit->GetMap() == this && !unit->IsWithinDistInMap(player, visibilityRange, false))
-                                VisitNearbyCellsOf(unit, grid_object_update, world_object_update);
-                }
-
-                { // Update any creatures that own auras the player has applications of
-                    std::vector<Unit*> toVisit;
-                    toVisit.reserve(player->GetAppliedAuras().size());
-
-                    for (std::pair<uint32, AuraApplication*> pair : player->GetAppliedAuras())
-                    {
-                        if (Unit* caster = pair.second->GetBase()->GetCaster())
-                            if (caster->GetTypeId() != TYPEID_PLAYER && caster->GetMap() == this && !caster->IsWithinDistInMap(player, visibilityRange, false))
-                                if (std::find(toVisit.begin(), toVisit.end(), caster) == toVisit.end())
-                                    toVisit.push_back(caster);
-                    }
-
-                    for (Unit* unit : toVisit)
-                        VisitNearbyCellsOf(unit, grid_object_update, world_object_update);
-                }
-
-                { // Update player's summons
-                    // Totems
-                    for (ObjectGuid const& summonGuid : player->m_SummonSlot)
-                        if (summonGuid)
-                            if (Creature* unit = GetCreature(summonGuid))
-                                if (unit->GetMap() == this && !unit->IsWithinDistInMap(player, visibilityRange, false))
-                                    VisitNearbyCellsOf(unit, grid_object_update, world_object_update);
-                }
-            }
+            UpdatePlayerCells(t_diff, visibilityRange, grid_object_update, world_object_update, playerSnapshot);
         }
 
         {
             ZoneScopedNC("EntityUpdates(Source:Active Objects)", MAP_UPDATE_COLOR);
-            // non-player active objects, increasing iterator in the loop in case of object removal
-            for (m_activeNonPlayersIter = m_activeNonPlayers.begin(); m_activeNonPlayersIter != m_activeNonPlayers.end();)
-            {
-                WorldObject* obj = *m_activeNonPlayersIter;
-                ++m_activeNonPlayersIter;
-
-                if (!obj || !obj->IsInWorld())
-                    continue;
-
-                VisitNearbyCellsOf(obj, grid_object_update, world_object_update);
-            }
+            VisitEntityUpdateSources(activeNonPlayersSnapshot, grid_object_update, world_object_update);
         }
     }
 
     {
         ZoneScopedNC("TransportUpdates", MAP_UPDATE_COLOR)
-        for (_transportsUpdateIter = _transports.begin(); _transportsUpdateIter != _transports.end();)
-        {
-            WorldObject* obj = *_transportsUpdateIter;
-            ++_transportsUpdateIter;
-
-            if (!obj->IsInWorld())
-                continue;
-
-            obj->Update(t_diff);
-        }
+        TransportSnapshot const transportSnapshot = CreateTransportSnapshot();
+        UpdateTransports(t_diff, transportSnapshot);
     }
 
     {
@@ -3065,22 +3297,40 @@ void Map::SendObjectUpdates()
 {
     UpdateDataMapType update_players;
 
-    while (!_updateObjects.empty())
+    for (UpdateObjectSnapshot updateObjects = DrainUpdateObjectSnapshot(); !updateObjects.empty(); updateObjects = DrainUpdateObjectSnapshot())
     {
-        Object* obj = *_updateObjects.begin();
-        ASSERT(obj->IsInWorld());
+        UpdateObjectBatches batches = CreateUpdateObjectBatches(updateObjects);
+        bool const useParallelBuild = GetMapObjectUpdateBuildWorkerCount() > 1 && batches.size() >= MinParallelUpdateObjectBatchCount;
 
-        _updateObjects.erase(_updateObjects.begin());
-        obj->BuildUpdate(update_players);
+        if (!useParallelBuild)
+        {
+            for (UpdateObjectSnapshot const& batch : batches)
+            {
+                UpdateDataMapType batchUpdatePlayers;
+                BuildObjectUpdateData(batch, batchUpdatePlayers);
+                MergeObjectUpdateData(std::move(batchUpdatePlayers), update_players);
+            }
+            continue;
+        } else { //parallel builds
+            std::vector<std::future<UpdateDataMapType>> batchFutures;
+            batchFutures.reserve(batches.size());
+
+            for (UpdateObjectSnapshot& batch : batches)
+            {
+                batchFutures.push_back(SubmitMapObjectUpdateBuildTask([this, batch = std::move(batch)]() mutable
+                {
+                    UpdateDataMapType batchUpdatePlayers;
+                    BuildObjectUpdateData(batch, batchUpdatePlayers);
+                    return batchUpdatePlayers;
+                }));
+            }
+
+            for (std::future<UpdateDataMapType>& batchFuture : batchFutures)
+                MergeObjectUpdateData(batchFuture.get(), update_players);
+            }
     }
 
-    WorldPacket packet;                                     // here we allocate a std::vector with a size of 0x10000
-    for (UpdateDataMapType::iterator iter = update_players.begin(); iter != update_players.end(); ++iter)
-    {
-        iter->second.BuildPacket(&packet);
-        iter->first->SendDirectMessage(&packet);
-        packet.clear();                                     // clean the string
-    }
+    FlushObjectUpdateData(update_players);
 }
 
 // CheckRespawn MUST do one of the following:
@@ -4584,7 +4834,7 @@ DynamicObject* Map::GetDynamicObject(ObjectGuid const& guid)
 
 void Map::UpdateIteratorBack(Player* player)
 {
-    if (&*m_mapRefIter == &player->GetMapRef())
+    if (m_mapRefIter != m_mapRefManager.end() && &*m_mapRefIter == &player->GetMapRef())
         m_mapRefIter = m_mapRefIter->nocheck_prev();
 }
 

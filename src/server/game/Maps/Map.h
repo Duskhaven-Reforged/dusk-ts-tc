@@ -675,6 +675,12 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         virtual std::string GetDebugInfo() const;
 
     private:
+        using PlayerSnapshot = std::vector<ObjectGuid>;
+        using WorldObjectSnapshot = std::vector<ObjectGuid>;
+        using TransportSnapshot = std::vector<ObjectGuid>;
+        using UpdateObjectSnapshot = std::vector<Object*>;
+        using UpdateObjectBatches = std::vector<UpdateObjectSnapshot>;
+
         void LoadMapAndVMap(int gx, int gy);
         void LoadVMap(int gx, int gy);
         void LoadMap(int gx, int gy, bool reload = false);
@@ -684,6 +690,28 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         void SetTimer(uint32 t) { i_gridExpiry = t < MIN_GRID_DELAY ? MIN_GRID_DELAY : t; }
 
         void SendInitSelf(Player* player);
+        PlayerSnapshot CreatePlayerSnapshot() const;
+        WorldObjectSnapshot CreateActiveNonPlayersSnapshot() const;
+        TransportSnapshot CreateTransportSnapshot() const;
+        UpdateObjectSnapshot DrainUpdateObjectSnapshot();
+        Player* ResolvePlayerSnapshot(ObjectGuid const& guid);
+        WorldObject* ResolveWorldObjectSnapshot(ObjectGuid const& guid);
+        Transport* ResolveTransportSnapshot(ObjectGuid const& guid);
+        void AppendEntityUpdateSource(ObjectGuid const& guid, GuidUnorderedSet& seenSources, WorldObjectSnapshot& sources);
+        WorldObjectSnapshot CollectPlayerEntityUpdateSources(Player* player, float visibilityRange);
+        void VisitEntityUpdateSources(WorldObjectSnapshot const& sources,
+            TypeContainerVisitor<Trinity::ObjectUpdater, GridTypeMapContainer>& gridObjectUpdate,
+            TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer>& worldObjectUpdate);
+        UpdateObjectBatches CreateUpdateObjectBatches(UpdateObjectSnapshot const& updateObjects) const;
+        void BuildObjectUpdateData(UpdateObjectSnapshot const& updateObjects, UpdateDataMapType& updatePlayers);
+        void MergeObjectUpdateData(UpdateDataMapType&& source, UpdateDataMapType& target);
+        void FlushObjectUpdateData(UpdateDataMapType& updatePlayers);
+        void UpdateWorldSessions(uint32 t_diff, PlayerSnapshot const& playerSnapshot);
+        void UpdatePlayerCells(uint32 t_diff, float visibilityRange,
+            TypeContainerVisitor<Trinity::ObjectUpdater, GridTypeMapContainer>& gridObjectUpdate,
+            TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer>& worldObjectUpdate,
+            PlayerSnapshot const& playerSnapshot);
+        void UpdateTransports(uint32 t_diff, TransportSnapshot const& transportSnapshot);
 
         bool CreatureCellRelocation(Creature* creature, Cell new_cell);
         bool GameObjectCellRelocation(GameObject* go, Cell new_cell);

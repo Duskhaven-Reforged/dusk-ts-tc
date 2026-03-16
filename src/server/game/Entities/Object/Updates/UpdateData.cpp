@@ -35,6 +35,17 @@ void UpdateData::AddOutOfRangeGUID(ObjectGuid guid)
     m_outOfRangeGUIDs.insert(guid);
 }
 
+void UpdateData::AppendFrom(UpdateData&& right)
+{
+    if (!right.HasData())
+        return;
+
+    m_blockCount += right.m_blockCount;
+    m_outOfRangeGUIDs.insert(right.m_outOfRangeGUIDs.begin(), right.m_outOfRangeGUIDs.end());
+    m_data.append(right.m_data);
+    right.Clear();
+}
+
 void UpdateData::Compress(void* dst, uint32 *dst_size, void* src, int src_size)
 {
     z_stream c_stream;
