@@ -32,6 +32,13 @@
 
 namespace Trinity
 {
+    struct PlayerRelocationVisibilityWorkItem
+    {
+        ObjectGuid playerGuid;
+        ObjectGuid viewPointGuid;
+        size_t reserveSize = 0;
+    };
+
     struct TC_GAME_API VisibilityCollector
     {
         std::vector<ObjectGuid> orderedGuids;
@@ -78,6 +85,7 @@ namespace Trinity
         PlayerRelocationNotifier(Player &player) : VisibleNotifier(player) { }
 
         template<class T> void Visit(GridRefManager<T> &m) { VisibleNotifier::Visit(m); }
+        void ApplyCollectedVisibility(VisibilityCollector&& collector);
         void Visit(CreatureMapType &);
         void Visit(PlayerMapType &);
     };
@@ -97,8 +105,16 @@ namespace Trinity
         Cell &cell;
         CellCoord &p;
         const float i_radius;
+        std::vector<PlayerRelocationVisibilityWorkItem>* i_playerRelocationVisibilityWork;
+        GuidUnorderedSet* i_scheduledPlayerRelocationVisibility;
         DelayedUnitRelocation(Cell &c, CellCoord &pair, Map &map, float radius) :
-            i_map(map), cell(c), p(pair), i_radius(radius) { }
+            i_map(map), cell(c), p(pair), i_radius(radius), i_playerRelocationVisibilityWork(nullptr), i_scheduledPlayerRelocationVisibility(nullptr) { }
+        DelayedUnitRelocation(Cell& c, CellCoord& pair, Map& map, float radius,
+            std::vector<PlayerRelocationVisibilityWorkItem>& playerRelocationVisibilityWork,
+            GuidUnorderedSet& scheduledPlayerRelocationVisibility) :
+            i_map(map), cell(c), p(pair), i_radius(radius),
+            i_playerRelocationVisibilityWork(&playerRelocationVisibilityWork),
+            i_scheduledPlayerRelocationVisibility(&scheduledPlayerRelocationVisibility) { }
         template<class T> void Visit(GridRefManager<T> &) { }
         void Visit(CreatureMapType &);
         void Visit(PlayerMapType   &);

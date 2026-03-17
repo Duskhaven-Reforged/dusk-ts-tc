@@ -70,8 +70,12 @@ namespace
 {
 size_t constexpr UpdateObjectBuildBatchSize = 128;
 size_t constexpr MinParallelUpdateObjectBatchCount = 3;
+size_t constexpr PlayerEntitySourceCollectBatchSize = 32;
+size_t constexpr MinParallelPlayerEntitySourceBatchCount = 2;
+size_t constexpr RelocationVisibilityCollectBatchSize = 64;
+size_t constexpr MinParallelRelocationVisibilityBatchCount = 2;
 
-size_t GetMapObjectUpdateBuildWorkerCount()
+size_t GetMapIntraUpdateWorkerCount()
 {
     static size_t workerCount = []
     {
@@ -89,19 +93,19 @@ size_t GetMapObjectUpdateBuildWorkerCount()
     return workerCount;
 }
 
-Trinity::ThreadPool& GetMapObjectUpdateBuildPool()
+Trinity::ThreadPool& GetMapIntraUpdatePool()
 {
-    static Trinity::ThreadPool pool(GetMapObjectUpdateBuildWorkerCount());
+    static Trinity::ThreadPool pool(GetMapIntraUpdateWorkerCount());
     return pool;
 }
 
-template <typename Work>
-auto SubmitMapObjectUpdateBuildTask(Work&& work) -> std::future<UpdateDataMapType>
+template <typename Result, typename Work>
+std::future<Result> SubmitMapIntraUpdateTask(Work&& work)
 {
-    std::promise<UpdateDataMapType> promise;
-    std::future<UpdateDataMapType> future = promise.get_future();
+    std::promise<Result> promise;
+    std::future<Result> future = promise.get_future();
 
-    GetMapObjectUpdateBuildPool().PostWork(
+    GetMapIntraUpdatePool().PostWork(
         [promise = std::move(promise), work = std::forward<Work>(work)]() mutable
         {
             try
@@ -953,6 +957,116 @@ Map::WorldObjectSnapshot Map::CollectPlayerEntityUpdateSources(Player* player, f
     return sources;
 }
 
+Map::PlayerEntityUpdateWork Map::FreezePlayerEntityUpdates(uint32 t_diff, float visibilityRange, PlayerSnapshot const& playerSnapshot)
+{
+    std::vector<Player*> updatedPlayers;
+    updatedPlayers.reserve(playerSnapshot.size());
+
+    for (ObjectGuid const& guid : playerSnapshot)
+    {
+        Player* player = ResolvePlayerSnapshot(guid);
+        if (!player || !player->IsInWorld() || player->FindMap() != this)
+            continue;
+
+        player->Update(t_diff);
+
+        if (!player->IsInWorld() || player->FindMap() != this)
+            continue;
+
+        updatedPlayers.push_back(player);
+    }
+
+    PlayerEntityUpdateWork frozenPlayerUpdates;
+    frozenPlayerUpdates.reserve(updatedPlayers.size());
+
+    if (updatedPlayers.empty())
+        return frozenPlayerUpdates;
+
+    auto buildPlayerEntitySourceBatches = [](std::vector<Player*> const& players)
+    {
+        std::vector<std::vector<Player*>> batches;
+        batches.reserve((players.size() + PlayerEntitySourceCollectBatchSize - 1) / PlayerEntitySourceCollectBatchSize);
+
+        for (size_t index = 0; index < players.size(); index += PlayerEntitySourceCollectBatchSize)
+        {
+            size_t const batchEnd = std::min(index + PlayerEntitySourceCollectBatchSize, players.size());
+            batches.emplace_back(players.begin() + index, players.begin() + batchEnd);
+        }
+
+        return batches;
+    };
+
+    auto collectPlayerEntitySourceBatch = [this, visibilityRange](std::vector<Player*> const& batch)
+    {
+        PlayerEntityUpdateWork batchWork;
+        batchWork.reserve(batch.size());
+
+        for (Player* player : batch)
+        {
+            if (!player || !player->IsInWorld() || player->FindMap() != this)
+                continue;
+
+            PlayerEntityUpdateWorkItem workItem;
+            workItem.playerGuid = player->GetGUID();
+            workItem.sources = CollectPlayerEntityUpdateSources(player, visibilityRange);
+            batchWork.push_back(std::move(workItem));
+        }
+
+        return batchWork;
+    };
+
+    std::vector<std::vector<Player*>> batches = buildPlayerEntitySourceBatches(updatedPlayers);
+    bool const useParallelCollect =
+        GetMapIntraUpdateWorkerCount() > 1 && batches.size() >= MinParallelPlayerEntitySourceBatchCount;
+
+    if (!useParallelCollect)
+    {
+        for (std::vector<Player*> const& batch : batches)
+        {
+            PlayerEntityUpdateWork batchWork = collectPlayerEntitySourceBatch(batch);
+            for (PlayerEntityUpdateWorkItem& workItem : batchWork)
+                frozenPlayerUpdates.push_back(std::move(workItem));
+        }
+    }
+    else
+    {
+        std::vector<std::future<PlayerEntityUpdateWork>> batchFutures;
+        batchFutures.reserve(batches.size());
+
+        for (std::vector<Player*> const& batch : batches)
+        {
+            batchFutures.push_back(SubmitMapIntraUpdateTask<PlayerEntityUpdateWork>(
+                [collectPlayerEntitySourceBatch, batch]()
+                {
+                    return collectPlayerEntitySourceBatch(batch);
+                }));
+        }
+
+        for (std::future<PlayerEntityUpdateWork>& batchFuture : batchFutures)
+        {
+            PlayerEntityUpdateWork batchWork = batchFuture.get();
+            for (PlayerEntityUpdateWorkItem& workItem : batchWork)
+                frozenPlayerUpdates.push_back(std::move(workItem));
+        }
+    }
+
+    return frozenPlayerUpdates;
+}
+
+void Map::VisitFrozenPlayerEntityUpdates(PlayerEntityUpdateWork const& frozenPlayerUpdates,
+    TypeContainerVisitor<Trinity::ObjectUpdater, GridTypeMapContainer>& gridObjectUpdate,
+    TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer>& worldObjectUpdate)
+{
+    for (PlayerEntityUpdateWorkItem const& workItem : frozenPlayerUpdates)
+    {
+        Player* player = ResolvePlayerSnapshot(workItem.playerGuid);
+        if (!player || !player->IsInWorld() || player->FindMap() != this)
+            continue;
+
+        VisitEntityUpdateSources(workItem.sources, gridObjectUpdate, worldObjectUpdate);
+    }
+}
+
 void Map::VisitEntityUpdateSources(WorldObjectSnapshot const& sources,
     TypeContainerVisitor<Trinity::ObjectUpdater, GridTypeMapContainer>& gridObjectUpdate,
     TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer>& worldObjectUpdate)
@@ -1042,26 +1156,6 @@ void Map::UpdateWorldSessions(uint32 t_diff, PlayerSnapshot const& playerSnapsho
     }
 }
 
-void Map::UpdatePlayerCells(uint32 t_diff, float visibilityRange,
-    TypeContainerVisitor<Trinity::ObjectUpdater, GridTypeMapContainer>& gridObjectUpdate,
-    TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer>& worldObjectUpdate,
-    PlayerSnapshot const& playerSnapshot)
-{
-    for (ObjectGuid const& guid : playerSnapshot)
-    {
-        Player* player = ResolvePlayerSnapshot(guid);
-        if (!player || !player->IsInWorld() || player->FindMap() != this)
-            continue;
-
-        player->Update(t_diff);
-
-        if (!player->IsInWorld() || player->FindMap() != this)
-            continue;
-
-        VisitEntityUpdateSources(CollectPlayerEntityUpdateSources(player, visibilityRange), gridObjectUpdate, worldObjectUpdate);
-    }
-}
-
 void Map::UpdateTransports(uint32 t_diff, TransportSnapshot const& transportSnapshot)
 {
     for (ObjectGuid const& guid : transportSnapshot)
@@ -1115,13 +1209,14 @@ void Map::Update(uint32 t_diff)
     TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer > world_object_update(updater);
     float const visibilityRange = GetVisibilityRange();
     PlayerSnapshot const playerSnapshot = CreatePlayerSnapshot();
+    PlayerEntityUpdateWork const frozenPlayerUpdates = FreezePlayerEntityUpdates(t_diff, visibilityRange, playerSnapshot);
     WorldObjectSnapshot const activeNonPlayersSnapshot = CreateActiveNonPlayersSnapshot();
 
     {
             ZoneScopedNC("EntityUpdates", MAP_UPDATE_COLOR);
         {
             ZoneScopedNC("EntityUpdates(Source:Players)", MAP_UPDATE_COLOR);
-            UpdatePlayerCells(t_diff, visibilityRange, grid_object_update, world_object_update, playerSnapshot);
+            VisitFrozenPlayerEntityUpdates(frozenPlayerUpdates, grid_object_update, world_object_update);
         }
 
         {
@@ -1202,6 +1297,9 @@ struct ResetNotifier
 
 void Map::ProcessRelocationNotifies(const uint32 diff)
 {
+    std::vector<Trinity::PlayerRelocationVisibilityWorkItem> playerRelocationVisibilityWork;
+    GuidUnorderedSet scheduledPlayerRelocationVisibility;
+
     for (GridRefManager<NGridType>::iterator i = GridRefManager<NGridType>::begin(); i != GridRefManager<NGridType>::end(); ++i)
     {
         NGridType *grid = i->GetSource();
@@ -1230,11 +1328,121 @@ void Map::ProcessRelocationNotifies(const uint32 diff)
                 Cell cell(pair);
                 cell.SetNoCreate();
 
-                Trinity::DelayedUnitRelocation cell_relocation(cell, pair, *this, MAX_VISIBILITY_DISTANCE);
+                Trinity::DelayedUnitRelocation cell_relocation(cell, pair, *this, MAX_VISIBILITY_DISTANCE,
+                    playerRelocationVisibilityWork, scheduledPlayerRelocationVisibility);
                 TypeContainerVisitor<Trinity::DelayedUnitRelocation, GridTypeMapContainer  > grid_object_relocation(cell_relocation);
                 TypeContainerVisitor<Trinity::DelayedUnitRelocation, WorldTypeMapContainer > world_object_relocation(cell_relocation);
                 Visit(cell, grid_object_relocation);
                 Visit(cell, world_object_relocation);
+            }
+        }
+    }
+
+    if (!playerRelocationVisibilityWork.empty())
+    {
+        struct RelocationVisibilityCollectorResult
+        {
+            Trinity::VisibilityCollector collector;
+            bool hasCollector = false;
+        };
+
+        auto buildRelocationVisibilityBatches = [](std::vector<Trinity::PlayerRelocationVisibilityWorkItem> const& workItems)
+        {
+            std::vector<std::vector<Trinity::PlayerRelocationVisibilityWorkItem>> batches;
+            batches.reserve((workItems.size() + RelocationVisibilityCollectBatchSize - 1) / RelocationVisibilityCollectBatchSize);
+
+            for (size_t index = 0; index < workItems.size(); index += RelocationVisibilityCollectBatchSize)
+            {
+                size_t const batchEnd = std::min(index + RelocationVisibilityCollectBatchSize, workItems.size());
+                batches.emplace_back(workItems.begin() + index, workItems.begin() + batchEnd);
+            }
+
+            return batches;
+        };
+
+        auto collectRelocationVisibilityBatch = [this](std::vector<Trinity::PlayerRelocationVisibilityWorkItem> const& batch)
+        {
+            std::vector<RelocationVisibilityCollectorResult> results;
+            results.reserve(batch.size());
+
+            for (Trinity::PlayerRelocationVisibilityWorkItem const& workItem : batch)
+            {
+                RelocationVisibilityCollectorResult result;
+
+                if (WorldObject* viewPoint = ResolveWorldObjectSnapshot(workItem.viewPointGuid))
+                {
+                    if (workItem.playerGuid == workItem.viewPointGuid || viewPoint->IsPositionValid())
+                    {
+                        result.collector = Trinity::VisibilityCollector(workItem.reserveSize);
+                        Cell::VisitAllObjects(viewPoint, result.collector, MAX_VISIBILITY_DISTANCE, false);
+                        result.hasCollector = true;
+                    }
+                }
+
+                results.push_back(std::move(result));
+            }
+
+            return results;
+        };
+
+        auto applyCollectedRelocationVisibility = [this](Trinity::PlayerRelocationVisibilityWorkItem const& workItem,
+            RelocationVisibilityCollectorResult&& result)
+        {
+            if (!result.hasCollector)
+                return;
+
+            Player* player = GetPlayer(workItem.playerGuid);
+            if (!player || !player->IsInWorld() || player->GetMap() != this)
+                return;
+
+            WorldObject* viewPoint = player->m_seer;
+            if (!viewPoint || viewPoint->GetGUID() != workItem.viewPointGuid)
+                return;
+
+            if (!viewPoint->isNeedNotify(NOTIFY_VISIBILITY_CHANGED))
+                return;
+
+            if (player != viewPoint && !viewPoint->IsPositionValid())
+                return;
+
+            Trinity::PlayerRelocationNotifier relocate(*player);
+            relocate.ApplyCollectedVisibility(std::move(result.collector));
+            relocate.SendToSelf();
+        };
+
+        std::vector<std::vector<Trinity::PlayerRelocationVisibilityWorkItem>> batches =
+            buildRelocationVisibilityBatches(playerRelocationVisibilityWork);
+        bool const useParallelCollect =
+            GetMapIntraUpdateWorkerCount() > 1 && batches.size() >= MinParallelRelocationVisibilityBatchCount;
+
+        if (!useParallelCollect)
+        {
+            for (std::vector<Trinity::PlayerRelocationVisibilityWorkItem> const& batch : batches)
+            {
+                std::vector<RelocationVisibilityCollectorResult> results = collectRelocationVisibilityBatch(batch);
+                for (size_t index = 0; index < batch.size(); ++index)
+                    applyCollectedRelocationVisibility(batch[index], std::move(results[index]));
+            }
+        }
+        else
+        {
+            std::vector<std::future<std::vector<RelocationVisibilityCollectorResult>>> batchFutures;
+            batchFutures.reserve(batches.size());
+
+            for (std::vector<Trinity::PlayerRelocationVisibilityWorkItem> const& batch : batches)
+            {
+                batchFutures.push_back(SubmitMapIntraUpdateTask<std::vector<RelocationVisibilityCollectorResult>>(
+                    [collectRelocationVisibilityBatch, batch]()
+                    {
+                        return collectRelocationVisibilityBatch(batch);
+                    }));
+            }
+
+            for (size_t batchIndex = 0; batchIndex < batches.size(); ++batchIndex)
+            {
+                std::vector<RelocationVisibilityCollectorResult> results = batchFutures[batchIndex].get();
+                for (size_t index = 0; index < batches[batchIndex].size(); ++index)
+                    applyCollectedRelocationVisibility(batches[batchIndex][index], std::move(results[index]));
             }
         }
     }
@@ -3300,7 +3508,7 @@ void Map::SendObjectUpdates()
     for (UpdateObjectSnapshot updateObjects = DrainUpdateObjectSnapshot(); !updateObjects.empty(); updateObjects = DrainUpdateObjectSnapshot())
     {
         UpdateObjectBatches batches = CreateUpdateObjectBatches(updateObjects);
-        bool const useParallelBuild = GetMapObjectUpdateBuildWorkerCount() > 1 && batches.size() >= MinParallelUpdateObjectBatchCount;
+        bool const useParallelBuild = GetMapIntraUpdateWorkerCount() > 1 && batches.size() >= MinParallelUpdateObjectBatchCount;
 
         if (!useParallelBuild)
         {
@@ -3317,17 +3525,18 @@ void Map::SendObjectUpdates()
 
             for (UpdateObjectSnapshot& batch : batches)
             {
-                batchFutures.push_back(SubmitMapObjectUpdateBuildTask([this, batch = std::move(batch)]() mutable
-                {
-                    UpdateDataMapType batchUpdatePlayers;
-                    BuildObjectUpdateData(batch, batchUpdatePlayers);
-                    return batchUpdatePlayers;
-                }));
+                batchFutures.push_back(SubmitMapIntraUpdateTask<UpdateDataMapType>(
+                    [this, batch = std::move(batch)]() mutable
+                    {
+                        UpdateDataMapType batchUpdatePlayers;
+                        BuildObjectUpdateData(batch, batchUpdatePlayers);
+                        return batchUpdatePlayers;
+                    }));
             }
 
             for (std::future<UpdateDataMapType>& batchFuture : batchFutures)
                 MergeObjectUpdateData(batchFuture.get(), update_players);
-            }
+        }
     }
 
     FlushObjectUpdateData(update_players);

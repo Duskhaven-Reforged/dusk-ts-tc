@@ -680,6 +680,12 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         using TransportSnapshot = std::vector<ObjectGuid>;
         using UpdateObjectSnapshot = std::vector<Object*>;
         using UpdateObjectBatches = std::vector<UpdateObjectSnapshot>;
+        struct PlayerEntityUpdateWorkItem
+        {
+            ObjectGuid playerGuid;
+            WorldObjectSnapshot sources;
+        };
+        using PlayerEntityUpdateWork = std::vector<PlayerEntityUpdateWorkItem>;
 
         void LoadMapAndVMap(int gx, int gy);
         void LoadVMap(int gx, int gy);
@@ -699,6 +705,10 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         Transport* ResolveTransportSnapshot(ObjectGuid const& guid);
         void AppendEntityUpdateSource(ObjectGuid const& guid, GuidUnorderedSet& seenSources, WorldObjectSnapshot& sources);
         WorldObjectSnapshot CollectPlayerEntityUpdateSources(Player* player, float visibilityRange);
+        PlayerEntityUpdateWork FreezePlayerEntityUpdates(uint32 t_diff, float visibilityRange, PlayerSnapshot const& playerSnapshot);
+        void VisitFrozenPlayerEntityUpdates(PlayerEntityUpdateWork const& frozenPlayerUpdates,
+            TypeContainerVisitor<Trinity::ObjectUpdater, GridTypeMapContainer>& gridObjectUpdate,
+            TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer>& worldObjectUpdate);
         void VisitEntityUpdateSources(WorldObjectSnapshot const& sources,
             TypeContainerVisitor<Trinity::ObjectUpdater, GridTypeMapContainer>& gridObjectUpdate,
             TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer>& worldObjectUpdate);
@@ -707,10 +717,6 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         void MergeObjectUpdateData(UpdateDataMapType&& source, UpdateDataMapType& target);
         void FlushObjectUpdateData(UpdateDataMapType& updatePlayers);
         void UpdateWorldSessions(uint32 t_diff, PlayerSnapshot const& playerSnapshot);
-        void UpdatePlayerCells(uint32 t_diff, float visibilityRange,
-            TypeContainerVisitor<Trinity::ObjectUpdater, GridTypeMapContainer>& gridObjectUpdate,
-            TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer>& worldObjectUpdate,
-            PlayerSnapshot const& playerSnapshot);
         void UpdateTransports(uint32 t_diff, TransportSnapshot const& transportSnapshot);
 
         bool CreatureCellRelocation(Creature* creature, Cell new_cell);

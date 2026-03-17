@@ -77,6 +77,63 @@ void VisibleNotifier::ApplyCollectedVisibility(VisibilityCollector&& collector)
     }
 }
 
+void PlayerRelocationNotifier::ApplyCollectedVisibility(VisibilityCollector&& collector)
+{
+    vis_guids = std::move(collector.vis_guids);
+    bool const relocated_for_ai = (&i_player == i_player.m_seer);
+
+    for (ObjectGuid const& guid : collector.orderedGuids)
+    {
+        if (guid.IsPlayer())
+        {
+            if (Player* player = i_player.GetMap()->GetPlayer(guid))
+            {
+                i_player.UpdateVisibilityOf(player, i_data, i_visibleNow);
+
+                if (!player->m_seer->isNeedNotify(NOTIFY_VISIBILITY_CHANGED))
+                    player->UpdateVisibilityOf(&i_player);
+            }
+
+            continue;
+        }
+
+        if (guid.IsAnyTypeCreature())
+        {
+            Creature* creature = guid.IsPet()
+                ? static_cast<Creature*>(i_player.GetMap()->GetPet(guid))
+                : i_player.GetMap()->GetCreature(guid);
+
+            if (creature)
+            {
+                i_player.UpdateVisibilityOf(creature, i_data, i_visibleNow);
+
+                if (relocated_for_ai && !creature->isNeedNotify(NOTIFY_VISIBILITY_CHANGED))
+                    CreatureUnitRelocationWorker(creature, &i_player);
+            }
+
+            continue;
+        }
+
+        if (guid.IsCorpse())
+        {
+            if (Corpse* corpse = i_player.GetMap()->GetCorpse(guid))
+                i_player.UpdateVisibilityOf(corpse, i_data, i_visibleNow);
+            continue;
+        }
+
+        if (guid.IsGameObject())
+        {
+            if (GameObject* gameObject = i_player.GetMap()->GetGameObject(guid))
+                i_player.UpdateVisibilityOf(gameObject, i_data, i_visibleNow);
+            continue;
+        }
+
+        if (guid.IsDynamicObject())
+            if (DynamicObject* dynamicObject = i_player.GetMap()->GetDynamicObject(guid))
+                i_player.UpdateVisibilityOf(dynamicObject, i_data, i_visibleNow);
+    }
+}
+
 void VisibleNotifier::SendToSelf()
 {
     // Objects on the current transport are not visited by the normal nearby-object walk.
@@ -292,6 +349,20 @@ void DelayedUnitRelocation::Visit(PlayerMapType &m)
 
         if (player != viewPoint && !viewPoint->IsPositionValid())
             continue;
+
+        if (i_playerRelocationVisibilityWork && i_scheduledPlayerRelocationVisibility)
+        {
+            if (i_scheduledPlayerRelocationVisibility->insert(player->GetGUID()).second)
+            {
+                PlayerRelocationVisibilityWorkItem workItem;
+                workItem.playerGuid = player->GetGUID();
+                workItem.viewPointGuid = viewPoint->GetGUID();
+                workItem.reserveSize = player->m_clientGUIDs.size();
+                i_playerRelocationVisibilityWork->push_back(std::move(workItem));
+            }
+
+            continue;
+        }
 
         PlayerRelocationNotifier relocate(*player);
         Cell::VisitAllObjects(viewPoint, relocate, i_radius, false);
