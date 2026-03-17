@@ -32,6 +32,20 @@
 
 namespace Trinity
 {
+    struct TC_GAME_API VisibilityCollector
+    {
+        std::vector<ObjectGuid> orderedGuids;
+        GuidUnorderedSet vis_guids;
+
+        explicit VisibilityCollector(size_t reserveSize = 0)
+        {
+            orderedGuids.reserve(reserveSize);
+            vis_guids.reserve(reserveSize);
+        }
+
+        template<class T> void Visit(GridRefManager<T>& m);
+    };
+
     struct TC_GAME_API VisibleNotifier
     {
         Player &i_player;
@@ -44,6 +58,7 @@ namespace Trinity
             vis_guids.reserve(player.m_clientGUIDs.size());
         }
         template<class T> void Visit(GridRefManager<T> &m);
+        void ApplyCollectedVisibility(VisibilityCollector&& collector);
         void SendToSelf(void);
     };
 

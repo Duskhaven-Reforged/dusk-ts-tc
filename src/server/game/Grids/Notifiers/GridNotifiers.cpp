@@ -30,6 +30,53 @@
 
 using namespace Trinity;
 
+void VisibleNotifier::ApplyCollectedVisibility(VisibilityCollector&& collector)
+{
+    vis_guids = std::move(collector.vis_guids);
+
+    for (ObjectGuid const& guid : collector.orderedGuids)
+    {
+        if (guid.IsPlayer())
+        {
+            if (Player* player = i_player.GetMap()->GetPlayer(guid))
+                i_player.UpdateVisibilityOf(player, i_data, i_visibleNow);
+            continue;
+        }
+
+        if (guid.IsPet())
+        {
+            if (Pet* pet = i_player.GetMap()->GetPet(guid))
+                i_player.UpdateVisibilityOf(static_cast<Creature*>(pet), i_data, i_visibleNow);
+            continue;
+        }
+
+        if (guid.IsAnyTypeCreature())
+        {
+            if (Creature* creature = i_player.GetMap()->GetCreature(guid))
+                i_player.UpdateVisibilityOf(creature, i_data, i_visibleNow);
+            continue;
+        }
+
+        if (guid.IsCorpse())
+        {
+            if (Corpse* corpse = i_player.GetMap()->GetCorpse(guid))
+                i_player.UpdateVisibilityOf(corpse, i_data, i_visibleNow);
+            continue;
+        }
+
+        if (guid.IsGameObject())
+        {
+            if (GameObject* gameObject = i_player.GetMap()->GetGameObject(guid))
+                i_player.UpdateVisibilityOf(gameObject, i_data, i_visibleNow);
+            continue;
+        }
+
+        if (guid.IsDynamicObject())
+            if (DynamicObject* dynamicObject = i_player.GetMap()->GetDynamicObject(guid))
+                i_player.UpdateVisibilityOf(dynamicObject, i_data, i_visibleNow);
+    }
+}
+
 void VisibleNotifier::SendToSelf()
 {
     // Objects on the current transport are not visited by the normal nearby-object walk.
@@ -159,7 +206,7 @@ void PlayerRelocationNotifier::Visit(PlayerMapType &m)
     {
         Player* player = iter->GetSource();
 
-        vis_guids.erase(player->GetGUID());
+        vis_guids.insert(player->GetGUID());
 
         i_player.UpdateVisibilityOf(player, i_data, i_visibleNow);
 
@@ -178,7 +225,7 @@ void PlayerRelocationNotifier::Visit(CreatureMapType &m)
     {
         Creature* c = iter->GetSource();
 
-        vis_guids.erase(c->GetGUID());
+        vis_guids.insert(c->GetGUID());
 
         i_player.UpdateVisibilityOf(c, i_data, i_visibleNow);
 

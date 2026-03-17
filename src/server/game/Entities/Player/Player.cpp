@@ -22977,8 +22977,11 @@ void Player::UpdateObjectVisibility(bool forced)
 void Player::UpdateVisibilityForPlayer()
 {
     // updates visibility of all objects around point of view for current player
+    Trinity::VisibilityCollector collector(m_clientGUIDs.size());
+    Cell::VisitAllObjects(m_seer, collector, GetSightRange());
+
     Trinity::VisibleNotifier notifier(*this);
-    Cell::VisitAllObjects(m_seer, notifier, GetSightRange());
+    notifier.ApplyCollectedVisibility(std::move(collector));
     notifier.SendToSelf();   // send gathered data
 }
 

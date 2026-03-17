@@ -28,6 +28,17 @@
 #include "WorldSession.h"
 
 template<class T>
+inline void Trinity::VisibilityCollector::Visit(GridRefManager<T>& m)
+{
+    for (typename GridRefManager<T>::iterator iter = m.begin(); iter != m.end(); ++iter)
+    {
+        ObjectGuid const guid = iter->GetSource()->GetGUID();
+        if (vis_guids.insert(guid).second)
+            orderedGuids.push_back(guid);
+    }
+}
+
+template<class T>
 inline void Trinity::VisibleNotifier::Visit(GridRefManager<T> &m)
 {
     for (typename GridRefManager<T>::iterator iter = m.begin(); iter != m.end(); ++iter)
