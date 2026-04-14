@@ -842,44 +842,82 @@ namespace MMAP
     }
 
     /**************************************************************************/
-    void TerrainBuilder::cleanVertices(G3D::Array<float> &verts, G3D::Array<int> &tris)
+    void TerrainBuilder::cleanVertices(G3D::Array<float> &verts, G3D::Array<int> &tris, char const* context)
     {
+        if (!verts.size() || !tris.size())
+            return;
+
         std::map<int, int> vertMap;
 
         int* t = tris.getCArray();
         float* v = verts.getCArray();
+        int vertexCount = verts.size() / 3;
 
         G3D::Array<float> cleanVerts;
-        int index, count = 0;
-        // collect all the vertex indices from triangle
-        for (int i = 0; i < tris.size(); ++i)
+        G3D::Array<int> cleanTris;
+        int count = 0;
+        int skippedTriangles = 0;
+
+        // Rebuild triangle list from only valid vertex indices.
+        for (int i = 0; i + 2 < tris.size(); i += 3)
         {
-            if (vertMap.find(t[i]) != vertMap.end())
+            int tri[3] = { t[i], t[i + 1], t[i + 2] };
+            bool valid = true;
+
+            for (int j = 0; j < 3; ++j)
+            {
+                if (tri[j] < 0 || tri[j] >= vertexCount)
+                {
+                    valid = false;
+                    break;
+                }
+            }
+
+            if (!valid)
+            {
+                printf("TerrainBuilder::cleanVertices: invalid triangle [%d,%d,%d] at tri=%d/%d (verts=%d",
+                    tri[0], tri[1], tri[2], i / 3, tris.size() / 3, vertexCount);
+
+                if (context && *context)
+                    printf(", context=%s", context);
+
+                printf(")\n");
+                ++skippedTriangles;
                 continue;
-            std::pair<int, int> val;
-            val.first = t[i];
+            }
 
-            index = val.first;
-            val.second = count;
+            for (int j = 0; j < 3; ++j)
+            {
+                auto it = vertMap.find(tri[j]);
+                if (it == vertMap.end())
+                {
+                    vertMap.insert(std::make_pair(tri[j], count));
+                    cleanVerts.append(v[tri[j] * 3], v[tri[j] * 3 + 1], v[tri[j] * 3 + 2]);
+                    cleanTris.append(count);
+                    ++count;
+                }
+                else
+                    cleanTris.append(it->second);
+            }
+        }
 
-            vertMap.insert(val);
-            cleanVerts.append(v[index * 3], v[index * 3 + 1], v[index * 3 + 2]);
-            count++;
+        if (skippedTriangles > 0)
+        {
+            printf("TerrainBuilder::cleanVertices: skipped %d triangles with invalid vertex indices (verts=%d, tris=%d",
+                skippedTriangles, vertexCount, tris.size() / 3);
+
+            if (context && *context)
+                printf(", context=%s", context);
+
+            printf(")\n");
         }
 
         verts.fastClear();
         verts.append(cleanVerts);
         cleanVerts.clear();
-
-        // update triangles to use new indices
-        for (int i = 0; i < tris.size(); ++i)
-        {
-            std::map<int, int>::iterator it;
-            if ((it = vertMap.find(t[i])) == vertMap.end())
-                continue;
-
-            t[i] = (*it).second;
-        }
+        tris.fastClear();
+        tris.append(cleanTris);
+        cleanTris.clear();
 
         vertMap.clear();
     }

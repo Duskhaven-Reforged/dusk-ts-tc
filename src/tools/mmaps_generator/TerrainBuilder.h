@@ -94,7 +94,7 @@ namespace MMAP
             static void copyVertices(std::vector<G3D::Vector3> &source, G3D::Array<float> &dest);
             static void copyIndices(std::vector<VMAP::MeshTriangle> &source, G3D::Array<int> &dest, int offest, bool flip);
             static void copyIndices(G3D::Array<int> &src, G3D::Array<int> &dest, int offset);
-            static void cleanVertices(G3D::Array<float> &verts, G3D::Array<int> &tris);
+            static void cleanVertices(G3D::Array<float> &verts, G3D::Array<int> &tris, char const* context = nullptr);
         private:
             /// Loads a portion of a map's terrain
             bool loadMap(uint32 mapID, uint32 tileX, uint32 tileY, MeshData &meshData, Spot portion);

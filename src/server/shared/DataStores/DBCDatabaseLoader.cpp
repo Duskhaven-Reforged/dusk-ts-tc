@@ -86,6 +86,7 @@ char* DBCDatabaseLoader::Load(uint32& records, char**& indexTable)
     std::unique_ptr<char[]> dataTable = std::make_unique<char[]>(result->GetRowCount() * _recordSize);
     std::unique_ptr<uint32[]> newIndexes = std::make_unique<uint32[]>(result->GetRowCount());
     uint32 newRecords = 0;
+    uint32 skippedDuplicateRecords = 0;
 
     // Insert sql data into the data array
     do
@@ -102,6 +103,13 @@ char* DBCDatabaseLoader::Load(uint32& records, char**& indexTable)
         }
         else
         {
+            if (std::strcmp(_sqlTableName, "spell_dbc") == 0)
+            {
+                ++skippedDuplicateRecords;
+                TC_LOG_WARN("sql.sql", "Skipping duplicate SQL row {} in '{}'; keeping existing DBC definition.", indexValue, _sqlTableName);
+                continue;
+            }
+
             // Attempt to overwrite existing data
             ABORT_MSG("Index %d already exists in dbc:'%s'", indexValue, _sqlTableName);
             return nullptr;
@@ -181,7 +189,7 @@ char* DBCDatabaseLoader::Load(uint32& records, char**& indexTable)
         ASSERT(dataOffset == _recordSize);
     } while (result->NextRow());
 
-    ASSERT(newRecords == result->GetRowCount());
+    ASSERT(newRecords + skippedDuplicateRecords == result->GetRowCount());
 
     // insert new records to index table
     for (uint32 i = 0; i < newRecords; ++i)
