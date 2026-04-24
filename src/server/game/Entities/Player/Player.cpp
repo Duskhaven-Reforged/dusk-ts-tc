@@ -195,11 +195,25 @@ namespace
     constexpr opcode_t VISIBLE_ITEM_OVERRIDE_OPCODE = 0x7A10;
     constexpr totalSize_t VISIBLE_ITEM_OVERRIDE_PACKET_SIZE = 34;
 
-    void SendVisibleItemOverridePacket(Player* player, uint8 slot, Item* item)
+    int32 ResolveVisibleItemDisplayFromEntry(int32 itemEntry)
     {
-        if (!player || slot >= EQUIPMENT_SLOT_END || !player->IsInWorld() || !player->GetMap())
-            return;
+        if (itemEntry < 0)
+            return -1;
 
+        if (itemEntry == 0)
+            return 0;
+
+        if (ItemTemplate const* itemTemplate = sObjectMgr->GetItemTemplate(uint32(itemEntry)))
+            return int32(itemTemplate->DisplayInfoID);
+
+        TC_LOG_WARN("entities.player.items",
+            "VisibleItemOverride could not resolve item display: entry={} has no item_template row",
+            uint32(itemEntry));
+        return 0;
+    }
+
+    void WriteVisibleItemOverridePacketData(TSPacketWrite& packet, Player* player, uint8 slot, Item* item)
+    {
         uint32 visibleEntry = 0;
         uint16 permanentEnchant = 0;
         uint16 temporaryEnchant = 0;
@@ -213,11 +227,10 @@ namespace
             permanentEnchant = uint16(item->GetEnchantmentId(PERM_ENCHANTMENT_SLOT));
             temporaryEnchant = uint16(item->GetEnchantmentId(TEMP_ENCHANTMENT_SLOT));
             transmogEntry = item->transmog;
-            leftShoulderDisplay = item->shoulderTransmogLeftDisplay;
-            rightShoulderDisplay = item->shoulderTransmogRightDisplay;
+            leftShoulderDisplay = ResolveVisibleItemDisplayFromEntry(item->shoulderTransmogLeftDisplay);
+            rightShoulderDisplay = ResolveVisibleItemDisplayFromEntry(item->shoulderTransmogRightDisplay);
         }
 
-        TSPacketWrite packet = CreateCustomPacket(VISIBLE_ITEM_OVERRIDE_OPCODE, VISIBLE_ITEM_OVERRIDE_PACKET_SIZE);
         packet.WriteUInt64(player->GetGUID().GetRawValue())
             ->WriteUInt8(slot)
             ->WriteUInt8(item ? 1 : 0)
@@ -238,7 +251,26 @@ namespace
             transmogEntry,
             leftShoulderDisplay,
             rightShoulderDisplay);
+    }
+
+    void SendVisibleItemOverridePacket(Player* player, uint8 slot, Item* item)
+    {
+        if (!player || slot >= EQUIPMENT_SLOT_END || !player->IsInWorld() || !player->GetMap())
+            return;
+
+        TSPacketWrite packet = CreateCustomPacket(VISIBLE_ITEM_OVERRIDE_OPCODE, VISIBLE_ITEM_OVERRIDE_PACKET_SIZE);
+        WriteVisibleItemOverridePacketData(packet, player, slot, item);
         packet.BroadcastMap(TSMap(player->GetMap()));
+    }
+
+    void SendVisibleItemOverridePacketTo(Player* receiver, Player* player, uint8 slot, Item* item)
+    {
+        if (!receiver || !player || slot >= EQUIPMENT_SLOT_END)
+            return;
+
+        TSPacketWrite packet = CreateCustomPacket(VISIBLE_ITEM_OVERRIDE_OPCODE, VISIBLE_ITEM_OVERRIDE_PACKET_SIZE);
+        WriteVisibleItemOverridePacketData(packet, player, slot, item);
+        packet.SendToPlayer(TSPlayer(receiver));
     }
 }
 
@@ -4108,6 +4140,14 @@ void Player::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target) c
     }
 
     Unit::BuildCreateUpdateBlockForPlayer(data, target);
+
+    for (uint8 i = 0; i < EQUIPMENT_SLOT_END; ++i)
+    {
+        if (!m_items[i])
+            continue;
+
+        SendVisibleItemOverridePacketTo(target, const_cast<Player*>(this), i, m_items[i]);
+    }
 }
 
 void Player::DestroyForPlayer(Player* target, bool onDeath) const

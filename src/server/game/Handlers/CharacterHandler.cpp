@@ -58,9 +58,14 @@
 #include "QueryHolder.h"
 #include "World.h"
 // @tswow-begin
+#include "TSCustomPacket.h"
 #include "TSPlayer.h"
 #include "TSEvents.h"
 // @tswow-end
+
+#include <sstream>
+#include <unordered_map>
+#include <vector>
 
 class LoginQueryHolder : public CharacterDatabaseQueryHolder
 {
@@ -74,6 +79,80 @@ class LoginQueryHolder : public CharacterDatabaseQueryHolder
         uint32 GetAccountId() const { return m_accountId; }
         bool Initialize();
 };
+
+namespace
+{
+    constexpr opcode_t CHAR_SELECT_SHOULDER_OVERRIDE_OPCODE = 0x7A11;
+
+    struct CharEnumShoulderOverrideData
+    {
+        int32 LeftShoulderEntry = -1;
+        int32 RightShoulderEntry = -1;
+    };
+
+    int32 ResolveVisibleItemDisplayFromEntry(int32 itemEntry)
+    {
+        if (itemEntry < 0)
+            return -1;
+
+        if (itemEntry == 0)
+            return 0;
+
+        if (ItemTemplate const* itemTemplate = sObjectMgr->GetItemTemplate(uint32(itemEntry)))
+            return int32(itemTemplate->DisplayInfoID);
+
+        return 0;
+    }
+
+    void SendCharEnumShoulderOverridePacket(WorldSession* session, std::vector<ObjectGuid> const& guids)
+    {
+        if (!session || guids.empty())
+            return;
+
+        std::unordered_map<uint32, CharEnumShoulderOverrideData> shoulderOverrides;
+        for (ObjectGuid const& guid : guids)
+            shoulderOverrides.emplace(guid.GetCounter(), CharEnumShoulderOverrideData{});
+
+        std::ostringstream query;
+        query << "SELECT ci.guid, ii.shoulderTransmogLeftDisplay, ii.shoulderTransmogRightDisplay "
+              << "FROM character_inventory ci "
+              << "INNER JOIN item_instance ii ON ci.item = ii.guid "
+              << "WHERE ci.bag = 0 AND ci.slot = 2 AND ci.guid IN (";
+
+        for (size_t i = 0; i < guids.size(); ++i)
+        {
+            if (i)
+                query << ',';
+            query << guids[i].GetCounter();
+        }
+        query << ')';
+
+        if (QueryResult shoulderResult = CharacterDatabase.Query(query.str().c_str()))
+        {
+            do
+            {
+                Field* fields = shoulderResult->Fetch();
+                CharEnumShoulderOverrideData& overrideData = shoulderOverrides[fields[0].GetUInt32()];
+                overrideData.LeftShoulderEntry = ResolveVisibleItemDisplayFromEntry(fields[1].GetInt32());
+                overrideData.RightShoulderEntry = ResolveVisibleItemDisplayFromEntry(fields[2].GetInt32());
+            }
+            while (shoulderResult->NextRow());
+        }
+
+        TSPacketWrite packet = CreateCustomPacket(
+            CHAR_SELECT_SHOULDER_OVERRIDE_OPCODE,
+            1 + uint32(guids.size()) * (8 + 4 + 4));
+        packet.WriteUInt8(uint8(guids.size()));
+        for (ObjectGuid const& guid : guids)
+        {
+            CharEnumShoulderOverrideData const& overrideData = shoulderOverrides[guid.GetCounter()];
+            packet.WriteUInt64(guid.GetRawValue())
+                ->WriteInt32(overrideData.LeftShoulderEntry)
+                ->WriteInt32(overrideData.RightShoulderEntry);
+        }
+        packet.SendToNotInWorld(session->GetAccountId());
+    }
+}
 
 bool LoginQueryHolder::Initialize()
 {
@@ -229,6 +308,7 @@ void WorldSession::HandleCharEnum(PreparedQueryResult result)
     WorldPacket data(SMSG_CHAR_ENUM, 100);                  // we guess size
 
     uint8 num = 0;
+    std::vector<ObjectGuid> enumGuids;
 
     data << num;
 
@@ -241,6 +321,7 @@ void WorldSession::HandleCharEnum(PreparedQueryResult result)
             TC_LOG_INFO("network", "Loading {} from account {}.", guid.ToString(), GetAccountId());
             if (Player::BuildEnumData(result, &data))
             {
+                enumGuids.push_back(guid);
                 // Do not allow banned characters to log in
                 if (!(*result)[23].GetUInt32())
                     _legitCharacters.insert(guid);
@@ -255,6 +336,7 @@ void WorldSession::HandleCharEnum(PreparedQueryResult result)
 
     data.put<uint8>(0, num);
 
+    SendCharEnumShoulderOverridePacket(this, enumGuids);
     SendPacket(&data);
 }
 
