@@ -506,6 +506,8 @@ bool Item::LoadFromDB(ObjectGuid::LowType guid, ObjectGuid owner_guid, Field* fi
 
     // @tswow-begin (Using Rochet2/Transmog)
     transmog = fields[15].GetUInt32();
+    shoulderTransmogLeftDisplay = fields[16].GetInt32();
+    shoulderTransmogRightDisplay = fields[17].GetInt32();
     // @tswow-end
 
     return true;

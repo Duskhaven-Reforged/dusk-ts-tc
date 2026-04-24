@@ -2040,6 +2040,9 @@ CREATE TABLE `item_instance` (
   `durability` smallint unsigned NOT NULL DEFAULT '0',
   `playedTime` int unsigned NOT NULL DEFAULT '0',
   `text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `transmog` int unsigned NOT NULL DEFAULT '0',
+  `shoulderTransmogLeftDisplay` int NOT NULL DEFAULT '-1',
+  `shoulderTransmogRightDisplay` int NOT NULL DEFAULT '-1',
   PRIMARY KEY (`guid`),
   KEY `idx_owner_guid` (`owner_guid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Item System';

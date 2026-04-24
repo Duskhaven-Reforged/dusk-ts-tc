@@ -115,10 +115,12 @@
 #include "TSFactionTemplate.h"
 #include "TSQuest.h"
 #include "TSPlayer.h"
+#include "TSCustomPacket.h"
 #include "TSCreature.h"
 #include "TSItem.h"
 #include "TSGameObject.h"
 #include "TSCorpse.h"
+#include "TSMap.h"
 // @tswow-end
 
 #define ZONE_UPDATE_INTERVAL (1*IN_MILLISECONDS)
@@ -187,6 +189,58 @@ enum CharacterCustomizeFlags
 static uint32 corpseReclaimDelay[MAX_DEATH_COUNT] = { 30, 60, 120 };
 
 uint32 const MAX_MONEY_AMOUNT = static_cast<uint32>(std::numeric_limits<int32>::max());
+
+namespace
+{
+    constexpr opcode_t VISIBLE_ITEM_OVERRIDE_OPCODE = 0x7A10;
+    constexpr totalSize_t VISIBLE_ITEM_OVERRIDE_PACKET_SIZE = 34;
+
+    void SendVisibleItemOverridePacket(Player* player, uint8 slot, Item* item)
+    {
+        if (!player || slot >= EQUIPMENT_SLOT_END || !player->IsInWorld() || !player->GetMap())
+            return;
+
+        uint32 visibleEntry = 0;
+        uint16 permanentEnchant = 0;
+        uint16 temporaryEnchant = 0;
+        uint32 transmogEntry = 0;
+        int32 leftShoulderDisplay = -1;
+        int32 rightShoulderDisplay = -1;
+
+        if (item)
+        {
+            visibleEntry = item->transmog ? item->transmog : item->GetEntry();
+            permanentEnchant = uint16(item->GetEnchantmentId(PERM_ENCHANTMENT_SLOT));
+            temporaryEnchant = uint16(item->GetEnchantmentId(TEMP_ENCHANTMENT_SLOT));
+            transmogEntry = item->transmog;
+            leftShoulderDisplay = item->shoulderTransmogLeftDisplay;
+            rightShoulderDisplay = item->shoulderTransmogRightDisplay;
+        }
+
+        TSPacketWrite packet = CreateCustomPacket(VISIBLE_ITEM_OVERRIDE_OPCODE, VISIBLE_ITEM_OVERRIDE_PACKET_SIZE);
+        packet.WriteUInt64(player->GetGUID().GetRawValue())
+            ->WriteUInt8(slot)
+            ->WriteUInt8(item ? 1 : 0)
+            ->WriteUInt32(visibleEntry)
+            ->WriteUInt16(permanentEnchant)
+            ->WriteUInt16(temporaryEnchant)
+            ->WriteUInt32(transmogEntry)
+            ->WriteInt32(leftShoulderDisplay)
+            ->WriteInt32(rightShoulderDisplay)
+            ->WriteUInt32(0);
+        TC_LOG_INFO("entities.player.items",
+            "VisibleItemOverride send: player='{}' guid={} slot={} hasItem={} entry={} transmog={} left={} right={}",
+            player->GetName(),
+            player->GetGUID().ToString(),
+            uint32(slot),
+            item ? 1 : 0,
+            visibleEntry,
+            transmogEntry,
+            leftShoulderDisplay,
+            rightShoulderDisplay);
+        packet.BroadcastMap(TSMap(player->GetMap()));
+    }
+}
 
 Player::Player(WorldSession* session): Unit(true)
 // @tswow-begin
@@ -12456,6 +12510,8 @@ void Player::SetVisibleItemSlot(uint8 slot, Item* pItem)
         SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), 0);
         SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENCHANTMENT + (slot * 2), 0);
     }
+
+    SendVisibleItemOverridePacket(this, slot, pItem);
 }
 
 void Player::VisualizeItem(uint8 slot, Item* pItem)
