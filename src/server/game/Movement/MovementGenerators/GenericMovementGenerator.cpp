@@ -20,6 +20,7 @@
 #include "CreatureAI.h"
 #include "MovementDefines.h"
 #include "MoveSpline.h"
+#include "ObjectAccessor.h"
 #include "SharedDefines.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
@@ -29,7 +30,7 @@
 #include "TSSpellInfo.h"
 #include "TSUnit.h"
 
-GenericMovementGenerator::GenericMovementGenerator(std::function<void(Movement::MoveSplineInit& init)>&& initializer, MovementGeneratorType type, uint32 id, uint32 spellId, uint32 triggerSpellId) : _splineInit(std::move(initializer)), _type(type), _pointId(id), _spellId(spellId), _triggerSpellId(triggerSpellId), _duration(0)
+GenericMovementGenerator::GenericMovementGenerator(std::function<void(Movement::MoveSplineInit& init)>&& initializer, MovementGeneratorType type, uint32 id, uint32 spellId, uint32 triggerSpellId, ObjectGuid const& triggerSpellTargetGuid) : _splineInit(std::move(initializer)), _type(type), _pointId(id), _spellId(spellId), _triggerSpellId(triggerSpellId), _triggerSpellTargetGuid(triggerSpellTargetGuid), _duration(0)
 {
     Mode = MOTION_MODE_DEFAULT;
     Priority = MOTION_PRIORITY_NORMAL;
@@ -91,6 +92,10 @@ void GenericMovementGenerator::Finalize(Unit* owner, bool/* active*/, bool movem
 
 void GenericMovementGenerator::MovementInform(Unit* owner)
 {
+    // Landed spell effects must resolve against the original landing target, not always self.
+    if (_type == EFFECT_MOTION_TYPE && _pointId == EVENT_JUMP && _spellId != 0 && _triggerSpellId != 0)
+        owner->CastSpell(ObjectAccessor::GetUnit(*owner, _triggerSpellTargetGuid), _triggerSpellId, true);
+
     if (Creature* creature = owner->ToCreature())
     {
         if (creature->AI())
@@ -107,8 +112,6 @@ void GenericMovementGenerator::MovementInform(Unit* owner)
         if (SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(_spellId))
         {
             FIRE_ID(spellInfo->events.id, Spell, OnJumpEnd, TSSpellInfo(spellInfo), TSUnit(owner));
-            if (_triggerSpellId != 0)
-                owner->CastSpell(owner, _triggerSpellId, true);
         }
     }
     // @tswow-end

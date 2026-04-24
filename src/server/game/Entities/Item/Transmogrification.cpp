@@ -248,6 +248,22 @@ void Transmogrification::UpdateItem(Player* player, Item* item) const
     }
 }
 
+void Transmogrification::SetShoulderVisual(Player* player, Item* item, int32 leftDisplayId, int32 rightDisplayId) const
+{
+    if (!player || !item || item->GetSlot() != EQUIPMENT_SLOT_SHOULDERS)
+        return;
+
+    item->shoulderTransmogLeftDisplay = leftDisplayId;
+    item->shoulderTransmogRightDisplay = rightDisplayId;
+    item->SetState(ITEM_CHANGED, player);
+    UpdateItem(player, item);
+}
+
+void Transmogrification::ClearShoulderVisual(Player* player, Item* item) const
+{
+    SetShoulderVisual(player, item, -1, -1);
+}
+
 TransmogTrinityStrings Transmogrification::Transmogrify(Player* player, ObjectGuid itemGUID, uint8 slot, bool no_cost)
 {
     TC_LOG_DEBUG("custom.transmog", "Transmogrification::Transmogrify");

@@ -1406,6 +1406,7 @@ class TC_GAME_API ObjectMgr
         void LoadVehicleTemplate();
         void LoadVehicleAccessories();
         void LoadVehicleSeatAddon();
+        void LoadJumpChargeParams();
 
         void LoadGossipText();
 
@@ -1538,6 +1539,7 @@ class TC_GAME_API ObjectMgr
                 return &itr->second;
             return nullptr;
         }
+        JumpChargeParams const* GetJumpChargeParams(int32 id) const;
 
         SpawnMetadata const* GetSpawnMetadata(SpawnObjectType type, ObjectGuid::LowType spawnId) const
         {
@@ -1943,6 +1945,7 @@ class TC_GAME_API ObjectMgr
         TempSummonDataContainer _tempSummonDataStore;
 
         BroadcastTextContainer _broadcastTextStore;
+        std::unordered_map<int32, JumpChargeParams> _jumpChargeParams;
         ItemTemplateContainer _itemTemplateStore;
         ItemLocaleContainer _itemLocaleStore;
         ItemSetNameLocaleContainer _itemSetNameLocaleStore;

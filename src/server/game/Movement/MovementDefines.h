@@ -19,6 +19,7 @@
 #define TRINITY_MOVEMENTDEFINES_H
 
 #include "Common.h"
+#include "Optional.h"
 
 #define SPEED_CHARGE 42.0f // assume it is 25 yard per 0.6 second
 
@@ -122,8 +123,15 @@ struct TC_GAME_API JumpChargeParams
     };
 
     bool TreatSpeedAsMoveTimeSeconds = false;
+    bool UnlimitedSpeed = false;
 
-    float JumpGravity = 0.0f;
+    Optional<float> MinHeight;
+    Optional<float> MaxHeight;
+
+    Optional<uint32> SpellVisualId;
+    Optional<uint32> ProgressCurveId;
+    Optional<uint32> ParabolicCurveId;
+    Optional<uint32> TriggerSpellId;
 };
 
 inline bool IsInvalidMovementGeneratorType(uint8 const type) { return type == MAX_DB_MOTION_TYPE || type >= MAX_MOTION_TYPE; }

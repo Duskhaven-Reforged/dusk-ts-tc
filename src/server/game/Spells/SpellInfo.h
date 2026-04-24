@@ -210,6 +210,7 @@ enum SpellCustomAttributes2
     SPELL_ATTR1_CU_DROP_STACK_ON_EXPIRE                 = 0x00100000,
     SPELL_ATTR1_CU_COMBODAMAGE                          = 0x00200000, // Combo points scale damage
     SPELL_ATTR1_CU_COMBODURATION                        = 0x00400000, // Combo points scale duration
+    SPELL_ATTR1_CU_ENFORCE_ITEMEQ_ALL_SLOTS             = 0x00800000, // Item Equip Reqs check all valid slots: used for armor effects
 };
 
 uint32 GetTargetFlagMask(SpellTargetObjectTypes objType);

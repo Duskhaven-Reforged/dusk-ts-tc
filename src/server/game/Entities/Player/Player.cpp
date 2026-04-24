@@ -24137,6 +24137,22 @@ bool Player::HasItemFitToSpellRequirements(SpellInfo const* spellInfo, Item cons
         }
         case ITEM_CLASS_ARMOR:
         {
+            if (spellInfo->HasAttribute(SpellCustomAttributes2::SPELL_ATTR1_CU_ENFORCE_ITEMEQ_ALL_SLOTS)) {
+                auto SubclassMask = spellInfo->EquippedItemSubClassMask;
+                std::vector<EquipmentSlots> ArmorSlots = {
+                    EQUIPMENT_SLOT_HEAD, EQUIPMENT_SLOT_SHOULDERS, EQUIPMENT_SLOT_CHEST, EQUIPMENT_SLOT_WAIST,
+                    EQUIPMENT_SLOT_LEGS, EQUIPMENT_SLOT_FEET, EQUIPMENT_SLOT_WRISTS, EQUIPMENT_SLOT_HANDS
+                };
+
+                for (EquipmentSlots slot : ArmorSlots) {
+                    if (Item* item = GetUseableItemByPos(INVENTORY_SLOT_BAG_0, slot)) {
+                        if (!item->IsFitToSpellRequirements(spellInfo))
+                            return false;
+                    }
+                }
+                return true;
+            }
+
             // most used check: shield only
             if (spellInfo->EquippedItemSubClassMask & ((1 << ITEM_SUBCLASS_ARMOR_BUCKLER) | (1 << ITEM_SUBCLASS_ARMOR_SHIELD)))
             {
@@ -24161,6 +24177,7 @@ bool Player::HasItemFitToSpellRequirements(SpellInfo const* spellInfo, Item cons
             if (Item* item = GetUseableItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_RANGED))
                 if (item != ignoreItem && item->IsFitToSpellRequirements(spellInfo))
                     return true;
+                
             break;
         }
         default:

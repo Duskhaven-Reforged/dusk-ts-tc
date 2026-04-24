@@ -484,7 +484,7 @@ uint32 UnitUpdateFieldFlags[PLAYER_END] =
     UF_FLAG_PUBLIC,                                         // PLAYER_VISIBLE_ITEM_19_ENCHANTMENT
     UF_FLAG_PUBLIC,                                         // PLAYER_CHOSEN_TITLE
     UF_FLAG_PUBLIC,                                         // PLAYER_FAKE_INEBRIATION
-    UF_FLAG_NONE,                                           // PLAYER_FIELD_PAD_0
+    UF_FLAG_PUBLIC,                                         // PLAYER_FIELD_PAD_0
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_HEAD
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_HEAD+1
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_HEAD+2

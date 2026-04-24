@@ -202,6 +202,8 @@ class TC_GAME_API Item : public Object
 
         // @tswow-begin (Using Rochet2/Transmog)
         uint32 transmog = 0;
+        int32 shoulderTransmogLeftDisplay = -1;
+        int32 shoulderTransmogRightDisplay = -1;
         // @tswow-end
 
         void BuildUpdate(UpdateDataMapType&) override;

@@ -43,6 +43,7 @@
 #include "LootMgr.h"
 #include "MiscPackets.h"
 #include "MotionMaster.h"
+#include "MoveSpline.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "Opcodes.h"
@@ -718,7 +719,7 @@ void Spell::EffectJump()
     float speedXY, speedZ;
     CalculateJumpSpeeds(*effectInfo, unitCaster->GetExactDist2d(unitTarget), speedXY, speedZ);
     uint32 triggerSpell = m_spellValue->EffectTriggerSpell[effectInfo->EffectIndex] ? m_spellValue->EffectTriggerSpell[effectInfo->EffectIndex] : effectInfo->TriggerSpell;
-    unitCaster->GetMotionMaster()->MoveJump(*unitTarget, speedXY, speedZ, EVENT_JUMP, false, m_spellInfo->Id, triggerSpell);
+    unitCaster->GetMotionMaster()->MoveJump(*unitTarget, speedXY, speedZ, EVENT_JUMP, false, m_spellInfo->Id, triggerSpell, unitTarget->GetGUID());
 }
 
 void Spell::EffectJumpDest()
@@ -738,9 +739,9 @@ void Spell::EffectJumpDest()
 
     float speedXY, speedZ;
     CalculateJumpSpeeds(*effectInfo, unitCaster->GetExactDist2d(destTarget), speedXY, speedZ);
-    FIRE_ID(GetSpellInfo()->events.id, Spell, OnJumpStart, TSSpellInfo(GetSpellInfo()), TSUnit(unitCaster), TSMutableNumber<float>(&speedXY), TSMutableNumber<float>(&speedZ), TSNumber<float>(unitCaster->GetExactDist(unitTarget->GetPosition())), TSNumber<float>(destTarget->GetPositionX()), TSNumber<float>(destTarget->GetPositionY()), TSNumber<float>(destTarget->GetPositionZ()));
+    FIRE_ID(GetSpellInfo()->events.id, Spell, OnJumpStart, TSSpellInfo(GetSpellInfo()), TSUnit(unitCaster), TSMutableNumber<float>(&speedXY), TSMutableNumber<float>(&speedZ), TSNumber<float>(unitCaster->GetExactDist(destTarget->GetPosition())), TSNumber<float>(destTarget->GetPositionX()), TSNumber<float>(destTarget->GetPositionY()), TSNumber<float>(destTarget->GetPositionZ()));
     uint32 triggerSpell = m_spellValue->EffectTriggerSpell[effectInfo->EffectIndex] ? m_spellValue->EffectTriggerSpell[effectInfo->EffectIndex] : effectInfo->TriggerSpell;
-    unitCaster->GetMotionMaster()->MoveJump(*destTarget, speedXY, speedZ, EVENT_JUMP, !m_targets.GetObjectTargetGUID().IsEmpty(), m_spellInfo->Id, triggerSpell);
+    unitCaster->GetMotionMaster()->MoveJump(*destTarget, speedXY, speedZ, EVENT_JUMP, !m_targets.GetObjectTargetGUID().IsEmpty(), m_spellInfo->Id, triggerSpell, unitTarget ? unitTarget->GetGUID() : ObjectGuid::Empty);
 
     if (Player* player = m_caster->ToPlayer())
     {
@@ -3963,6 +3964,7 @@ void Spell::EffectCharge()
         }
 
         unitCaster->GetMotionMaster()->MoveCharge(*m_preGeneratedPath, speed);
+        UpdateDelayMomentForUnitTarget(unitTarget, unitCaster->movespline->Duration());
     }
 
     if (effectHandleMode == SPELL_EFFECT_HANDLE_HIT_TARGET)
@@ -3999,6 +4001,7 @@ void Spell::EffectChargeDest()
         }
 
         unitCaster->GetMotionMaster()->MoveCharge(pos.m_positionX, pos.m_positionY, pos.m_positionZ);
+        UpdateDelayMomentForDst(unitCaster->movespline->Duration());
     }
 }
 
@@ -5242,33 +5245,48 @@ void Spell::EffectLearnTransmogSet()
 
 void Spell::EffectJumpCharge()
 {
-    // if (effectHandleMode != SPELL_EFFECT_HANDLE_LAUNCH)
-    //     return;
+    if (effectHandleMode != SPELL_EFFECT_HANDLE_LAUNCH)
+        return;
 
-    // if (!m_caster || !m_caster->ToUnit())
-    //     return;
+    Unit* unitCaster = GetUnitCasterForEffectHandlers();
+    if (!unitCaster)
+        return;
 
-    // if (m_caster->ToUnit()->HasUnitState(UNIT_STATE_IN_FLIGHT))
-    //     return;
+    if (unitCaster->IsInFlight())
+        return;
 
-    // JumpChargeParams const* params = sObjectMgr->GetJumpChargeParams(effectInfo->MiscValue);
+    if (!m_targets.HasDst())
+        return;
 
-    // if (!params)
-    //     return;
+    JumpChargeParams const* params = sObjectMgr->GetJumpChargeParams(effectInfo->MiscValue);
+    if (!params)
+        return;
 
-    // float speed = params->Speed;
+    float speedXY = params->Speed;
+    if (params->TreatSpeedAsMoveTimeSeconds)
+    {
+        if (params->MoveTimeInSec <= 0.0f)
+            return;
 
-    // if (params->TreatSpeedAsMoveTimeSeconds)
-    //     speed = m_caster->GetExactDist(destTarget) / params->MoveTimeInSec;
+        speedXY = unitCaster->GetExactDist2d(destTarget) / params->MoveTimeInSec;
+    }
 
-    // m_caster->ToUnit()->GetMotionMaster()->MoveJumpWithGravity(*destTarget, speed, params->JumpGravity, 0, ObjectAccessor::GetUnit(*m_caster, m_caster->GetGuidValue(UNIT_FIELD_TARGET)));
+    if (!params->UnlimitedSpeed)
+        speedXY = std::min(speedXY, 50.0f);
 
-    // TODO MOVE THIS TO TSWOW
+    if (speedXY < 0.01f)
+        return;
 
-    //if (m_caster->GetTypeId() == TYPEID_PLAYER)
-    //{
-    //    sScriptMgr->AnticheatSetUnderACKmount(m_caster->ToPlayer());
-    //}
+    float duration = unitCaster->GetExactDist2d(destTarget) / speedXY;
+    float durationSqr = duration * duration;
+    float height = std::clamp(Movement::gravity * durationSqr / 8, params->MinHeight.value_or(0.5f), params->MaxHeight.value_or(1000.0f));
+    float speedZ = std::sqrt(2 * Movement::gravity * height);
+
+    uint32 triggerSpell = m_spellValue->EffectTriggerSpell[effectInfo->EffectIndex] ? m_spellValue->EffectTriggerSpell[effectInfo->EffectIndex] : effectInfo->TriggerSpell;
+    if (params->TriggerSpellId)
+        triggerSpell = *params->TriggerSpellId;
+
+    unitCaster->GetMotionMaster()->MoveJump(*destTarget, speedXY, speedZ, EVENT_JUMP, unitTarget != nullptr, m_spellInfo->Id, triggerSpell, unitTarget ? unitTarget->GetGUID() : ObjectGuid::Empty);
 }
 
 void Spell::EffectModifyCurrentSpellCooldown()

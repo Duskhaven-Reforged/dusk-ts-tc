@@ -4078,6 +4078,90 @@ void ObjectMgr::LoadVehicleSeatAddon()
     TC_LOG_INFO("server.loading", ">> Loaded {} Vehicle Seat Addon entries in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
+void ObjectMgr::LoadJumpChargeParams()
+{
+    uint32 oldMSTime = getMSTime();
+
+    _jumpChargeParams.clear();
+
+    QueryResult result = WorldDatabase.Query("SELECT id, speed, treatSpeedAsMoveTimeSeconds, minHeight, maxHeight, unlimitedSpeed, spellVisualId, progressCurveId, parabolicCurveId, triggerSpellId FROM jump_charge_params");
+    if (!result)
+    {
+        TC_LOG_INFO("server.loading", ">> Loaded 0 jump charge params. DB table `jump_charge_params` is empty.");
+        return;
+    }
+
+    uint32 count = 0;
+    do
+    {
+        Field* fields = result->Fetch();
+
+        int32 id = fields[0].GetInt32();
+        JumpChargeParams& params = _jumpChargeParams[id];
+        params.Speed = fields[1].GetFloat();
+        params.TreatSpeedAsMoveTimeSeconds = fields[2].GetBool();
+        if (!fields[3].IsNull())
+            params.MinHeight = fields[3].GetFloat();
+        if (!fields[4].IsNull())
+            params.MaxHeight = fields[4].GetFloat();
+        params.UnlimitedSpeed = fields[5].GetBool();
+        if (!fields[6].IsNull())
+            params.SpellVisualId = fields[6].GetUInt32();
+        if (!fields[7].IsNull())
+            params.ProgressCurveId = fields[7].GetUInt32();
+        if (!fields[8].IsNull())
+            params.ParabolicCurveId = fields[8].GetUInt32();
+        if (!fields[9].IsNull())
+            params.TriggerSpellId = fields[9].GetUInt32();
+
+        if (params.Speed <= 0.0f)
+        {
+            TC_LOG_ERROR("sql.sql", "Table `jump_charge_params` uses invalid speed {} for id {}, set to default charge speed {}.",
+                params.Speed, id, SPEED_CHARGE);
+            params.Speed = SPEED_CHARGE;
+        }
+
+        if (params.MinHeight && *params.MinHeight <= 0.0f)
+        {
+            TC_LOG_ERROR("sql.sql", "Table `jump_charge_params` uses invalid min height {} for id {}, set to none.",
+                *params.MinHeight, id);
+            params.MinHeight.reset();
+        }
+
+        if (params.MaxHeight && *params.MaxHeight <= 0.0f)
+        {
+            TC_LOG_ERROR("sql.sql", "Table `jump_charge_params` uses invalid max height {} for id {}, set to none.",
+                *params.MaxHeight, id);
+            params.MaxHeight.reset();
+        }
+
+        if (params.MinHeight && params.MaxHeight && *params.MinHeight >= *params.MaxHeight)
+        {
+            TC_LOG_ERROR("sql.sql", "Table `jump_charge_params` uses invalid max height {} (must be greater than min height {}) for id {}, set to none.",
+                *params.MaxHeight, *params.MinHeight, id);
+            params.MaxHeight.reset();
+        }
+
+        if (params.SpellVisualId && !sSpellVisualStore.LookupEntry(*params.SpellVisualId))
+        {
+            TC_LOG_ERROR("sql.sql", "Table `jump_charge_params` references non-existing SpellVisual {} for id {}, ignored.",
+                *params.SpellVisualId, id);
+            params.SpellVisualId.reset();
+        }
+
+        if (params.TriggerSpellId && !sSpellMgr->GetSpellInfo(*params.TriggerSpellId))
+        {
+            TC_LOG_ERROR("sql.sql", "Table `jump_charge_params` references non-existing trigger spell id {} for id {}, ignored.",
+                *params.TriggerSpellId, id);
+            params.TriggerSpellId.reset();
+        }
+
+        ++count;
+    } while (result->NextRow());
+
+    TC_LOG_INFO("server.loading", ">> Loaded {} jump charge params in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
+}
+
 void ObjectMgr::LoadPetLevelInfo()
 {
     uint32 oldMSTime = getMSTime();
@@ -4782,7 +4866,7 @@ void ObjectMgr::LoadPlayerInfo()
                     continue;
 
                 // fatal error if no level 1 data
-                if (!info->levelInfo || info->levelInfo[0].stats[0] == 0)
+                if (!info->levelInfo || info->levelInfo[0].stats[2] == 0)
                 {
                     TC_LOG_ERROR("sql.sql", "Race {} Class {} Level 1 does not have stats data!", race, class_);
                     ABORT();
@@ -9965,6 +10049,11 @@ GameTele const* ObjectMgr::GetGameTele(std::string_view name) const
     return alt;
 }
 
+JumpChargeParams const* ObjectMgr::GetJumpChargeParams(int32 id) const
+{
+    return Trinity::Containers::MapGetValuePtr(_jumpChargeParams, id);
+}
+
 GameTele const* ObjectMgr::GetGameTeleExactName(std::string_view name) const
 {
     // explicit name case
@@ -10951,17 +11040,16 @@ void ObjectMgr::LoadCreatureClassLevelStats()
             TC_LOG_ERROR("sql.sql", "Creature base stats for level {} has invalid class {}", Level, Class);
 
         CreatureBaseStats stats;
+        uint32 baseHp = fields[2].GetUInt32();
+        stats.BaseHealth[0] = baseHp;
+        uint32 eliteHp = fields[3].GetUInt32();
+        stats.BaseHealth[1] = eliteHp;
+        uint32 bossHp = fields[4].GetUInt32();
+        stats.BaseHealth[2] = bossHp;
 
+        // hater: removed hp scaling by expansion, didn't matter really, was bad
         for (uint8 i = 0; i < MAX_EXPANSIONS; ++i)
         {
-            stats.BaseHealth[i] = fields[2 + i].GetUInt16();
-
-            if (stats.BaseHealth[i] == 0)
-            {
-                TC_LOG_ERROR("sql.sql", "Creature base stats for class {}, level {} has invalid zero base HP[{}] - set to 1", Class, Level, i);
-                stats.BaseHealth[i] = 1;
-            }
-
             stats.BaseDamage[i] = fields[9 + i].GetFloat();
             if (stats.BaseDamage[i] < 0.0f)
             {

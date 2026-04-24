@@ -410,6 +410,8 @@ struct TC_GAME_API CreatureBaseStats
 
     uint32 GenerateHealth(CreatureTemplate const* info) const
     {
+        auto rank = info->rank;
+        auto which = rank == CREATURE_ELITE_ELITE ? (info->type_flags & CREATURE_TYPE_FLAG_BOSS_MOB || info->flags_extra & CREATURE_FLAG_EXTRA_DUNGEON_BOSS) ? 2: 1 : 0;
         return uint32(ceil(BaseHealth[info->expansion] * info->ModHealth));
     }
 

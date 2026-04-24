@@ -364,6 +364,8 @@ void Item::SaveToDB(CharacterDatabaseTransaction trans)
             stmt->setString(++index, m_text);
             // @tswow-begin (Using Rochet2/Transmog)
             stmt->setUInt32(++index, transmog);
+            stmt->setInt32(++index, shoulderTransmogLeftDisplay);
+            stmt->setInt32(++index, shoulderTransmogRightDisplay);
             // @tswow-end
             stmt->setUInt32(++index, guid);
 

@@ -941,8 +941,44 @@ uint64 Spell::CalculateDelayMomentForDst() const
 
 void Spell::RecalculateDelayMomentForDst()
 {
-    m_delayMoment = CalculateDelayMomentForDst();
-    m_caster->m_Events.ModifyEventTime(_spellEvent, Milliseconds(GetDelayStart() + m_delayMoment));
+    UpdateDelayMomentForDst(CalculateDelayMomentForDst());
+}
+
+void Spell::UpdateDelayMomentForDst(uint64 hitDelay)
+{
+    m_delayMoment = hitDelay;
+
+    if (GetDelayStart())
+        m_caster->m_Events.ModifyEventTime(_spellEvent, Milliseconds(GetDelayStart() + m_delayMoment));
+}
+
+void Spell::UpdateDelayMomentForUnitTarget(Unit* unit, uint64 hitDelay)
+{
+    auto itr = std::find_if(m_UniqueTargetInfo.begin(), m_UniqueTargetInfo.end(), [unit](Spell::TargetInfo const& targetInfo)
+    {
+        return targetInfo.TargetGUID == unit->GetGUID();
+    });
+
+    if (itr == m_UniqueTargetInfo.end())
+        return;
+
+    uint64 oldDelay = itr->TimeDelay;
+    itr->TimeDelay = hitDelay;
+
+    if (hitDelay && (!m_delayMoment || m_delayMoment > hitDelay))
+        m_delayMoment = hitDelay;
+    else if (m_delayMoment && oldDelay < hitDelay)
+    {
+        auto minDelayTargetItr = std::min_element(m_UniqueTargetInfo.begin(), m_UniqueTargetInfo.end(), [](Spell::TargetInfo const& targetInfo, Spell::TargetInfo const& smallest)
+        {
+            return targetInfo.TimeDelay && targetInfo.TimeDelay < smallest.TimeDelay;
+        });
+
+        m_delayMoment = minDelayTargetItr != m_UniqueTargetInfo.end() ? minDelayTargetItr->TimeDelay : 0;
+    }
+
+    if (GetDelayStart())
+        m_caster->m_Events.ModifyEventTime(_spellEvent, Milliseconds(GetDelayStart() + m_delayMoment));
 }
 
 void Spell::SelectEffectImplicitTargets(SpellEffectInfo const& spellEffectInfo, SpellImplicitTargetInfo const& targetType, uint32 effectMask)

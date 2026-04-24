@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS `forge_spell_jump_charge_params`;
 DROP TABLE IF EXISTS `jump_charge_params`;
 CREATE TABLE `jump_charge_params` (
   `id` int NOT NULL,
