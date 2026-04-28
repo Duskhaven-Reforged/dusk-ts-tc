@@ -109,6 +109,7 @@ char constexpr SkillLinefmt[] = "nixssssssssssssssssxxxxxxxxxxxxxxxxxxixxxxxxxxx
 char constexpr SkillLineAbilityfmt[] = "niiiixxiiiiixx";
 char constexpr SkillRaceClassInfofmt[] = "diiiixix";
 char constexpr SkillTiersfmt[] = "nxxxxxxxxxxxxxxxxiiiiiiiiiiiiiiii";
+char constexpr ScriptedMissileMotionfmt[] = "niiiiiffffffffffsiiif";
 char constexpr SoundEntriesfmt[] = "nxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 char constexpr SpellCastTimefmt[] = "nixx";
 char constexpr SpellCategoryfmt[] = "ni";

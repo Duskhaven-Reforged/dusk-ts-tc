@@ -1398,6 +1398,31 @@ struct SkillTiersEntry
     uint32 Value[MAX_SKILL_STEP];                           // 17-32
 };
 
+struct ScriptedMissileMotionEntry
+{
+    uint32 ID;                                              // 0
+    int32 Motion;                                           // 1
+    int32 Count;                                            // 2
+    int32 DurationMs;                                       // 3
+    int32 TickMs;                                           // 4
+    int32 Flags;                                            // 5
+    float CollisionRadius;                                  // 6
+    float Radius;                                           // 7
+    float RadiusVelocity;                                   // 8
+    float StartDistance;                                    // 9
+    float Height;                                           // 10
+    float VerticalVelocity;                                 // 11
+    float ForwardSpeed;                                     // 12
+    float AngularSpeed;                                     // 13
+    float SineAmplitude;                                    // 14
+    float SineFrequency;                                    // 15
+    char const* ModelPath;                                  // 16
+    int32 VisualFlags;                                      // 17
+    int32 AttachMode;                                       // 18
+    int32 AttachPoint;                                      // 19
+    float VisualScale;                                      // 20
+};
+
 struct SoundEntriesEntry
 {
     uint32 ID;                                              // 0

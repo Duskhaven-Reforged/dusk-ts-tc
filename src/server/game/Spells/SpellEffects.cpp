@@ -53,6 +53,7 @@
 #include "Player.h"
 #include "ReputationMgr.h"
 #include "ScriptMgr.h"
+#include "ScriptedMissile.h"
 #include "SkillExtraItems.h"
 #include "SharedDefines.h"
 #include "SocialMgr.h"
@@ -5207,10 +5208,11 @@ void Spell::EffectCreateAreaTrigger()
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT)
         return;
 
-    if (!m_targets.HasDst())
+    if (ScriptedMissile::CreateFromSpell(this, *effectInfo))
         return;
 
-    int32 duration = GetSpellInfo()->GetDuration();
+    if (!m_targets.HasDst())
+        return;
 
     //AreaTrigger::CreateAreaTrigger(m_spellInfo->GetEffect(effIndex).MiscValue, GetCaster(), nullptr, GetSpellInfo(), destTarget->GetPosition(), duration, { m_spellInfo->SpellVisual[0], m_spellInfo->SpellVisual[1] }, this);
 }

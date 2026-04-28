@@ -175,6 +175,7 @@ TC_GAME_API extern DBCStorage <ScalingStatValuesEntry>       sScalingStatValuesS
 TC_GAME_API extern DBCStorage <SkillLineEntry>               sSkillLineStore;
 TC_GAME_API extern DBCStorage <SkillLineAbilityEntry>        sSkillLineAbilityStore;
 TC_GAME_API extern DBCStorage <SkillTiersEntry>              sSkillTiersStore;
+TC_GAME_API extern DBCStorage <ScriptedMissileMotionEntry>   sScriptedMissileMotionStore;
 TC_GAME_API extern DBCStorage <SoundEntriesEntry>            sSoundEntriesStore;
 TC_GAME_API extern DBCStorage <SpellCastTimesEntry>          sSpellCastTimesStore;
 TC_GAME_API extern DBCStorage <SpellCategoryEntry>           sSpellCategoryStore;

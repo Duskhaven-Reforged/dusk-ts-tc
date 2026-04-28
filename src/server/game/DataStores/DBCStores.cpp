@@ -169,6 +169,7 @@ std::unordered_map<uint32, std::vector<SkillLineAbilityEntry const*>> SkillLineA
 SkillRaceClassInfoMap SkillRaceClassInfoBySkill;
 
 DBCStorage <SkillTiersEntry> sSkillTiersStore(SkillTiersfmt);
+DBCStorage <ScriptedMissileMotionEntry> sScriptedMissileMotionStore(ScriptedMissileMotionfmt);
 
 DBCStorage <SoundEntriesEntry> sSoundEntriesStore(SoundEntriesfmt);
 
@@ -379,6 +380,7 @@ void LoadDBCStores(const std::string& dataPath)
     LOAD_DBC(sSkillLineAbilityStore,              "SkillLineAbility.dbc");
     LOAD_DBC(sSkillRaceClassInfoStore,            "SkillRaceClassInfo.dbc");
     LOAD_DBC(sSkillTiersStore,                    "SkillTiers.dbc");
+    LOAD_DBC(sScriptedMissileMotionStore,         "ScriptedMissileMotion.cdbc");
     LOAD_DBC(sSoundEntriesStore,                  "SoundEntries.dbc");
     LOAD_DBC(sSpellCastTimesStore,                "SpellCastTimes.dbc");
     LOAD_DBC(sSpellCategoryStore,                 "SpellCategory.dbc");
