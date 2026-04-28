@@ -419,8 +419,8 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //352 SPELL_AURA_MOD_RESTED_XP_MAX_AMOUNT implemented in Player::SetRestBonus, Spell::EffectGiveRestedExperience
     &AuraEffect::HandleNoImmediateEffect,                         //353 SPELL_AURA_MOD_RESTED_XP_RECOVERY_RATE implemented in Player::Update
     &AuraEffect::HandleModHealthOrManaFromStatPercent,            //354 SPELL_AURA_MOD_MANA_OR_HEALTH_FROM_STAT_PERCENT
-    &AuraEffect::HandleNULL,                                      //355
-    &AuraEffect::HandleNULL,                                      //356
+    &AuraEffect::HandleAuraMonkUnarmed,                           //355 SPELL_AURA_MONK_UNARMED
+    &AuraEffect::HandleModWeaponDpsFromSpellPower,                 //356 SPELL_AURA_MOD_WEAPON_DPS_FROM_SPELL_POWER
 };
 
 AuraEffect::AuraEffect(Aura* base, SpellEffectInfo const& spellEfffectInfo, int32 const* baseAmount, Unit* caster):
@@ -4266,6 +4266,13 @@ void AuraEffect::HandleModDamageDone(AuraApplication const* aurApp, uint8 mode, 
     if (GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL)
         target->UpdateAllDamageDoneMods();
 
+    if ((GetMiscValue() & SPELL_SCHOOL_MASK_HOLY) && target->HasAuraType(SPELL_AURA_MOD_WEAPON_DPS_FROM_SPELL_POWER))
+    {
+        target->UpdateDamagePhysical(BASE_ATTACK);
+        target->UpdateDamagePhysical(OFF_ATTACK);
+        target->UpdateDamagePhysical(RANGED_ATTACK);
+    }
+
     // Magic damage modifiers implemented in Unit::SpellBaseDamageBonusDone
     // This information for client side use only
     if (target->GetTypeId() == TYPEID_PLAYER)
@@ -4314,6 +4321,30 @@ void AuraEffect::HandleModOffhandDamagePercent(AuraApplication const* aurApp, ui
 
     // also handles spell group stacks
     target->UpdateDamagePctDoneMods(OFF_ATTACK);
+}
+
+void AuraEffect::HandleAuraMonkUnarmed(AuraApplication const* aurApp, uint8 mode, bool apply) const
+{
+    if (!(mode & AURA_EFFECT_HANDLE_REAL))
+        return;
+
+    Unit* target = aurApp->GetTarget();
+    target->UpdateDamagePhysical(BASE_ATTACK);
+    target->UpdateDamagePhysical(OFF_ATTACK);
+
+    if (Player* player = target->ToPlayer())
+        player->SetSheath(player->GetSheath());
+}
+
+void AuraEffect::HandleModWeaponDpsFromSpellPower(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
+{
+    if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
+        return;
+
+    Unit* target = aurApp->GetTarget();
+    target->UpdateDamagePhysical(BASE_ATTACK);
+    target->UpdateDamagePhysical(OFF_ATTACK);
+    target->UpdateDamagePhysical(RANGED_ATTACK);
 }
 
 void AuraEffect::HandleShieldBlockValue(AuraApplication const* aurApp, uint8 mode, bool apply) const

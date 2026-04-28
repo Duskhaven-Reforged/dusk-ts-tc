@@ -432,8 +432,8 @@ enum AuraType : uint32
     SPELL_AURA_MOD_RESTED_XP_MAX_AMOUNT                     = 352,
     SPELL_AURA_MOD_RESTED_XP_RECOVERY_RATE                  = 353,
     SPELL_AURA_MOD_MANA_OR_HEALTH_FROM_STAT_PERCENT         = 354,
-    UNU355                                                  = 355,
-    UNU356                                                  = 356,
+    SPELL_AURA_MONK_UNARMED                                = 355,
+    SPELL_AURA_MOD_WEAPON_DPS_FROM_SPELL_POWER              = 356,
     TOTAL_AURAS                                             
 };
 

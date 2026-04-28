@@ -276,6 +276,8 @@ class TC_GAME_API AuraEffect
         void HandleModDamageDone(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleModDamagePercentDone(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleModOffhandDamagePercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleAuraMonkUnarmed(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleModWeaponDpsFromSpellPower(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleShieldBlockValue(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleShieldBlockValuePercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         //  power cost

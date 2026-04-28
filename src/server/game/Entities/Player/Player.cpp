@@ -7846,6 +7846,9 @@ void Player::_ApplyWeaponDamage(uint8 slot, ItemTemplate const* proto, bool appl
 
 SpellSchoolMask Player::GetMeleeDamageSchoolMask(WeaponAttackType attackType /*= BASE_ATTACK*/, uint8 damageIndex /*= 0*/) const
 {
+    if (HasAuraType(SPELL_AURA_MONK_UNARMED) && (attackType == BASE_ATTACK || attackType == OFF_ATTACK))
+        return SPELL_SCHOOL_MASK_NORMAL;
+
     if (Item const* weapon = GetWeaponForAttack(attackType, true))
         return SpellSchoolMask(1 << weapon->GetTemplate()->Damage[damageIndex].DamageType);
 
@@ -9669,6 +9672,9 @@ void Player::ResetPetTalents()
 void Player::SetVirtualItemSlot(uint8 i, Item* item)
 {
     ASSERT(i < 3);
+
+    SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + i, item ? item->GetEntry() : 0);
+
     if (i < 2 && item)
     {
         if (!item->GetEnchantmentId(TEMP_ENCHANTMENT_SLOT))
@@ -9696,8 +9702,8 @@ void Player::SetSheath(SheathState sheathed)
             SetVirtualItemSlot(2, nullptr);
             break;
         case SHEATH_STATE_MELEE:                            // prepared melee weapon
-            SetVirtualItemSlot(0, GetWeaponForAttack(BASE_ATTACK, true));
-            SetVirtualItemSlot(1, GetWeaponForAttack(OFF_ATTACK, true));
+            SetVirtualItemSlot(0, GetWeaponForAttack(BASE_ATTACK, !HasAuraType(SPELL_AURA_MONK_UNARMED)));
+            SetVirtualItemSlot(1, GetWeaponForAttack(OFF_ATTACK, !HasAuraType(SPELL_AURA_MONK_UNARMED)));
             SetVirtualItemSlot(2, nullptr);
             break;
         case SHEATH_STATE_RANGED:                           // prepared ranged weapon
@@ -10128,6 +10134,9 @@ uint32 Player::GetFreeInventorySpace() const
 
 Item* Player::GetWeaponForAttack(WeaponAttackType attackType, bool useable /*= false*/) const
 {
+    if (useable && (attackType == BASE_ATTACK || attackType == OFF_ATTACK) && HasAuraType(SPELL_AURA_MONK_UNARMED))
+        return nullptr;
+
     uint8 slot;
     switch (attackType)
     {

@@ -517,6 +517,9 @@ void Unit::Update(uint32 p_time)
 
 bool Unit::haveOffhandWeapon() const
 {
+    if (HasAuraType(SPELL_AURA_MONK_UNARMED))
+        return true;
+
     if (Player const* player = ToPlayer())
         return player->GetWeaponForAttack(OFF_ATTACK, true) != nullptr;
 
@@ -1279,6 +1282,7 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
         uint32 damage = 0;
         uint8 itemDamagesMask = (GetTypeId() == TYPEID_PLAYER) ? (1 << i) : 0;
         damage += CalculateDamage(damageInfo->AttackType, false, addPctMods, itemDamagesMask);
+
         // Add melee damage bonus
         // @tswow-begin
         FIRE(Unit,OnMeleeDamageEarly
@@ -8647,7 +8651,7 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
     int32 TakenFlatBenefit = 0;
 
     // ..taken
-    TakenFlatBenefit += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_DAMAGE_TAKEN, attacker->GetMeleeDamageSchoolMask());
+    TakenFlatBenefit += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_DAMAGE_TAKEN, damageSchoolMask);
 
     if (attType != RANGED_ATTACK)
         TakenFlatBenefit += GetTotalAuraModifier(SPELL_AURA_MOD_MELEE_DAMAGE_TAKEN);
@@ -8661,7 +8665,7 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
     float TakenTotalMod = 1.0f;
 
     // ..taken
-    TakenTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, attacker->GetMeleeDamageSchoolMask());
+    TakenTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, damageSchoolMask);
 
     TakenTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_FROM_CASTER, [attacker, spellProto](AuraEffect const* aurEff) -> bool
         { return aurEff->GetCasterGUID() == attacker->GetGUID(); });
@@ -9153,6 +9157,9 @@ int32 Unit::ModifyPower(Powers power, int32 dVal, bool withPowerUpdate /*= true*
 
 uint32 Unit::GetAttackTime(WeaponAttackType att) const
 {
+    if ((att == BASE_ATTACK || att == OFF_ATTACK) && HasAuraType(SPELL_AURA_MONK_UNARMED))
+        return BASE_ATTACK_TIME;
+
     float f_BaseAttackTime = GetFloatValue(UNIT_FIELD_BASEATTACKTIME + AsUnderlyingType(att)) / m_modAttackSpeedPct[att];
     return (uint32)f_BaseAttackTime;
 }

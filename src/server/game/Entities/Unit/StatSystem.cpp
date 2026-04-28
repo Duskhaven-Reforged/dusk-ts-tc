@@ -320,6 +320,13 @@ void Player::ApplySpellPowerBonus(int32 amount, bool apply)
     ApplyModUInt32Value(PLAYER_FIELD_MOD_HEALING_DONE_POS, amount, apply);
     for (int i = SPELL_SCHOOL_HOLY; i < MAX_SPELL_SCHOOL; ++i)
         ApplyModUInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_POS + i, amount, apply);
+
+    if (HasAuraType(SPELL_AURA_MOD_WEAPON_DPS_FROM_SPELL_POWER))
+    {
+        UpdateDamagePhysical(BASE_ATTACK);
+        UpdateDamagePhysical(OFF_ATTACK);
+        UpdateDamagePhysical(RANGED_ATTACK);
+    }
 }
 
 void Player::UpdateSpellDamageAndHealingBonus()
@@ -345,6 +352,12 @@ void Player::UpdateSpellDamageAndHealingBonus()
         SetStatInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_POS + i, SpellDamageSchool);
     }
 
+    if (HasAuraType(SPELL_AURA_MOD_WEAPON_DPS_FROM_SPELL_POWER))
+    {
+        UpdateDamagePhysical(BASE_ATTACK);
+        UpdateDamagePhysical(OFF_ATTACK);
+        UpdateDamagePhysical(RANGED_ATTACK);
+    }
 
     Pet* pet = GetPet();
     if (pet)
@@ -730,6 +743,9 @@ void Player::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bo
         minDamage = 0.0f;
         maxDamage = 0.0f;
 
+        if (HasAuraType(SPELL_AURA_MONK_UNARMED) && (attType == BASE_ATTACK || attType == OFF_ATTACK))
+            return;
+
         if (!IsInFeralForm() && CanUseAttackType(attType))
         {
             minDamage = GetWeaponDamageRange(attType, MINDAMAGE, damageIndex);
@@ -768,7 +784,12 @@ void Player::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bo
 
     // check if player is druid and in cat or bear forms
     SpellShapeshiftFormEntry const* shape = sSpellShapeshiftFormStore.LookupEntry(GetShapeshiftForm());
-    if (shape && shape->CombatRoundTime) {
+    if (HasAuraType(SPELL_AURA_MONK_UNARMED) && (attType == BASE_ATTACK || attType == OFF_ATTACK))
+    {
+        weaponMinDamage = BASE_MINDAMAGE;
+        weaponMaxDamage = BASE_MAXDAMAGE;
+    }
+    else if (shape && shape->CombatRoundTime) {
         weaponMinDamage = weaponMinDamage * shape->CombatRoundTime / 1000.0f / attackPowerMod;
         weaponMaxDamage = weaponMaxDamage * shape->CombatRoundTime / 1000.0f / attackPowerMod;
     }
@@ -784,6 +805,12 @@ void Player::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bo
 
         weaponMinDamage = BASE_MINDAMAGE;
         weaponMaxDamage = BASE_MAXDAMAGE;
+    }
+    if (int32 spellPowerDpsPct = GetTotalAuraModifier(SPELL_AURA_MOD_WEAPON_DPS_FROM_SPELL_POWER))
+    {
+        float const spellPowerDps = float(SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_HOLY)) * float(spellPowerDpsPct) / 100.0f;
+        weaponMinDamage += spellPowerDps * attackPowerMod;
+        weaponMaxDamage += spellPowerDps * attackPowerMod;
     }
     //else if (attType == RANGED_ATTACK) // add ammo DPS to ranged primary damage
     //{
