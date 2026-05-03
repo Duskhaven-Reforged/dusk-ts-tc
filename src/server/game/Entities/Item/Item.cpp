@@ -1024,7 +1024,7 @@ uint8 Item::GetGemCountWithLimitCategory(uint32 limitCategory) const
 bool Item::IsLimitedToAnotherMapOrZone(uint32 cur_mapId, uint32 cur_zoneId) const
 {
     ItemTemplate const* proto = GetTemplate();
-    return proto && ((proto->Map && proto->Map != cur_mapId) || (proto->Area && proto->Area != cur_zoneId));
+    return proto && ((static_cast<int16>(proto->Map) >-1 && proto->Map != cur_mapId) || (proto->Area && proto->Area != cur_zoneId));
 }
 
 void Item::SendUpdateSockets()
