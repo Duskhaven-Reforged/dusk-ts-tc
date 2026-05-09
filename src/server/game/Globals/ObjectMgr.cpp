@@ -3500,7 +3500,7 @@ void ObjectMgr::LoadItemTemplates()
         if (itemTemplate.Area && !sAreaTableStore.LookupEntry(itemTemplate.Area))
             TC_LOG_ERROR("sql.sql", "Item (Entry: {}) has wrong Area ({})", entry, itemTemplate.Area);
 
-        if (itemTemplate.Map && !sMapStore.LookupEntry(itemTemplate.Map))
+        if (itemTemplate.Map && static_cast<int16>(itemTemplate.Map) > -1 && !sMapStore.LookupEntry(itemTemplate.Map))
             TC_LOG_ERROR("sql.sql", "Item (Entry: {}) has wrong Map ({})", entry, itemTemplate.Map);
 
         if (itemTemplate.BagFamily)
