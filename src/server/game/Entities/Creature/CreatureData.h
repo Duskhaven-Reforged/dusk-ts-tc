@@ -399,7 +399,9 @@ struct TC_GAME_API CreatureTemplate
 // Defines base stats for creatures (used to calculate HP/mana/armor/attackpower/rangedattackpower/all damage).
 struct TC_GAME_API CreatureBaseStats
 {
-    uint32 BaseHealth[MAX_EXPANSIONS];
+    static constexpr uint8 MAX_BASE_HEALTH_RANKS = 4;
+
+    uint32 BaseHealth[MAX_BASE_HEALTH_RANKS];
     uint32 BaseMana;
     uint32 BaseArmor;
     uint32 AttackPower;
@@ -410,9 +412,28 @@ struct TC_GAME_API CreatureBaseStats
 
     uint32 GenerateHealth(CreatureTemplate const* info) const
     {
-        auto rank = info->rank;
-        auto which = rank == CREATURE_ELITE_ELITE ? (info->type_flags & CREATURE_TYPE_FLAG_BOSS_MOB || info->flags_extra & CREATURE_FLAG_EXTRA_DUNGEON_BOSS) ? 2: 1 : 0;
-        return uint32(ceil(BaseHealth[info->expansion] * info->ModHealth));
+        uint8 healthRank = 0;
+        switch (info->rank)
+        {
+            case CREATURE_ELITE_ELITE:
+            case CREATURE_ELITE_RAREELITE:
+                healthRank = 1;
+                break;
+            case CREATURE_ELITE_DUNGEONBOSS:
+                healthRank = 2;
+                break;
+            case CREATURE_ELITE_WORLDBOSS:
+                healthRank = 3;
+                break;
+            default:
+                break;
+        }
+
+        // Existing instance encounter data still marks bosses dynamically.
+        if ((info->flags_extra & CREATURE_FLAG_EXTRA_DUNGEON_BOSS) != 0 && healthRank < 2)
+            healthRank = 2;
+
+        return uint32(ceil(BaseHealth[healthRank] * info->ModHealth));
     }
 
     uint32 GenerateMana(CreatureTemplate const* info) const

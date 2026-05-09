@@ -709,7 +709,7 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
     else
     {
         UpdateDamagePhysical(BASE_ATTACK);
-        if (CanDualWield() && haveOffhandWeapon())           //allow update offhand damage only if player knows DualWield Spec and has equipped offhand weapon
+        if (HasAuraType(SPELL_AURA_MONK_UNARMED) || (CanDualWield() && haveOffhandWeapon()))
             UpdateDamagePhysical(OFF_ATTACK);
         if (GetClass() == CLASS_SHAMAN || GetClass() == CLASS_PALADIN)                      // mental quickness
             UpdateSpellDamageAndHealingBonus();

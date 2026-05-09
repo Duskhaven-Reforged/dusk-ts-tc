@@ -1197,6 +1197,7 @@ bool Creature::Create(ObjectGuid::LowType guidlow, Map* map, uint32 phaseMask, u
             m_corpseDelay = sWorld->getIntConfig(CONFIG_CORPSE_DECAY_ELITE);
             break;
         case CREATURE_ELITE_RAREELITE:
+        case CREATURE_ELITE_DUNGEONBOSS:
             m_corpseDelay = sWorld->getIntConfig(CONFIG_CORPSE_DECAY_RAREELITE);
             break;
         case CREATURE_ELITE_WORLDBOSS:
@@ -1654,6 +1655,7 @@ float Creature::_GetHealthMod(int32 Rank)
         case CREATURE_ELITE_ELITE:
             return sWorld->getRate(RATE_CREATURE_ELITE_ELITE_HP);
         case CREATURE_ELITE_RAREELITE:
+        case CREATURE_ELITE_DUNGEONBOSS:
             return sWorld->getRate(RATE_CREATURE_ELITE_RAREELITE_HP);
         case CREATURE_ELITE_WORLDBOSS:
             return sWorld->getRate(RATE_CREATURE_ELITE_WORLDBOSS_HP);
@@ -1679,6 +1681,7 @@ float Creature::_GetDamageMod(int32 Rank)
         case CREATURE_ELITE_ELITE:
             return sWorld->getRate(RATE_CREATURE_ELITE_ELITE_DAMAGE);
         case CREATURE_ELITE_RAREELITE:
+        case CREATURE_ELITE_DUNGEONBOSS:
             return sWorld->getRate(RATE_CREATURE_ELITE_RAREELITE_DAMAGE);
         case CREATURE_ELITE_WORLDBOSS:
             return sWorld->getRate(RATE_CREATURE_ELITE_WORLDBOSS_DAMAGE);
@@ -1698,6 +1701,7 @@ float Creature::GetSpellDamageMod(int32 Rank) const
         case CREATURE_ELITE_ELITE:
             return sWorld->getRate(RATE_CREATURE_ELITE_ELITE_SPELLDAMAGE);
         case CREATURE_ELITE_RAREELITE:
+        case CREATURE_ELITE_DUNGEONBOSS:
             return sWorld->getRate(RATE_CREATURE_ELITE_RAREELITE_SPELLDAMAGE);
         case CREATURE_ELITE_WORLDBOSS:
             return sWorld->getRate(RATE_CREATURE_ELITE_WORLDBOSS_SPELLDAMAGE);
@@ -2423,7 +2427,8 @@ bool Creature::isWorldBoss() const
     if (IsPet())
         return false;
 
-    return (GetCreatureTemplate()->type_flags & CREATURE_TYPE_FLAG_BOSS_MOB) != 0;
+    CreatureTemplate const* creatureTemplate = GetCreatureTemplate();
+    return creatureTemplate->rank == CREATURE_ELITE_WORLDBOSS || (creatureTemplate->type_flags & CREATURE_TYPE_FLAG_BOSS_MOB) != 0;
 }
 
 // select nearest hostile unit within the given distance (regardless of threat list).

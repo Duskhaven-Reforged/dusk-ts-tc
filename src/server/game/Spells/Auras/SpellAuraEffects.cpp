@@ -4329,6 +4329,10 @@ void AuraEffect::HandleAuraMonkUnarmed(AuraApplication const* aurApp, uint8 mode
         return;
 
     Unit* target = aurApp->GetTarget();
+
+    if (Player* player = target->ToPlayer())
+        player->SetRegularAttackTime();
+
     target->UpdateDamagePhysical(BASE_ATTACK);
     target->UpdateDamagePhysical(OFF_ATTACK);
 

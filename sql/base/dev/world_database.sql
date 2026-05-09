@@ -386,6 +386,7 @@ CREATE TABLE `creature_classlevelstats` (
   `basehp0` smallint unsigned NOT NULL DEFAULT '1',
   `basehp1` smallint unsigned NOT NULL DEFAULT '1',
   `basehp2` smallint unsigned NOT NULL DEFAULT '1',
+  `basehp3` int unsigned NOT NULL DEFAULT '1',
   `basemana` smallint unsigned NOT NULL DEFAULT '0',
   `basearmor` smallint unsigned NOT NULL DEFAULT '1',
   `attackpower` smallint unsigned NOT NULL DEFAULT '0',

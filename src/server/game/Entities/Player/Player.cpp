@@ -123,6 +123,8 @@
 #include "TSMap.h"
 // @tswow-end
 
+#include <vector>
+
 #define ZONE_UPDATE_INTERVAL (1*IN_MILLISECONDS)
 
 #define PLAYER_SKILL_INDEX(x)       (PLAYER_SKILL_INFO_1_1 + ((x)*3))
@@ -193,7 +195,11 @@ uint32 const MAX_MONEY_AMOUNT = static_cast<uint32>(std::numeric_limits<int32>::
 namespace
 {
     constexpr opcode_t VISIBLE_ITEM_OVERRIDE_OPCODE = 0x7A10;
+    constexpr opcode_t RETAIL_CUSTOMIZATION_OPCODE = 0x7A12;
+    constexpr opcode_t RETAIL_CHARACTER_RENDER_STATE_OPCODE = 0x7A14;
+    constexpr uint8 RETAIL_CHARACTER_RENDER_STATE_VERSION = 1;
     constexpr totalSize_t VISIBLE_ITEM_OVERRIDE_PACKET_SIZE = 34;
+    constexpr uint8 RETAIL_CUSTOMIZATION_MAX_CHOICES = 32;
 
     int32 ResolveVisibleItemDisplayFromEntry(int32 itemEntry)
     {
@@ -270,6 +276,181 @@ namespace
 
         TSPacketWrite packet = CreateCustomPacket(VISIBLE_ITEM_OVERRIDE_OPCODE, VISIBLE_ITEM_OVERRIDE_PACKET_SIZE);
         WriteVisibleItemOverridePacketData(packet, player, slot, item);
+        packet.SendToPlayer(TSPlayer(receiver));
+    }
+
+    bool HasRetailCustomizationTable()
+    {
+        static int hasRetailCustomizationTable = -1;
+        if (hasRetailCustomizationTable < 0)
+            hasRetailCustomizationTable = CharacterDatabase.Query("SHOW TABLES LIKE 'character_retail_customizations'") ? 1 : 0;
+        return hasRetailCustomizationTable != 0;
+    }
+
+    void LoadStoredRetailCustomizationChoices(Player* player, std::vector<uint32>& choices)
+    {
+        if (!player || !HasRetailCustomizationTable())
+            return;
+
+        if (QueryResult result = CharacterDatabase.Query(
+            Trinity::StringFormat(
+                "SELECT choiceId FROM character_retail_customizations WHERE guid = {} ORDER BY optionId",
+                player->GetGUID().GetCounter()).c_str()))
+        {
+            do
+            {
+                if (choices.size() >= RETAIL_CUSTOMIZATION_MAX_CHOICES)
+                    break;
+
+                Field* fields = result->Fetch();
+                choices.push_back(fields[0].GetUInt32());
+            }
+            while (result->NextRow());
+        }
+    }
+
+    void AddDefaultHumanMaleRetailChoices(Player* player, std::vector<uint32>& choices)
+    {
+        if (!player || player->GetRace() != RACE_HUMAN || player->GetNativeGender() != GENDER_MALE)
+            return;
+
+        auto pushChoice = [&choices](uint32 choice)
+        {
+            if (choice && choices.size() < RETAIL_CUSTOMIZATION_MAX_CHOICES)
+                choices.push_back(choice);
+        };
+
+        pushChoice(1);  // human male skin option 9, order 0
+        pushChoice(20); // human male face option 10, order 0
+        pushChoice(44); // human male hair style option 11, order 0
+        pushChoice(61); // human male hair color option 12, order 0
+        pushChoice(76); // human male beard option 13, order 0
+    }
+
+    void SendRetailCustomizationPacketTo(Player* receiver, Player* player)
+    {
+        if (!receiver || !player)
+            return;
+
+        std::vector<uint32> choices;
+        LoadStoredRetailCustomizationChoices(player, choices);
+        if (choices.empty())
+            AddDefaultHumanMaleRetailChoices(player, choices);
+
+        uint8 skin = player->GetSkinId();
+        uint8 face = player->GetFaceId();
+        uint8 hairStyle = player->GetHairStyleId();
+        uint8 hairColor = player->GetHairColorId();
+        uint8 facialStyle = player->GetFacialStyle();
+        if (!Player::ValidateAppearance(
+            player->GetRace(),
+            player->GetClass(),
+            uint8(player->GetNativeGender()),
+            hairStyle,
+            hairColor,
+            face,
+            facialStyle,
+            skin))
+        {
+            skin = 0;
+            face = 0;
+            hairStyle = 0;
+            hairColor = 0;
+            facialStyle = 0;
+        }
+
+        const uint32 payloadSize = 1 + 8 + 8 + 1 + uint32(choices.size()) * 4;
+        TSPacketWrite packet = CreateCustomPacket(RETAIL_CUSTOMIZATION_OPCODE, payloadSize);
+        packet.WriteUInt8(1)
+            ->WriteUInt64(player->GetGUID().GetRawValue())
+            ->WriteUInt8(player->GetRace())
+            ->WriteUInt8(uint8(player->GetNativeGender()))
+            ->WriteUInt8(player->GetClass())
+            ->WriteUInt8(skin)
+            ->WriteUInt8(face)
+            ->WriteUInt8(hairStyle)
+            ->WriteUInt8(hairColor)
+            ->WriteUInt8(facialStyle)
+            ->WriteUInt8(uint8(choices.size()));
+        for (uint32 choiceId : choices)
+            packet.WriteUInt32(choiceId);
+
+        packet.SendToPlayer(TSPlayer(receiver));
+    }
+
+    void SendRetailCharacterRenderStatePacketTo(Player* receiver, Player* player)
+    {
+        if (!receiver || !player)
+            return;
+
+        std::vector<uint32> choices;
+        LoadStoredRetailCustomizationChoices(player, choices);
+        if (choices.empty())
+            AddDefaultHumanMaleRetailChoices(player, choices);
+
+        uint8 skin = player->GetSkinId();
+        uint8 face = player->GetFaceId();
+        uint8 hairStyle = player->GetHairStyleId();
+        uint8 hairColor = player->GetHairColorId();
+        uint8 facialStyle = player->GetFacialStyle();
+        if (!Player::ValidateAppearance(
+            player->GetRace(),
+            player->GetClass(),
+            uint8(player->GetNativeGender()),
+            hairStyle,
+            hairColor,
+            face,
+            facialStyle,
+            skin))
+        {
+            skin = 0;
+            face = 0;
+            hairStyle = 0;
+            hairColor = 0;
+            facialStyle = 0;
+        }
+
+        uint8 slotCount = 0;
+        for (uint8 i = 0; i < EQUIPMENT_SLOT_END; ++i)
+        {
+            if (player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                ++slotCount;
+        }
+
+        const uint32 payloadSize =
+            2 + 8 + 8 + 1 + uint32(choices.size()) * 4 + 1 + uint32(slotCount) * (1 + 4 + 4 + 4 + 4 + 4);
+        TSPacketWrite packet = CreateCustomPacket(RETAIL_CHARACTER_RENDER_STATE_OPCODE, payloadSize);
+        packet.WriteUInt8(RETAIL_CHARACTER_RENDER_STATE_VERSION)
+            ->WriteUInt8(1)
+            ->WriteUInt64(player->GetGUID().GetRawValue())
+            ->WriteUInt8(player->GetRace())
+            ->WriteUInt8(uint8(player->GetNativeGender()))
+            ->WriteUInt8(player->GetClass())
+            ->WriteUInt8(skin)
+            ->WriteUInt8(face)
+            ->WriteUInt8(hairStyle)
+            ->WriteUInt8(hairColor)
+            ->WriteUInt8(facialStyle)
+            ->WriteUInt8(uint8(choices.size()));
+        for (uint32 choiceId : choices)
+            packet.WriteUInt32(choiceId);
+
+        packet.WriteUInt8(slotCount);
+        for (uint8 i = 0; i < EQUIPMENT_SLOT_END; ++i)
+        {
+            Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i);
+            if (!item)
+                continue;
+
+            const uint32 visibleEntry = item->transmog ? item->transmog : item->GetEntry();
+            packet.WriteUInt8(i)
+                ->WriteUInt32(uint32(ResolveVisibleItemDisplayFromEntry(int32(visibleEntry))))
+                ->WriteUInt32(visibleEntry)
+                ->WriteUInt32(0)
+                ->WriteUInt32(0)
+                ->WriteUInt32(0);
+        }
+
         packet.SendToPlayer(TSPlayer(receiver));
     }
 }
@@ -4140,6 +4321,9 @@ void Player::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target) c
     }
 
     Unit::BuildCreateUpdateBlockForPlayer(data, target);
+
+    SendRetailCustomizationPacketTo(target, const_cast<Player*>(this));
+    SendRetailCharacterRenderStatePacketTo(target, const_cast<Player*>(this));
 
     for (uint8 i = 0; i < EQUIPMENT_SLOT_END; ++i)
     {

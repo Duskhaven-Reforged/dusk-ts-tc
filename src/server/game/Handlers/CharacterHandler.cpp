@@ -82,12 +82,34 @@ class LoginQueryHolder : public CharacterDatabaseQueryHolder
 
 namespace
 {
-    constexpr opcode_t CHAR_SELECT_SHOULDER_OVERRIDE_OPCODE = 0x7A11;
+    constexpr opcode_t RETAIL_CUSTOMIZATION_OPCODE = 0x7A12;
+    constexpr opcode_t CHAR_SELECT_VISIBLE_ITEM_OPCODE = 0x7A13;
+    constexpr opcode_t RETAIL_CHARACTER_RENDER_STATE_OPCODE = 0x7A14;
+    constexpr uint8 RETAIL_CHARACTER_RENDER_STATE_VERSION = 1;
+    constexpr uint8 RETAIL_CUSTOMIZATION_MAX_CHOICES = 32;
 
-    struct CharEnumShoulderOverrideData
+    struct CharEnumVisibleItemSlotData
     {
-        int32 LeftShoulderEntry = -1;
-        int32 RightShoulderEntry = -1;
+        uint8 Slot = 0;
+        uint32 VisibleEntry = 0;
+        uint32 DisplayId = 0;
+        uint32 TransmogEntry = 0;
+        int32 LeftShoulderDisplay = -1;
+        int32 RightShoulderDisplay = -1;
+    };
+
+    struct RetailCustomizationPacketData
+    {
+        ObjectGuid Guid;
+        uint8 Race = 0;
+        uint8 Gender = 0;
+        uint8 Class = 0;
+        uint8 Skin = 0;
+        uint8 Face = 0;
+        uint8 HairStyle = 0;
+        uint8 HairColor = 0;
+        uint8 FacialHair = 0;
+        std::vector<uint32> ChoiceIds;
     };
 
     int32 ResolveVisibleItemDisplayFromEntry(int32 itemEntry)
@@ -104,20 +126,20 @@ namespace
         return 0;
     }
 
-    void SendCharEnumShoulderOverridePacket(WorldSession* session, std::vector<ObjectGuid> const& guids)
+    void SendCharEnumVisibleItemPacket(WorldSession* session, std::vector<ObjectGuid> const& guids)
     {
         if (!session || guids.empty())
             return;
 
-        std::unordered_map<uint32, CharEnumShoulderOverrideData> shoulderOverrides;
+        std::unordered_map<uint32, std::vector<CharEnumVisibleItemSlotData>> visibleItems;
         for (ObjectGuid const& guid : guids)
-            shoulderOverrides.emplace(guid.GetCounter(), CharEnumShoulderOverrideData{});
+            visibleItems.emplace(guid.GetCounter(), std::vector<CharEnumVisibleItemSlotData>{});
 
         std::ostringstream query;
-        query << "SELECT ci.guid, ii.shoulderTransmogLeftDisplay, ii.shoulderTransmogRightDisplay "
+        query << "SELECT ci.guid, ci.slot, ii.itemEntry, ii.transmog, ii.shoulderTransmogLeftDisplay, ii.shoulderTransmogRightDisplay "
               << "FROM character_inventory ci "
               << "INNER JOIN item_instance ii ON ci.item = ii.guid "
-              << "WHERE ci.bag = 0 AND ci.slot = 2 AND ci.guid IN (";
+              << "WHERE ci.bag = 0 AND ci.slot < " << uint32(EQUIPMENT_SLOT_END) << " AND ci.guid IN (";
 
         for (size_t i = 0; i < guids.size(); ++i)
         {
@@ -127,28 +149,248 @@ namespace
         }
         query << ')';
 
-        if (QueryResult shoulderResult = CharacterDatabase.Query(query.str().c_str()))
+        if (QueryResult itemResult = CharacterDatabase.Query(query.str().c_str()))
         {
             do
             {
-                Field* fields = shoulderResult->Fetch();
-                CharEnumShoulderOverrideData& overrideData = shoulderOverrides[fields[0].GetUInt32()];
-                overrideData.LeftShoulderEntry = ResolveVisibleItemDisplayFromEntry(fields[1].GetInt32());
-                overrideData.RightShoulderEntry = ResolveVisibleItemDisplayFromEntry(fields[2].GetInt32());
+                Field* fields = itemResult->Fetch();
+                const uint32 guid = fields[0].GetUInt32();
+                const uint8 slot = fields[1].GetUInt8();
+                const uint32 itemEntry = fields[2].GetUInt32();
+                const uint32 transmogEntry = fields[3].GetUInt32();
+                const uint32 visibleEntry = transmogEntry ? transmogEntry : itemEntry;
+                if (!visibleEntry)
+                    continue;
+
+                CharEnumVisibleItemSlotData slotData;
+                slotData.Slot = slot;
+                slotData.VisibleEntry = visibleEntry;
+                slotData.DisplayId = uint32(ResolveVisibleItemDisplayFromEntry(int32(visibleEntry)));
+                slotData.TransmogEntry = transmogEntry;
+                slotData.LeftShoulderDisplay = ResolveVisibleItemDisplayFromEntry(fields[4].GetInt32());
+                slotData.RightShoulderDisplay = ResolveVisibleItemDisplayFromEntry(fields[5].GetInt32());
+                visibleItems[guid].push_back(slotData);
             }
-            while (shoulderResult->NextRow());
+            while (itemResult->NextRow());
         }
 
-        TSPacketWrite packet = CreateCustomPacket(
-            CHAR_SELECT_SHOULDER_OVERRIDE_OPCODE,
-            1 + uint32(guids.size()) * (8 + 4 + 4));
+        uint32 payloadSize = 1 + uint32(guids.size()) * (8 + 1);
+        for (ObjectGuid const& guid : guids)
+            payloadSize += uint32(visibleItems[guid.GetCounter()].size()) * (1 + 4 + 4 + 4 + 4 + 4 + 4);
+
+        TSPacketWrite packet = CreateCustomPacket(CHAR_SELECT_VISIBLE_ITEM_OPCODE, payloadSize);
         packet.WriteUInt8(uint8(guids.size()));
         for (ObjectGuid const& guid : guids)
         {
-            CharEnumShoulderOverrideData const& overrideData = shoulderOverrides[guid.GetCounter()];
-            packet.WriteUInt64(guid.GetRawValue())
-                ->WriteInt32(overrideData.LeftShoulderEntry)
-                ->WriteInt32(overrideData.RightShoulderEntry);
+            std::vector<CharEnumVisibleItemSlotData> const& slots = visibleItems[guid.GetCounter()];
+            packet.WriteUInt64(guid.GetRawValue())->WriteUInt8(uint8(slots.size()));
+            for (CharEnumVisibleItemSlotData const& slotData : slots)
+            {
+                packet.WriteUInt8(slotData.Slot)
+                    ->WriteUInt32(slotData.VisibleEntry)
+                    ->WriteUInt32(slotData.DisplayId)
+                    ->WriteUInt32(slotData.TransmogEntry)
+                    ->WriteInt32(slotData.LeftShoulderDisplay)
+                    ->WriteInt32(slotData.RightShoulderDisplay)
+                    ->WriteUInt32(0);
+            }
+        }
+        packet.SendToNotInWorld(session->GetAccountId());
+    }
+
+    void AddDefaultHumanMaleRetailChoices(RetailCustomizationPacketData& data)
+    {
+        if (data.Race != RACE_HUMAN || data.Gender != GENDER_MALE)
+            return;
+
+        auto pushChoice = [&data](uint32 choice)
+        {
+            if (choice && data.ChoiceIds.size() < RETAIL_CUSTOMIZATION_MAX_CHOICES)
+                data.ChoiceIds.push_back(choice);
+        };
+
+        pushChoice(1);  // human male skin option 9, order 0
+        pushChoice(20); // human male face option 10, order 0
+        pushChoice(44); // human male hair style option 11, order 0
+        pushChoice(61); // human male hair color option 12, order 0
+        pushChoice(76); // human male beard option 13, order 0
+    }
+
+    bool HasRetailCustomizationTable()
+    {
+        static int hasRetailCustomizationTable = -1;
+        if (hasRetailCustomizationTable < 0)
+            hasRetailCustomizationTable = CharacterDatabase.Query("SHOW TABLES LIKE 'character_retail_customizations'") ? 1 : 0;
+        return hasRetailCustomizationTable != 0;
+    }
+
+    void LoadStoredRetailCustomizationChoices(std::vector<RetailCustomizationPacketData>& rows)
+    {
+        if (rows.empty())
+            return;
+
+        if (!HasRetailCustomizationTable())
+            return;
+
+        std::ostringstream query;
+        query << "SELECT guid, choiceId FROM character_retail_customizations WHERE guid IN (";
+        for (size_t i = 0; i < rows.size(); ++i)
+        {
+            if (i)
+                query << ',';
+            query << rows[i].Guid.GetCounter();
+        }
+        query << ") ORDER BY guid, optionId";
+
+        std::unordered_map<uint32, RetailCustomizationPacketData*> byGuid;
+        for (RetailCustomizationPacketData& row : rows)
+            byGuid[row.Guid.GetCounter()] = &row;
+
+        if (QueryResult result = CharacterDatabase.Query(query.str().c_str()))
+        {
+            do
+            {
+                Field* fields = result->Fetch();
+                auto itr = byGuid.find(fields[0].GetUInt32());
+                if (itr == byGuid.end())
+                    continue;
+
+                std::vector<uint32>& choices = itr->second->ChoiceIds;
+                if (choices.size() < RETAIL_CUSTOMIZATION_MAX_CHOICES)
+                    choices.push_back(fields[1].GetUInt32());
+            }
+            while (result->NextRow());
+        }
+    }
+
+    void SendRetailCustomizationPacket(WorldSession* session, std::vector<RetailCustomizationPacketData> rows, bool inWorld)
+    {
+        if (!session || rows.empty())
+            return;
+
+        LoadStoredRetailCustomizationChoices(rows);
+        for (RetailCustomizationPacketData& row : rows)
+        {
+            if (row.ChoiceIds.empty())
+                AddDefaultHumanMaleRetailChoices(row);
+        }
+
+        uint32 payloadSize = 1;
+        for (RetailCustomizationPacketData const& row : rows)
+            payloadSize += 8 + 8 + 1 + uint32(row.ChoiceIds.size()) * 4;
+
+        TSPacketWrite packet = CreateCustomPacket(RETAIL_CUSTOMIZATION_OPCODE, payloadSize);
+        packet.WriteUInt8(uint8(rows.size()));
+        for (RetailCustomizationPacketData const& row : rows)
+        {
+            packet.WriteUInt64(row.Guid.GetRawValue())
+                ->WriteUInt8(row.Race)
+                ->WriteUInt8(row.Gender)
+                ->WriteUInt8(row.Class)
+                ->WriteUInt8(row.Skin)
+                ->WriteUInt8(row.Face)
+                ->WriteUInt8(row.HairStyle)
+                ->WriteUInt8(row.HairColor)
+                ->WriteUInt8(row.FacialHair)
+                ->WriteUInt8(uint8(row.ChoiceIds.size()));
+            for (uint32 choiceId : row.ChoiceIds)
+                packet.WriteUInt32(choiceId);
+        }
+
+        if (inWorld)
+            packet.SendToPlayer(TSPlayer(session->GetPlayer()));
+        else
+            packet.SendToNotInWorld(session->GetAccountId());
+    }
+
+    void SendCharEnumRetailRenderStatePacket(WorldSession* session, std::vector<RetailCustomizationPacketData> rows)
+    {
+        if (!session || rows.empty())
+            return;
+
+        LoadStoredRetailCustomizationChoices(rows);
+        for (RetailCustomizationPacketData& row : rows)
+        {
+            if (row.ChoiceIds.empty())
+                AddDefaultHumanMaleRetailChoices(row);
+        }
+
+        std::unordered_map<uint32, std::vector<CharEnumVisibleItemSlotData>> visibleItems;
+        std::ostringstream query;
+        query << "SELECT ci.guid, ci.slot, ii.itemEntry, ii.transmog, ii.shoulderTransmogLeftDisplay, ii.shoulderTransmogRightDisplay "
+              << "FROM character_inventory ci "
+              << "INNER JOIN item_instance ii ON ci.item = ii.guid "
+              << "WHERE ci.bag = 0 AND ci.slot < " << uint32(EQUIPMENT_SLOT_END) << " AND ci.guid IN (";
+
+        for (size_t i = 0; i < rows.size(); ++i)
+        {
+            visibleItems.emplace(rows[i].Guid.GetCounter(), std::vector<CharEnumVisibleItemSlotData>{});
+            if (i)
+                query << ',';
+            query << rows[i].Guid.GetCounter();
+        }
+        query << ')';
+
+        if (QueryResult itemResult = CharacterDatabase.Query(query.str().c_str()))
+        {
+            do
+            {
+                Field* fields = itemResult->Fetch();
+                const uint32 guid = fields[0].GetUInt32();
+                const uint8 slot = fields[1].GetUInt8();
+                const uint32 itemEntry = fields[2].GetUInt32();
+                const uint32 transmogEntry = fields[3].GetUInt32();
+                const uint32 visibleEntry = transmogEntry ? transmogEntry : itemEntry;
+                if (!visibleEntry)
+                    continue;
+
+                CharEnumVisibleItemSlotData slotData;
+                slotData.Slot = slot;
+                slotData.VisibleEntry = visibleEntry;
+                slotData.DisplayId = uint32(ResolveVisibleItemDisplayFromEntry(int32(visibleEntry)));
+                slotData.TransmogEntry = transmogEntry;
+                slotData.LeftShoulderDisplay = ResolveVisibleItemDisplayFromEntry(fields[4].GetInt32());
+                slotData.RightShoulderDisplay = ResolveVisibleItemDisplayFromEntry(fields[5].GetInt32());
+                visibleItems[guid].push_back(slotData);
+            }
+            while (itemResult->NextRow());
+        }
+
+        uint32 payloadSize = 2;
+        for (RetailCustomizationPacketData const& row : rows)
+        {
+            payloadSize += 8 + 8 + 1 + uint32(row.ChoiceIds.size()) * 4 + 1;
+            payloadSize += uint32(visibleItems[row.Guid.GetCounter()].size()) * (1 + 4 + 4 + 4 + 4 + 4);
+        }
+
+        TSPacketWrite packet = CreateCustomPacket(RETAIL_CHARACTER_RENDER_STATE_OPCODE, payloadSize);
+        packet.WriteUInt8(RETAIL_CHARACTER_RENDER_STATE_VERSION)->WriteUInt8(uint8(rows.size()));
+        for (RetailCustomizationPacketData const& row : rows)
+        {
+            std::vector<CharEnumVisibleItemSlotData> const& slots = visibleItems[row.Guid.GetCounter()];
+            packet.WriteUInt64(row.Guid.GetRawValue())
+                ->WriteUInt8(row.Race)
+                ->WriteUInt8(row.Gender)
+                ->WriteUInt8(row.Class)
+                ->WriteUInt8(row.Skin)
+                ->WriteUInt8(row.Face)
+                ->WriteUInt8(row.HairStyle)
+                ->WriteUInt8(row.HairColor)
+                ->WriteUInt8(row.FacialHair)
+                ->WriteUInt8(uint8(row.ChoiceIds.size()));
+            for (uint32 choiceId : row.ChoiceIds)
+                packet.WriteUInt32(choiceId);
+
+            packet.WriteUInt8(uint8(slots.size()));
+            for (CharEnumVisibleItemSlotData const& slotData : slots)
+            {
+                packet.WriteUInt8(slotData.Slot)
+                    ->WriteUInt32(slotData.DisplayId)
+                    ->WriteUInt32(slotData.VisibleEntry)
+                    ->WriteUInt32(0)
+                    ->WriteUInt32(0)
+                    ->WriteUInt32(0);
+            }
         }
         packet.SendToNotInWorld(session->GetAccountId());
     }
@@ -309,6 +551,7 @@ void WorldSession::HandleCharEnum(PreparedQueryResult result)
 
     uint8 num = 0;
     std::vector<ObjectGuid> enumGuids;
+    std::vector<RetailCustomizationPacketData> retailCustomizations;
 
     data << num;
 
@@ -322,6 +565,33 @@ void WorldSession::HandleCharEnum(PreparedQueryResult result)
             if (Player::BuildEnumData(result, &data))
             {
                 enumGuids.push_back(guid);
+                RetailCustomizationPacketData customization;
+                customization.Guid = guid;
+                customization.Race = (*result)[2].GetUInt8();
+                customization.Class = (*result)[3].GetUInt8();
+                customization.Gender = (*result)[4].GetUInt8();
+                customization.Skin = (*result)[5].GetUInt8();
+                customization.Face = (*result)[6].GetUInt8();
+                customization.HairStyle = (*result)[7].GetUInt8();
+                customization.HairColor = (*result)[8].GetUInt8();
+                customization.FacialHair = (*result)[9].GetUInt8();
+                if (!Player::ValidateAppearance(
+                    customization.Race,
+                    customization.Class,
+                    customization.Gender,
+                    customization.HairStyle,
+                    customization.HairColor,
+                    customization.Face,
+                    customization.FacialHair,
+                    customization.Skin))
+                {
+                    customization.Skin = 0;
+                    customization.Face = 0;
+                    customization.HairStyle = 0;
+                    customization.HairColor = 0;
+                    customization.FacialHair = 0;
+                }
+                retailCustomizations.push_back(customization);
                 // Do not allow banned characters to log in
                 if (!(*result)[23].GetUInt32())
                     _legitCharacters.insert(guid);
@@ -336,7 +606,9 @@ void WorldSession::HandleCharEnum(PreparedQueryResult result)
 
     data.put<uint8>(0, num);
 
-    SendCharEnumShoulderOverridePacket(this, enumGuids);
+    SendCharEnumVisibleItemPacket(this, enumGuids);
+    SendRetailCustomizationPacket(this, retailCustomizations, false);
+    SendCharEnumRetailRenderStatePacket(this, retailCustomizations);
     SendPacket(&data);
 }
 
@@ -1573,6 +1845,13 @@ void WorldSession::HandleCharCustomizeCallback(std::shared_ptr<CharacterCustomiz
 
     /// Customize
     Player::Customize(customizeInfo.get(), trans);
+    if (HasRetailCustomizationTable())
+    {
+        CharacterDatabase.Execute(
+            Trinity::StringFormat(
+                "DELETE FROM character_retail_customizations WHERE guid = {}",
+                lowGuid).c_str());
+    }
 
     /// Name Change and update atLogin flags
     {

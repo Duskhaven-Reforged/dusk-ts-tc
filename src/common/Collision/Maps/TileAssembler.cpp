@@ -52,8 +52,12 @@ namespace VMAP
 
     //=================================================================
 
-    TileAssembler::TileAssembler(const std::string& pSrcDirName, const std::string& pDestDirName)
-        : iDestDir(pDestDirName), iSrcDir(pSrcDirName)
+    TileAssembler::TileAssembler(
+        const std::string& pSrcDirName,
+        const std::string& pDestDirName,
+        std::set<uint32> maps,
+        std::set<std::pair<uint32, uint32>> tiles)
+        : iDestDir(pDestDirName), iSrcDir(pSrcDirName), iMaps(maps), iTiles(tiles)
     {
         boost::filesystem::create_directory(iDestDir);
         //init();
@@ -230,6 +234,12 @@ namespace VMAP
 
             if (!ModelSpawn::readFromFile(dirf, spawn))
                 break;
+
+            if (!iMaps.empty() && iMaps.find(mapID) == iMaps.end())
+                continue;
+
+            if (!iTiles.empty() && iTiles.find({ tileX, tileY }) == iTiles.end())
+                continue;
 
             MapSpawns *current;
             MapData::iterator map_iter = mapData.find(mapID);

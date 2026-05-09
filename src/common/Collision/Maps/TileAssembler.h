@@ -95,10 +95,16 @@ namespace VMAP
             std::string iDestDir;
             std::string iSrcDir;
             MapData mapData;
+            std::set<uint32> iMaps;
+            std::set<std::pair<uint32, uint32>> iTiles;
             std::set<std::string> spawnedModelFiles;
 
         public:
-            TileAssembler(const std::string& pSrcDirName, const std::string& pDestDirName);
+            TileAssembler(
+                const std::string& pSrcDirName,
+                const std::string& pDestDirName,
+                std::set<uint32> maps = {},
+                std::set<std::pair<uint32, uint32>> tiles = {});
             virtual ~TileAssembler();
 
             bool convertWorld2();

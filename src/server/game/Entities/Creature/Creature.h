@@ -121,7 +121,11 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         MovementGeneratorType GetDefaultMovementType() const override { return m_defaultMovementType; }
         void SetDefaultMovementType(MovementGeneratorType mgt) { m_defaultMovementType = mgt; }
 
-        bool IsDungeonBoss() const { return (GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_DUNGEON_BOSS) != 0; }
+        bool IsDungeonBoss() const
+        {
+            CreatureTemplate const* creatureTemplate = GetCreatureTemplate();
+            return creatureTemplate->rank == CREATURE_ELITE_DUNGEONBOSS || (creatureTemplate->flags_extra & CREATURE_FLAG_EXTRA_DUNGEON_BOSS) != 0;
+        }
         bool IsAffectedByDiminishingReturns() const override { return Unit::IsAffectedByDiminishingReturns() || (GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_ALL_DIMINISH) != 0; }
 
         Unit* SelectVictim();

@@ -459,7 +459,7 @@ bool InstanceScript::SetBossState(uint32 id, EncounterState state)
             if (state == DONE)
                 for (GuidSet::iterator i = bossInfo->minion.begin(); i != bossInfo->minion.end(); ++i)
                     if (Creature* minion = instance->GetCreature(*i))
-                        if (minion->isWorldBoss() && minion->IsAlive())
+                        if ((minion->isWorldBoss() || minion->IsDungeonBoss()) && minion->IsAlive())
                             return false;
 
             bossInfo->state = state;
