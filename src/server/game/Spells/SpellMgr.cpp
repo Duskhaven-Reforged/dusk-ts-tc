@@ -1903,8 +1903,8 @@ void SpellMgr::LoadSpellBonuses()
 
     mSpellBonusMap.clear();                             // need for reload case
 
-    //                                                0      1      2   3   4
-    QueryResult result = WorldDatabase.Query("SELECT entry, effect, sp, ap, bv FROM spell_bonus_data");
+    //                                                0      1      2   3   4   5
+    QueryResult result = WorldDatabase.Query("SELECT entry, effect, sp, ap, bv, scaling_mode FROM spell_bonus_data");
     if (!result)
     {
         TC_LOG_INFO("server.loading", ">> Loaded 0 spell bonus data. DB table `spell_bonus_data` is empty.");
@@ -1934,6 +1934,12 @@ void SpellMgr::LoadSpellBonuses()
         sbe.sp = fields[2].GetFloat();
         sbe.ap = fields[3].GetFloat();
         sbe.bv = fields[4].GetFloat();
+        sbe.scalingMode = fields[5].GetUInt8();
+        if (sbe.scalingMode > SPELL_BONUS_SCALING_HIGHEST)
+        {
+            TC_LOG_ERROR("sql.sql", "The spell {} listed in `spell_bonus_data` with invalid scaling_mode {}. Defaulting to BOTH.", entry, sbe.scalingMode);
+            sbe.scalingMode = SPELL_BONUS_SCALING_BOTH;
+        }
 
         ++count;
     } while (result->NextRow());

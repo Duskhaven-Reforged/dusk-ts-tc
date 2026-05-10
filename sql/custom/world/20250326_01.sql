@@ -7,6 +7,7 @@ CREATE TABLE `spell_bonus_data` (
   `sp` float NOT NULL DEFAULT '0',
   `ap` float NOT NULL DEFAULT '0',
   `bv` float NOT NULL DEFAULT '0',
+  `scaling_mode` int unsigned NOT NULL DEFAULT '0',
   `comments` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`entry`, `effect`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

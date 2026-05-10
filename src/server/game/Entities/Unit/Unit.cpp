@@ -6938,6 +6938,8 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
 
     // Check for table values
     float coeff = spellEffectInfo.BonusMultiplier;
+    int32 bonusAPBenefit = 0;
+    bool useHighestHybridBonus = false;
     if (SpellBonusEntry const* bonus = sSpellMgr->GetSpellBonusData(spellProto->Id, spellEffectInfo.EffectIndex))
     {
         WeaponAttackType const attType =
@@ -6945,7 +6947,10 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
         float APbonus = float(victim->GetTotalAuraModifier(attType == BASE_ATTACK ? SPELL_AURA_MELEE_ATTACK_POWER_ATTACKER_BONUS : SPELL_AURA_RANGED_ATTACK_POWER_ATTACKER_BONUS));
         APbonus += GetTotalAttackPowerValue(attType);
         coeff = bonus->sp;
-        DoneTotal += int32(bonus->ap * stack * ApCoeffMod * APbonus);
+        bonusAPBenefit = int32(bonus->ap * stack * ApCoeffMod * APbonus);
+        useHighestHybridBonus = bonus->scalingMode == SPELL_BONUS_SCALING_HIGHEST && bonus->ap != 0.0f && bonus->sp != 0.0f;
+        if (!useHighestHybridBonus)
+            DoneTotal += bonusAPBenefit;
         DoneTotal += int32(bonus->bv * GetShieldBlockValue());
     } else {
         // No bonus damage for SPELL_DAMAGE_CLASS_NONE class spells by default
@@ -6954,6 +6959,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
     }
 
     // Default calculation
+    bool appliedHighestHybridBonus = false;
     if (DoneAdvertisedBenefit)
     {
         if (coeff < 0.f)
@@ -6966,8 +6972,19 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
             modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_BONUS_MULTIPLIER, coeff);
             coeff /= 100.0f;
         }
-        DoneTotal += int32(DoneAdvertisedBenefit * coeff * factorMod);
+
+        int32 bonusSPBenefit = int32(DoneAdvertisedBenefit * coeff * factorMod);
+        if (useHighestHybridBonus)
+        {
+            DoneTotal += bonusAPBenefit >= bonusSPBenefit ? bonusAPBenefit : bonusSPBenefit;
+            appliedHighestHybridBonus = true;
+        }
+        else
+            DoneTotal += bonusSPBenefit;
     }
+
+    if (useHighestHybridBonus && !appliedHighestHybridBonus)
+        DoneTotal += bonusAPBenefit;
 
     float tmpDamage = float(int32(pdamage) + DoneTotal) * DoneTotalMod;
     if (Player const* pCaster = ToPlayer()) {
@@ -7949,13 +7966,18 @@ uint32 Unit::SpellHealingBonusDone(Unit* victim, SpellInfo const* spellProto, ui
 
     // Check for table values
     float coeff = spellEffectInfo.BonusMultiplier;
+    int32 bonusAPBenefit = 0;
+    bool useHighestHybridBonus = false;
     if (SpellBonusEntry const* bonus = sSpellMgr->GetSpellBonusData(spellProto->Id, spellEffectInfo.EffectIndex))
     {
         WeaponAttackType const attType = (spellProto->IsRangedWeaponSpell() && spellProto->DmgClass != SPELL_DAMAGE_CLASS_MELEE) ? RANGED_ATTACK : spellProto->HasAttribute(SPELL_ATTR3_MAIN_HAND) ? BASE_ATTACK : OFF_ATTACK;
         float APbonus = float(victim->GetTotalAuraModifier(attType == BASE_ATTACK ? SPELL_AURA_MELEE_ATTACK_POWER_ATTACKER_BONUS : SPELL_AURA_RANGED_ATTACK_POWER_ATTACKER_BONUS));
         APbonus += GetTotalAttackPowerValue(attType);
         coeff = bonus->sp;
-        DoneTotal += int32(bonus->ap * stack * ApCoeffMod * APbonus);
+        bonusAPBenefit = int32(bonus->ap * stack * ApCoeffMod * APbonus);
+        useHighestHybridBonus = bonus->scalingMode == SPELL_BONUS_SCALING_HIGHEST && bonus->ap != 0.0f && bonus->sp != 0.0f;
+        if (!useHighestHybridBonus)
+            DoneTotal += bonusAPBenefit;
     }
     else
     {
@@ -7965,6 +7987,7 @@ uint32 Unit::SpellHealingBonusDone(Unit* victim, SpellInfo const* spellProto, ui
     }
 
     // Default calculation
+    bool appliedHighestHybridBonus = false;
     if (DoneAdvertisedBenefit)
     {
         if (coeff < 0.f)
@@ -7978,8 +8001,18 @@ uint32 Unit::SpellHealingBonusDone(Unit* victim, SpellInfo const* spellProto, ui
             coeff /= 100.0f;
         }
 
-        DoneTotal += int32(DoneAdvertisedBenefit * coeff * factorMod);
+        int32 bonusSPBenefit = int32(DoneAdvertisedBenefit * coeff * factorMod);
+        if (useHighestHybridBonus)
+        {
+            DoneTotal += bonusAPBenefit >= bonusSPBenefit ? bonusAPBenefit : bonusSPBenefit;
+            appliedHighestHybridBonus = true;
+        }
+        else
+            DoneTotal += bonusSPBenefit;
     }
+
+    if (useHighestHybridBonus && !appliedHighestHybridBonus)
+        DoneTotal += bonusAPBenefit;
 
     for (SpellEffectInfo const& otherSpellEffect : spellProto->GetEffects())
     {

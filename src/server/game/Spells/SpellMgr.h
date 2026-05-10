@@ -300,6 +300,13 @@ struct SpellBonusEntry
     float  sp;
     float  ap;
     float  bv;
+    uint8  scalingMode;
+};
+
+enum SpellBonusScalingMode
+{
+    SPELL_BONUS_SCALING_BOTH = 0,
+    SPELL_BONUS_SCALING_HIGHEST = 1
 };
 
 typedef std::unordered_map<uint32, std::unordered_map<SpellEffIndex, SpellBonusEntry>>     SpellBonusMap;

@@ -547,10 +547,6 @@ DELETE bdo
 FROM `default.dataset.world.dest`.`battleground_door_object` bdo
 JOIN tmp_removed_maps m ON m.map = bdo.map;
 
-DELETE cht
-FROM `default.dataset.world.dest`.`creature_health_tuning` cht
-JOIN tmp_removed_maps m ON m.map = cht.MapID;
-
 DELETE ia
 FROM `default.dataset.world.dest`.`instance_addon` ia
 JOIN tmp_removed_maps m ON m.map = ia.map;

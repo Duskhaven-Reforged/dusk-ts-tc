@@ -10,34 +10,23 @@
 -- 1. Creature model/display cleanup.
 -- ---------------------------------------------------------------------------
 
--- Remove creature_model_info rows for custom display IDs that do not exist in
--- the client DBC. The current DBErrors audit reports the contiguous generated
--- block 150000-151567 as invalid.
-DELETE FROM `default.dataset.world.dest`.`creature_model_info`
-WHERE `DisplayID` BETWEEN 150000 AND 151567;
-
--- Clear creature_template model slots that point at missing client display IDs.
--- The 150000-151567 range is generated/custom; the small list below came from
--- the same DBErrors audit.
+-- Clear creature_template model slots that point at known missing client display IDs.
+-- Do not touch generated/custom 150k display IDs; those are used by the project.
 UPDATE `default.dataset.world.dest`.`creature_template`
 SET `modelid1` = 0
-WHERE `modelid1` BETWEEN 150000 AND 151567
-   OR `modelid1` IN (1257,4245,7010,13131,13150,15261,16542);
+WHERE `modelid1` IN (1257,4245,7010,13131,13150,15261,16542);
 
 UPDATE `default.dataset.world.dest`.`creature_template`
 SET `modelid2` = 0
-WHERE `modelid2` BETWEEN 150000 AND 151567
-   OR `modelid2` IN (1257,4245,7010,13131,13150,15261,16542);
+WHERE `modelid2` IN (1257,4245,7010,13131,13150,15261,16542);
 
 UPDATE `default.dataset.world.dest`.`creature_template`
 SET `modelid3` = 0
-WHERE `modelid3` BETWEEN 150000 AND 151567
-   OR `modelid3` IN (1257,4245,7010,13131,13150,15261,16542);
+WHERE `modelid3` IN (1257,4245,7010,13131,13150,15261,16542);
 
 UPDATE `default.dataset.world.dest`.`creature_template`
 SET `modelid4` = 0
-WHERE `modelid4` BETWEEN 150000 AND 151567
-   OR `modelid4` IN (1257,4245,7010,13131,13150,15261,16542);
+WHERE `modelid4` IN (1257,4245,7010,13131,13150,15261,16542);
 
 -- Some generated/custom creature templates only had the invalid model. Give
 -- those a known-valid fallback display instead of leaving them with no model.
@@ -49,7 +38,7 @@ WHERE `modelid1` = 0
   AND `modelid4` = 0
   AND (
        `entry` BETWEEN 45560 AND 47127
-    OR `entry` IN (3339,3651,7826,11446,13085,14387,15103,16979,45000,45391,45417,47184,47238,47473,47505)
+    OR `entry` IN (3339,3651,7826,11446,13085,14387,15103,16979)
   );
 
 -- ---------------------------------------------------------------------------

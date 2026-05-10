@@ -1,30 +1,11 @@
 -- Auto-generated DBErrors cleanup.
 -- Scope: current `default.dataset.world.dest` world schema only.
-
-UPDATE `default.dataset.world.dest`.`creature_template` SET modelid1 = 0 WHERE entry = 45391;
-
 UPDATE `default.dataset.world.dest`.`creature_template` SET modelid1 = 0 WHERE entry = 3339;
 
 UPDATE `default.dataset.world.dest`.`creature_template` SET modelid1 = 0 WHERE entry = 7826;
-
-UPDATE `default.dataset.world.dest`.`creature_template` SET modelid1 = 0 WHERE entry = 47505;
-
-UPDATE `default.dataset.world.dest`.`creature_template` SET modelid1 = 0 WHERE entry = 47473;
-
-UPDATE `default.dataset.world.dest`.`creature_template` SET modelid1 = 0 WHERE entry = 45417;
-
 UPDATE `default.dataset.world.dest`.`creature_template` SET modelid1 = 0 WHERE entry = 14387;
 
 UPDATE `default.dataset.world.dest`.`creature_template` SET modelid1 = 0 WHERE entry = 13085;
-
-UPDATE `default.dataset.world.dest`.`creature_template` SET modelid1 = 0 WHERE entry = 47184;
-
-UPDATE `default.dataset.world.dest`.`creature_template` SET modelid1 = 0 WHERE entry = 45000;
-
-UPDATE `default.dataset.world.dest`.`creature_template` SET modelid3 = 0 WHERE entry = 47238;
-
-UPDATE `default.dataset.world.dest`.`creature_template` SET modelid1 = 49 WHERE entry IN (45391, 47505, 47473, 45417, 47184, 45000) AND modelid1 = 0 AND modelid2 = 0 AND modelid3 = 0 AND modelid4 = 0;
-
 UPDATE `default.dataset.world.dest`.`creature_template` SET speed_walk = 1 WHERE entry = 795;
 
 UPDATE `default.dataset.world.dest`.`creature_template` SET speed_walk = 1 WHERE entry = 796;
