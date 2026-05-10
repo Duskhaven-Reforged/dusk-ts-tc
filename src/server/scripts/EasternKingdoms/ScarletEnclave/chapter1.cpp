@@ -1159,5 +1159,5 @@ void AddSC_the_scarlet_enclave_c1()
     new npc_dkc1_gothik();
     RegisterCreatureAI(npc_scarlet_ghoul);
     RegisterSpellScript(spell_gift_of_the_harvester);
-    RegisterSpellScript(spell_chapter1_runeforging_credit);
+    // RegisterSpellScript(spell_chapter1_runeforging_credit);
 }

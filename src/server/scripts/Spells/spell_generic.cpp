@@ -4673,7 +4673,7 @@ void AddSC_generic_spell_scripts()
     RegisterSpellScript(spell_gen_nightmare_vine);
     RegisterSpellScript(spell_gen_nitrous_boost);
     RegisterSpellScript(spell_gen_obsidian_armor);
-    RegisterSpellScript(spell_gen_one_tick_dummy);
+    // RegisterSpellScript(spell_gen_one_tick_dummy);
     RegisterSpellScript(spell_gen_oracle_wolvar_reputation);
     RegisterSpellScript(spell_gen_orc_disguise);
     RegisterSpellScript(spell_gen_paralytic_poison);

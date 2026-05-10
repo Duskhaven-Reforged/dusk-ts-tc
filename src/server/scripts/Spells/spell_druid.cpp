@@ -1927,13 +1927,13 @@ class spell_dru_wild_growth_aura : public AuraScript
 void AddSC_druid_spell_scripts()
 {
     RegisterSpellScript(spell_dru_barkskin);
-    RegisterSpellScript(spell_dru_bear_form_passive);
+    // RegisterSpellScript(spell_dru_bear_form_passive);
     RegisterSpellScript(spell_dru_berserk);
     RegisterSpellScript(spell_dru_dash);
     RegisterSpellScript(spell_dru_eclipse);
     RegisterSpellScript(spell_dru_enrage);
     RegisterSpellScript(spell_dru_forms_trinket);
-    RegisterSpellScript(spell_dru_flight_form);
+    // RegisterSpellScript(spell_dru_flight_form);
     RegisterSpellScript(spell_dru_frenzied_regeneration);
     RegisterSpellScript(spell_dru_glyph_of_barkskin);
     RegisterSpellScript(spell_dru_glyph_of_innervate);
@@ -1944,27 +1944,27 @@ void AddSC_druid_spell_scripts()
     RegisterSpellScript(spell_dru_glyph_of_starfire_dummy);
     RegisterSpellScript(spell_dru_idol_lifebloom);
     RegisterSpellScript(spell_dru_innervate);
-    RegisterSpellScript(spell_dru_insect_swarm);
+    // RegisterSpellScript(spell_dru_insect_swarm);
     RegisterSpellScript(spell_dru_leader_of_the_pack);
-    RegisterSpellScript(spell_dru_lifebloom);
+    // RegisterSpellScript(spell_dru_lifebloom);
     RegisterSpellScript(spell_dru_living_seed);
     RegisterSpellScript(spell_dru_living_seed_proc);
     RegisterSpellScript(spell_dru_moonkin_form_passive);
-    RegisterSpellScript(spell_dru_nourish);
+    // RegisterSpellScript(spell_dru_nourish);
     RegisterSpellScript(spell_dru_nurturing_instinct);
     RegisterSpellScript(spell_dru_omen_of_clarity);
     RegisterSpellScript(spell_dru_owlkin_frenzy);
     RegisterSpellScript(spell_dru_predatory_strikes);
     RegisterSpellScript(spell_dru_primal_tenacity);
     RegisterSpellScript(spell_dru_revitalize);
-    RegisterSpellScript(spell_dru_rip);
+    // RegisterSpellScript(spell_dru_rip);
     RegisterSpellScript(spell_dru_savage_defense);
-    RegisterSpellAndAuraScriptPair(spell_dru_savage_roar, spell_dru_savage_roar_aura);
+    // RegisterSpellAndAuraScriptPair(spell_dru_savage_roar, spell_dru_savage_roar_aura);
     RegisterSpellScript(spell_dru_starfall_aoe);
     RegisterSpellScript(spell_dru_starfall_dummy);
     RegisterSpellAndAuraScriptPair(spell_dru_survival_instincts, spell_dru_survival_instincts_aura);
     RegisterSpellScript(spell_dru_swift_flight_passive);
-    RegisterSpellScript(spell_dru_tiger_s_fury);
+    // RegisterSpellScript(spell_dru_tiger_s_fury);
     RegisterSpellScript(spell_dru_typhoon);
     RegisterSpellScript(spell_dru_t3_2p_bonus);
     RegisterSpellScript(spell_dru_t3_6p_bonus);
@@ -1975,5 +1975,5 @@ void AddSC_druid_spell_scripts()
     RegisterSpellScript(spell_dru_t10_balance_4p_bonus);
     RegisterSpellScript(spell_dru_t10_restoration_4p_bonus);
     RegisterSpellScript(spell_dru_t10_restoration_4p_bonus_dummy);
-    RegisterSpellAndAuraScriptPair(spell_dru_wild_growth, spell_dru_wild_growth_aura);
+    // RegisterSpellAndAuraScriptPair(spell_dru_wild_growth, spell_dru_wild_growth_aura);
 }

@@ -1974,7 +1974,7 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScript(spell_pal_ardent_defender);
     RegisterSpellScript(spell_pal_aura_mastery);
     RegisterSpellScript(spell_pal_aura_mastery_immune);
-    RegisterSpellScript(spell_pal_avenging_wrath);
+    // RegisterSpellScript(spell_pal_avenging_wrath);
     RegisterSpellScript(spell_pal_blessing_of_faith);
     RegisterSpellScript(spell_pal_blessing_of_sanctuary);
     RegisterSpellScript(spell_pal_divine_purpose);
@@ -1990,7 +1990,7 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScript(spell_pal_hand_of_sacrifice);
     RegisterSpellScript(spell_pal_hand_of_salvation);
     RegisterSpellScript(spell_pal_heart_of_the_crusader);
-    RegisterSpellScript(spell_pal_holy_shock);
+    // RegisterSpellScript(spell_pal_holy_shock);
     RegisterSpellScript(spell_pal_illumination);
     RegisterSpellScript(spell_pal_immunities);
     RegisterSpellScriptWithArgs(spell_pal_improved_aura, "spell_pal_improved_concentraction_aura", SPELL_PALADIN_IMPROVED_CONCENTRACTION_AURA);
@@ -2012,11 +2012,11 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScript(spell_pal_righteous_defense);
     RegisterSpellScript(spell_pal_righteous_vengeance);
     RegisterSpellScript(spell_pal_sacred_shield);
-    RegisterSpellScript(spell_pal_sacred_shield_dummy);
+    // RegisterSpellScript(spell_pal_sacred_shield_dummy);
     RegisterSpellScript(spell_pal_seal_of_righteousness);
-    new spell_pal_seal_of_vengeance<SPELL_PALADIN_HOLY_VENGEANCE, SPELL_PALADIN_SEAL_OF_VENGEANCE_DAMAGE>("spell_pal_seal_of_vengeance");
-    new spell_pal_seal_of_vengeance<SPELL_PALADIN_BLOOD_CORRUPTION, SPELL_PALADIN_SEAL_OF_CORRUPTION_DAMAGE>("spell_pal_seal_of_corruption");
-    RegisterSpellScript(spell_pal_seals);
+    // new spell_pal_seal_of_vengeance<SPELL_PALADIN_HOLY_VENGEANCE, SPELL_PALADIN_SEAL_OF_VENGEANCE_DAMAGE>("spell_pal_seal_of_vengeance");
+    // new spell_pal_seal_of_vengeance<SPELL_PALADIN_BLOOD_CORRUPTION, SPELL_PALADIN_SEAL_OF_CORRUPTION_DAMAGE>("spell_pal_seal_of_corruption");
+    // RegisterSpellScript(spell_pal_seals);
     RegisterSpellScript(spell_pal_spiritual_attunement);
     RegisterSpellScript(spell_pal_sheath_of_light);
     RegisterSpellScript(spell_pal_t3_6p_bonus);

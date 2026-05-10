@@ -1092,7 +1092,7 @@ void ScriptMgr::Initialize()
     {
         // Avoid complaining about empty script names since the
         // script name container contains a placeholder as the 0 element.
-        if (scriptName.empty())
+        if (scriptName.empty() || scriptName == "custom_script")
             continue;
 
         TC_LOG_ERROR("sql.sql", "Script '{}' is referenced by the database, but does not exist in the core!", scriptName);

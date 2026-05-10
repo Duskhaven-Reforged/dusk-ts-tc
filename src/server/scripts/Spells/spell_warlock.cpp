@@ -1791,37 +1791,37 @@ class spell_warl_soulrend : public AuraScript
 
 void AddSC_warlock_spell_scripts()
 {
-    RegisterSpellScript(spell_warl_curse_of_agony);
+    // RegisterSpellScript(spell_warl_curse_of_agony);
     RegisterSpellScript(spell_warl_banish);
-    new spell_warl_create_healthstone();
-    RegisterSpellScript(spell_warl_curse_of_doom);
+    // new spell_warl_create_healthstone();
+    // RegisterSpellScript(spell_warl_curse_of_doom);
     RegisterSpellScript(spell_warl_decimation);
-    RegisterSpellScript(spell_warl_demonic_circle_summon);
-    RegisterSpellScript(spell_warl_demonic_circle_teleport);
+    // RegisterSpellScript(spell_warl_demonic_circle_summon);
+    // RegisterSpellScript(spell_warl_demonic_circle_teleport);
     RegisterSpellScript(spell_warl_demonic_empowerment);
     RegisterSpellScript(spell_warl_demonic_pact);
-    RegisterSpellScript(spell_warl_drain_soul);
+    // RegisterSpellScript(spell_warl_drain_soul);
     RegisterSpellScript(spell_warl_everlasting_affliction);
     RegisterSpellScript(spell_warl_fel_synergy);
     RegisterSpellScript(spell_warl_glyph_of_life_tap);
     RegisterSpellScript(spell_warl_glyph_of_shadowflame);
-    RegisterSpellAndAuraScriptPair(spell_warl_haunt, spell_warl_haunt_aura);
-    RegisterSpellScript(spell_warl_health_funnel);
+    // RegisterSpellAndAuraScriptPair(spell_warl_haunt, spell_warl_haunt_aura);
+    // RegisterSpellScript(spell_warl_health_funnel);
     RegisterSpellScript(spell_warl_glyph_of_corruption_nightfall);
-    RegisterSpellScript(spell_warl_life_tap);
+    // RegisterSpellScript(spell_warl_life_tap);
     RegisterSpellScript(spell_warl_nether_protection);
     RegisterSpellScript(spell_warl_ritual_of_doom_effect);
     RegisterSpellScript(spell_warl_seduction);
     RegisterSpellScript(spell_warl_seed_of_corruption);
-    RegisterSpellScript(spell_warl_seed_of_corruption_dummy);
+    // RegisterSpellScript(spell_warl_seed_of_corruption_dummy);
     RegisterSpellScript(spell_warl_seed_of_corruption_generic);
-    RegisterSpellScript(spell_warl_shadow_ward);
+    // RegisterSpellScript(spell_warl_shadow_ward);
     RegisterSpellScript(spell_warl_siphon_life);
     RegisterSpellScript(spell_warl_soul_leech);
-    RegisterSpellScript(spell_warl_soulshatter);
+    // RegisterSpellScript(spell_warl_soulshatter);
     RegisterSpellScriptWithArgs(spell_warl_t4_2p_bonus<SPELL_WARLOCK_FLAMESHADOW>, "spell_warl_t4_2p_bonus_shadow");
     RegisterSpellScriptWithArgs(spell_warl_t4_2p_bonus<SPELL_WARLOCK_SHADOWFLAME>, "spell_warl_t4_2p_bonus_fire");
-    RegisterSpellScript(spell_warl_unstable_affliction);
+    // RegisterSpellScript(spell_warl_unstable_affliction);
     // Duskhaven
     // RegisterSpellScript(spell_warl_chaos_bolt);
     // RegisterSpellScript(spell_warl_corruption);

@@ -1299,7 +1299,7 @@ void AddSC_priest_spell_scripts()
     RegisterSpellScript(spell_pri_aq_3p_bonus);
     RegisterSpellScript(spell_pri_blessed_recovery);
     RegisterSpellScript(spell_pri_body_and_soul);
-    RegisterSpellScript(spell_pri_circle_of_healing);
+    // RegisterSpellScript(spell_pri_circle_of_healing);
     RegisterSpellScript(spell_pri_divine_aegis);
     RegisterSpellScript(spell_pri_divine_hymn);
     RegisterSpellScript(spell_pri_glyph_of_dispel_magic);
@@ -1315,14 +1315,14 @@ void AddSC_priest_spell_scripts()
     RegisterSpellScript(spell_pri_mind_sear);
     RegisterSpellScript(spell_pri_pain_and_suffering_dummy);
     RegisterSpellScript(spell_pri_pain_and_suffering_proc);
-    RegisterSpellScript(spell_pri_penance);
-    RegisterSpellAndAuraScriptPair(spell_pri_power_word_shield, spell_pri_power_word_shield_aura);
+    // RegisterSpellScript(spell_pri_penance);
+    // RegisterSpellAndAuraScriptPair(spell_pri_power_word_shield, spell_pri_power_word_shield_aura);
     RegisterSpellScript(spell_pri_prayer_of_mending_heal);
-    RegisterSpellScript(spell_pri_renew);
+    // RegisterSpellScript(spell_pri_renew);
     RegisterSpellScript(spell_pri_shadowfiend_death);
-    RegisterSpellScript(spell_pri_shadow_word_death);
+    // RegisterSpellScript(spell_pri_shadow_word_death);
     RegisterSpellScript(spell_pri_vampiric_embrace);
-    RegisterSpellScript(spell_pri_vampiric_touch);
+    // RegisterSpellScript(spell_pri_vampiric_touch);
     RegisterSpellScript(spell_pri_t3_4p_bonus);
     RegisterSpellScript(spell_pri_t5_heal_2p_bonus);
     RegisterSpellScript(spell_pri_t10_heal_2p_bonus);

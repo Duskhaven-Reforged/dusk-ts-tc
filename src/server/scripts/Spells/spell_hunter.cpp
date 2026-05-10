@@ -1373,7 +1373,7 @@ void AddSC_hunter_spell_scripts()
     RegisterSpellScript(spell_hun_disengage);
     RegisterSpellScript(spell_hun_glyph_of_arcane_shot);
     RegisterSpellScript(spell_hun_glyph_of_mend_pet);
-    RegisterSpellScript(spell_hun_explosive_shot);
+    // RegisterSpellScript(spell_hun_explosive_shot);
     RegisterSpellScript(spell_hun_feeding_frenzy);
     RegisterSpellScript(spell_hun_hunting_party);
     RegisterSpellScript(spell_hun_improved_mend_pet);
@@ -1381,8 +1381,8 @@ void AddSC_hunter_spell_scripts()
     RegisterSpellScript(spell_hun_kill_command_pet);
     RegisterSpellScript(spell_hun_last_stand_pet);
     RegisterSpellScript(spell_hun_lock_and_load);
-    RegisterSpellScript(spell_hun_masters_call);
-    RegisterSpellScript(spell_hun_misdirection);
+    // RegisterSpellScript(spell_hun_masters_call);
+    // RegisterSpellScript(spell_hun_misdirection);
     RegisterSpellScript(spell_hun_misdirection_proc);
     RegisterSpellScript(spell_hun_pet_cower);
     RegisterSpellScript(spell_hun_pet_carrion_feeder);
@@ -1399,5 +1399,5 @@ void AddSC_hunter_spell_scripts()
     RegisterSpellScript(spell_hun_thrill_of_the_hunt);
     RegisterSpellScript(spell_hun_t9_4p_bonus);
     RegisterSpellScript(spell_hun_viper_attack_speed);
-    RegisterSpellScript(spell_hun_wyvern_sting);
+    // RegisterSpellScript(spell_hun_wyvern_sting);
 }

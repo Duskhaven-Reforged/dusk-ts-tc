@@ -996,12 +996,12 @@ void AddSC_rogue_spell_scripts()
     RegisterSpellScript(spell_rog_preparation);
     RegisterSpellScript(spell_rog_prey_on_the_weak);
     RegisterSpellScript(spell_rog_quick_recovery);
-    new spell_rog_rupture();
+    // new spell_rog_rupture();
     RegisterSpellScript(spell_rog_glyph_of_backstab);
     new spell_rog_glyph_of_backstab_triggered();
     RegisterSpellScript(spell_rog_setup);
-    RegisterSpellScript(spell_rog_shiv);
-    RegisterSpellAndAuraScriptPair(spell_rog_tricks_of_the_trade, spell_rog_tricks_of_the_trade_aura);
+    // RegisterSpellScript(spell_rog_shiv);
+    // RegisterSpellAndAuraScriptPair(spell_rog_tricks_of_the_trade, spell_rog_tricks_of_the_trade_aura);
     RegisterSpellScript(spell_rog_tricks_of_the_trade_proc);
     RegisterSpellScript(spell_rog_honor_among_thieves);
     RegisterSpellAndAuraScriptPair(spell_rog_honor_among_thieves_proc, spell_rog_honor_among_thieves_proc_aura);
