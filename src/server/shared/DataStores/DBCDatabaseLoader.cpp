@@ -103,7 +103,9 @@ char* DBCDatabaseLoader::Load(uint32& records, char**& indexTable)
         }
         else
         {
-            if (std::strcmp(_sqlTableName, "spell_dbc") == 0)
+            if (std::strcmp(_sqlTableName, "spell_dbc") == 0 ||
+                std::strcmp(_sqlTableName, "dbc_spellcasttimes") == 0 ||
+                std::strcmp(_sqlTableName, "dbc_spellduration") == 0)
             {
                 ++skippedDuplicateRecords;
                 TC_LOG_WARN("sql.sql", "Skipping duplicate SQL row {} in '{}'; keeping existing DBC definition.", indexValue, _sqlTableName);

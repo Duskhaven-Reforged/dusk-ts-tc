@@ -417,7 +417,9 @@ void LoadDBCStores(const std::string& dataPath)
 
     LOAD_DBC_EXT(sAchievementStore,     "Achievement.dbc",      "achievement_dbc",      CustomAchievementfmt,     CustomAchievementIndex);
     LOAD_DBC_EXT(sSpellStore,           "Spell.dbc",            "spell_dbc",            CustomSpellEntryfmt,      CustomSpellEntryIndex);
+    LOAD_DBC_EXT(sSpellCastTimesStore,  "SpellCastTimes.dbc",   "dbc_spellcasttimes",   CustomSpellCastTimefmt,  CustomSpellCastTimeIndex);
     LOAD_DBC_EXT(sSpellDifficultyStore, "SpellDifficulty.dbc",  "spelldifficulty_dbc",  CustomSpellDifficultyfmt, CustomSpellDifficultyIndex);
+    LOAD_DBC_EXT(sSpellDurationStore,   "SpellDuration.dbc",    "dbc_spellduration",    CustomSpellDurationfmt,  CustomSpellDurationIndex);
 
 #undef LOAD_DBC_EXT
 
