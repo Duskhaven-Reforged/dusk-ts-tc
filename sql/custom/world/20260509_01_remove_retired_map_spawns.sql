@@ -563,10 +563,6 @@ DELETE iea
 FROM `default.dataset.world.dest`.`instance_encounter_achievement` iea
 JOIN tmp_removed_maps m ON m.map = iea.map;
 
-DELETE ihp
-FROM `default.dataset.world.dest`.`instance_health_profile` ihp
-JOIN tmp_removed_maps m ON m.map = ihp.MapID;
-
 DELETE it
 FROM `default.dataset.world.dest`.`instance_template` it
 JOIN tmp_removed_maps m ON m.map = it.map;
