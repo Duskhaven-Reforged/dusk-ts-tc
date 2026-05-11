@@ -39,7 +39,7 @@ CREATE TEMPORARY TABLE tmp_removed_creature_guids (
 
 INSERT INTO tmp_removed_creature_guids (guid)
 SELECT c.guid
-FROM `default.dataset.world.dest`.`creature` c
+FROM `creature` c
 JOIN tmp_removed_maps m ON m.map = c.map;
 
 DROP TEMPORARY TABLE IF EXISTS tmp_removed_creature_guids_linked;
@@ -57,7 +57,7 @@ CREATE TEMPORARY TABLE tmp_removed_creature_entries (
 
 INSERT IGNORE INTO tmp_removed_creature_entries (entry)
 SELECT c.id
-FROM `default.dataset.world.dest`.`creature` c
+FROM `creature` c
 JOIN tmp_removed_maps m ON m.map = c.map
 WHERE c.id <> 0;
 
@@ -68,7 +68,7 @@ CREATE TEMPORARY TABLE tmp_removed_gameobject_guids (
 
 INSERT INTO tmp_removed_gameobject_guids (guid)
 SELECT g.guid
-FROM `default.dataset.world.dest`.`gameobject` g
+FROM `gameobject` g
 JOIN tmp_removed_maps m ON m.map = g.map;
 
 DROP TEMPORARY TABLE IF EXISTS tmp_removed_gameobject_guids_linked;
@@ -86,7 +86,7 @@ CREATE TEMPORARY TABLE tmp_removed_gameobject_entries (
 
 INSERT IGNORE INTO tmp_removed_gameobject_entries (entry)
 SELECT g.id
-FROM `default.dataset.world.dest`.`gameobject` g
+FROM `gameobject` g
 JOIN tmp_removed_maps m ON m.map = g.map
 WHERE g.id <> 0;
 
@@ -97,7 +97,7 @@ CREATE TEMPORARY TABLE tmp_removed_creature_path_ids (
 
 INSERT IGNORE INTO tmp_removed_creature_path_ids (path_id)
 SELECT ca.path_id
-FROM `default.dataset.world.dest`.`creature_addon` ca
+FROM `creature_addon` ca
 JOIN tmp_removed_creature_guids rc ON rc.guid = ca.guid
 WHERE ca.path_id <> 0;
 
@@ -108,7 +108,7 @@ CREATE TEMPORARY TABLE tmp_removed_waypoint_script_ids (
 
 INSERT IGNORE INTO tmp_removed_waypoint_script_ids (id)
 SELECT wd.action
-FROM `default.dataset.world.dest`.`waypoint_data` wd
+FROM `waypoint_data` wd
 JOIN tmp_removed_creature_path_ids rp ON rp.path_id = wd.id
 WHERE wd.action <> 0;
 
@@ -119,21 +119,21 @@ CREATE TEMPORARY TABLE tmp_removed_spawn_group_ids (
 
 INSERT IGNORE INTO tmp_removed_spawn_group_ids (groupId)
 SELECT sg.groupId
-FROM `default.dataset.world.dest`.`spawn_group` sg
+FROM `spawn_group` sg
 JOIN tmp_removed_creature_guids rc
   ON sg.spawnType = 0
  AND sg.spawnId = rc.guid;
 
 INSERT IGNORE INTO tmp_removed_spawn_group_ids (groupId)
 SELECT sg.groupId
-FROM `default.dataset.world.dest`.`spawn_group` sg
+FROM `spawn_group` sg
 JOIN tmp_removed_gameobject_guids rg
   ON sg.spawnType = 1
  AND sg.spawnId = rg.guid;
 
 INSERT IGNORE INTO tmp_removed_spawn_group_ids (groupId)
 SELECT isg.spawnGroupId
-FROM `default.dataset.world.dest`.`instance_spawn_groups` isg
+FROM `instance_spawn_groups` isg
 JOIN tmp_removed_maps m ON m.map = isg.instanceMapId;
 
 DROP TEMPORARY TABLE IF EXISTS tmp_deleted_smart_scripts;
@@ -147,14 +147,14 @@ CREATE TEMPORARY TABLE tmp_deleted_smart_scripts (
 
 INSERT INTO tmp_deleted_smart_scripts (entryorguid, source_type, id, link)
 SELECT ss.entryorguid, ss.source_type, ss.id, ss.link
-FROM `default.dataset.world.dest`.`smart_scripts` ss
+FROM `smart_scripts` ss
 JOIN tmp_removed_creature_guids rc
   ON ss.source_type = 0
  AND ss.entryorguid = -CAST(rc.guid AS SIGNED);
 
 INSERT INTO tmp_deleted_smart_scripts (entryorguid, source_type, id, link)
 SELECT ss.entryorguid, ss.source_type, ss.id, ss.link
-FROM `default.dataset.world.dest`.`smart_scripts` ss
+FROM `smart_scripts` ss
 JOIN tmp_removed_gameobject_guids rg
   ON ss.source_type = 1
  AND ss.entryorguid = -CAST(rg.guid AS SIGNED);
@@ -192,7 +192,7 @@ CREATE TEMPORARY TABLE tmp_timed_actionlist_candidates (
 
 INSERT IGNORE INTO tmp_timed_actionlist_candidates (entry)
 SELECT ss.action_param1
-FROM `default.dataset.world.dest`.`smart_scripts` ss
+FROM `smart_scripts` ss
 JOIN tmp_deleted_smart_scripts dss
   ON dss.entryorguid = ss.entryorguid
  AND dss.source_type = ss.source_type
@@ -203,7 +203,7 @@ WHERE ss.action_type = 80
 
 INSERT IGNORE INTO tmp_timed_actionlist_candidates (entry)
 SELECT ss.action_param1
-FROM `default.dataset.world.dest`.`smart_scripts` ss
+FROM `smart_scripts` ss
 JOIN tmp_deleted_smart_scripts dss
   ON dss.entryorguid = ss.entryorguid
  AND dss.source_type = ss.source_type
@@ -213,7 +213,7 @@ WHERE ss.action_type = 87 AND ss.action_param1 <> 0;
 
 INSERT IGNORE INTO tmp_timed_actionlist_candidates (entry)
 SELECT ss.action_param2
-FROM `default.dataset.world.dest`.`smart_scripts` ss
+FROM `smart_scripts` ss
 JOIN tmp_deleted_smart_scripts dss
   ON dss.entryorguid = ss.entryorguid
  AND dss.source_type = ss.source_type
@@ -223,7 +223,7 @@ WHERE ss.action_type = 87 AND ss.action_param2 <> 0;
 
 INSERT IGNORE INTO tmp_timed_actionlist_candidates (entry)
 SELECT ss.action_param3
-FROM `default.dataset.world.dest`.`smart_scripts` ss
+FROM `smart_scripts` ss
 JOIN tmp_deleted_smart_scripts dss
   ON dss.entryorguid = ss.entryorguid
  AND dss.source_type = ss.source_type
@@ -233,7 +233,7 @@ WHERE ss.action_type = 87 AND ss.action_param3 <> 0;
 
 INSERT IGNORE INTO tmp_timed_actionlist_candidates (entry)
 SELECT ss.action_param4
-FROM `default.dataset.world.dest`.`smart_scripts` ss
+FROM `smart_scripts` ss
 JOIN tmp_deleted_smart_scripts dss
   ON dss.entryorguid = ss.entryorguid
  AND dss.source_type = ss.source_type
@@ -243,7 +243,7 @@ WHERE ss.action_type = 87 AND ss.action_param4 <> 0;
 
 INSERT IGNORE INTO tmp_timed_actionlist_candidates (entry)
 SELECT ss.action_param5
-FROM `default.dataset.world.dest`.`smart_scripts` ss
+FROM `smart_scripts` ss
 JOIN tmp_deleted_smart_scripts dss
   ON dss.entryorguid = ss.entryorguid
  AND dss.source_type = ss.source_type
@@ -253,7 +253,7 @@ WHERE ss.action_type = 87 AND ss.action_param5 <> 0;
 
 INSERT IGNORE INTO tmp_timed_actionlist_candidates (entry)
 SELECT ss.action_param6
-FROM `default.dataset.world.dest`.`smart_scripts` ss
+FROM `smart_scripts` ss
 JOIN tmp_deleted_smart_scripts dss
   ON dss.entryorguid = ss.entryorguid
  AND dss.source_type = ss.source_type
@@ -263,7 +263,7 @@ WHERE ss.action_type = 87 AND ss.action_param6 <> 0;
 
 INSERT IGNORE INTO tmp_timed_actionlist_candidates (entry)
 SELECT ss.action_param1 + seq.n
-FROM `default.dataset.world.dest`.`smart_scripts` ss
+FROM `smart_scripts` ss
 JOIN tmp_deleted_smart_scripts dss
   ON dss.entryorguid = ss.entryorguid
  AND dss.source_type = ss.source_type
@@ -292,13 +292,13 @@ SELECT c.entry
 FROM tmp_timed_actionlist_candidates c
 WHERE EXISTS (
   SELECT 1
-  FROM `default.dataset.world.dest`.`smart_scripts` ss
+  FROM `smart_scripts` ss
   WHERE ss.source_type = 9
     AND ss.entryorguid = c.entry
 )
 AND NOT EXISTS (
   SELECT 1
-  FROM `default.dataset.world.dest`.`smart_scripts` live
+  FROM `smart_scripts` live
   LEFT JOIN tmp_deleted_smart_scripts_live dss
     ON dss.entryorguid = live.entryorguid
    AND dss.source_type = live.source_type
@@ -333,7 +333,7 @@ CREATE TEMPORARY TABLE tmp_removed_quest_poi (
 
 INSERT INTO tmp_removed_quest_poi (QuestID, id)
 SELECT qp.QuestID, qp.id
-FROM `default.dataset.world.dest`.`quest_poi` qp
+FROM `quest_poi` qp
 JOIN tmp_removed_maps m ON m.map = qp.MapID;
 
 -- Audit before deletes.
@@ -341,7 +341,7 @@ SELECT 'creature' AS table_name, COUNT(*) AS rows_to_delete FROM tmp_removed_cre
 SELECT 'gameobject' AS table_name, COUNT(*) AS rows_to_delete FROM tmp_removed_gameobject_guids;
 SELECT 'smart_scripts' AS table_name, COUNT(*) AS rows_to_delete FROM tmp_deleted_smart_scripts;
 SELECT 'smart_scripts timed_actionlists' AS table_name, COUNT(*) AS rows_to_delete
-FROM `default.dataset.world.dest`.`smart_scripts` ss
+FROM `smart_scripts` ss
 JOIN tmp_deleted_timed_actionlists dt
   ON dt.entry = ss.entryorguid
  AND ss.source_type = 9;
@@ -349,68 +349,68 @@ SELECT 'quest_poi' AS table_name, COUNT(*) AS rows_to_delete FROM tmp_removed_qu
 
 -- Quest/template fallout audit. These are not deleted by this file.
 SELECT DISTINCT 'creature_queststarter' AS ref_type, cqs.quest, cqs.id AS entry
-FROM `default.dataset.world.dest`.`creature_queststarter` cqs
+FROM `creature_queststarter` cqs
 JOIN tmp_removed_creature_entries rce ON rce.entry = cqs.id
 ORDER BY cqs.quest, cqs.id;
 
 SELECT DISTINCT 'creature_questender' AS ref_type, cqe.quest, cqe.id AS entry
-FROM `default.dataset.world.dest`.`creature_questender` cqe
+FROM `creature_questender` cqe
 JOIN tmp_removed_creature_entries rce ON rce.entry = cqe.id
 ORDER BY cqe.quest, cqe.id;
 
 SELECT DISTINCT 'gameobject_queststarter' AS ref_type, gqs.quest, gqs.id AS entry
-FROM `default.dataset.world.dest`.`gameobject_queststarter` gqs
+FROM `gameobject_queststarter` gqs
 JOIN tmp_removed_gameobject_entries rge ON rge.entry = gqs.id
 ORDER BY gqs.quest, gqs.id;
 
 SELECT DISTINCT 'gameobject_questender' AS ref_type, gqe.quest, gqe.id AS entry
-FROM `default.dataset.world.dest`.`gameobject_questender` gqe
+FROM `gameobject_questender` gqe
 JOIN tmp_removed_gameobject_entries rge ON rge.entry = gqe.id
 ORDER BY gqe.quest, gqe.id;
 
 SELECT DISTINCT 'quest_objective_creature' AS ref_type, qt.ID AS quest, req.entry
-FROM `default.dataset.world.dest`.`quest_template` qt
+FROM `quest_template` qt
 JOIN (
-  SELECT ID, RequiredNpcOrGo1 AS entry FROM `default.dataset.world.dest`.`quest_template` WHERE RequiredNpcOrGo1 > 0
-  UNION ALL SELECT ID, RequiredNpcOrGo2 FROM `default.dataset.world.dest`.`quest_template` WHERE RequiredNpcOrGo2 > 0
-  UNION ALL SELECT ID, RequiredNpcOrGo3 FROM `default.dataset.world.dest`.`quest_template` WHERE RequiredNpcOrGo3 > 0
-  UNION ALL SELECT ID, RequiredNpcOrGo4 FROM `default.dataset.world.dest`.`quest_template` WHERE RequiredNpcOrGo4 > 0
+  SELECT ID, RequiredNpcOrGo1 AS entry FROM `quest_template` WHERE RequiredNpcOrGo1 > 0
+  UNION ALL SELECT ID, RequiredNpcOrGo2 FROM `quest_template` WHERE RequiredNpcOrGo2 > 0
+  UNION ALL SELECT ID, RequiredNpcOrGo3 FROM `quest_template` WHERE RequiredNpcOrGo3 > 0
+  UNION ALL SELECT ID, RequiredNpcOrGo4 FROM `quest_template` WHERE RequiredNpcOrGo4 > 0
 ) req ON req.ID = qt.ID
 JOIN tmp_removed_creature_entries rce ON rce.entry = req.entry
 ORDER BY qt.ID, req.entry;
 
 SELECT DISTINCT 'quest_objective_gameobject' AS ref_type, qt.ID AS quest, req.entry
-FROM `default.dataset.world.dest`.`quest_template` qt
+FROM `quest_template` qt
 JOIN (
-  SELECT ID, -RequiredNpcOrGo1 AS entry FROM `default.dataset.world.dest`.`quest_template` WHERE RequiredNpcOrGo1 < 0
-  UNION ALL SELECT ID, -RequiredNpcOrGo2 FROM `default.dataset.world.dest`.`quest_template` WHERE RequiredNpcOrGo2 < 0
-  UNION ALL SELECT ID, -RequiredNpcOrGo3 FROM `default.dataset.world.dest`.`quest_template` WHERE RequiredNpcOrGo3 < 0
-  UNION ALL SELECT ID, -RequiredNpcOrGo4 FROM `default.dataset.world.dest`.`quest_template` WHERE RequiredNpcOrGo4 < 0
+  SELECT ID, -RequiredNpcOrGo1 AS entry FROM `quest_template` WHERE RequiredNpcOrGo1 < 0
+  UNION ALL SELECT ID, -RequiredNpcOrGo2 FROM `quest_template` WHERE RequiredNpcOrGo2 < 0
+  UNION ALL SELECT ID, -RequiredNpcOrGo3 FROM `quest_template` WHERE RequiredNpcOrGo3 < 0
+  UNION ALL SELECT ID, -RequiredNpcOrGo4 FROM `quest_template` WHERE RequiredNpcOrGo4 < 0
 ) req ON req.ID = qt.ID
 JOIN tmp_removed_gameobject_entries rge ON rge.entry = req.entry
 ORDER BY qt.ID, req.entry;
 
 SELECT DISTINCT 'item_template_map_restriction' AS ref_type, it.entry, it.name, it.`Map`
-FROM `default.dataset.world.dest`.`item_template` it
+FROM `item_template` it
 JOIN tmp_removed_maps m ON m.map = it.`Map`
 ORDER BY it.entry;
 
 DELETE c
-FROM `default.dataset.world.dest`.`conditions` c
+FROM `conditions` c
 JOIN tmp_deleted_smart_scripts dss
   ON c.SourceTypeOrReferenceId = 22
  AND c.SourceEntry = dss.entryorguid
  AND c.SourceId = dss.source_type;
 
 DELETE c
-FROM `default.dataset.world.dest`.`conditions` c
+FROM `conditions` c
 JOIN tmp_deleted_timed_actionlists dt
   ON c.SourceTypeOrReferenceId = 22
  AND c.SourceEntry = dt.entry
  AND c.SourceId = 9;
 
 DELETE ss
-FROM `default.dataset.world.dest`.`smart_scripts` ss
+FROM `smart_scripts` ss
 JOIN tmp_deleted_smart_scripts dss
   ON dss.entryorguid = ss.entryorguid
  AND dss.source_type = ss.source_type
@@ -418,35 +418,35 @@ JOIN tmp_deleted_smart_scripts dss
  AND dss.link = ss.link;
 
 DELETE ss
-FROM `default.dataset.world.dest`.`smart_scripts` ss
+FROM `smart_scripts` ss
 JOIN tmp_deleted_timed_actionlists dt
   ON dt.entry = ss.entryorguid
 WHERE ss.source_type = 9;
 
 DELETE ws
-FROM `default.dataset.world.dest`.`waypoint_scripts` ws
+FROM `waypoint_scripts` ws
 JOIN tmp_removed_waypoint_script_ids rws ON rws.id = ws.id;
 
 DELETE wd
-FROM `default.dataset.world.dest`.`waypoint_data` wd
+FROM `waypoint_data` wd
 JOIN tmp_removed_creature_path_ids rp ON rp.path_id = wd.id;
 
 DELETE ca
-FROM `default.dataset.world.dest`.`creature_addon` ca
+FROM `creature_addon` ca
 JOIN tmp_removed_creature_guids rc ON rc.guid = ca.guid;
 
 DELETE cmo
-FROM `default.dataset.world.dest`.`creature_movement_override` cmo
+FROM `creature_movement_override` cmo
 JOIN tmp_removed_creature_guids rc ON rc.guid = cmo.SpawnId;
 
 DELETE cf
-FROM `default.dataset.world.dest`.`creature_formations` cf
+FROM `creature_formations` cf
 JOIN tmp_removed_creature_guids rc
   ON rc.guid = cf.leaderGUID
   OR rc.guid = cf.memberGUID;
 
 DELETE lr
-FROM `default.dataset.world.dest`.`linked_respawn` lr
+FROM `linked_respawn` lr
 LEFT JOIN tmp_removed_creature_guids rc
   ON rc.guid = lr.guid
 LEFT JOIN tmp_removed_gameobject_guids rg
@@ -461,133 +461,133 @@ WHERE (lr.linkType IN (0,1) AND rc.guid IS NOT NULL)
    OR (lr.linkType IN (1,2) AND rgl.guid IS NOT NULL);
 
 DELETE gec
-FROM `default.dataset.world.dest`.`game_event_creature` gec
+FROM `game_event_creature` gec
 JOIN tmp_removed_creature_guids rc ON rc.guid = gec.guid;
 
 DELETE gem
-FROM `default.dataset.world.dest`.`game_event_model_equip` gem
+FROM `game_event_model_equip` gem
 JOIN tmp_removed_creature_guids rc ON rc.guid = gem.guid;
 
 DELETE genv
-FROM `default.dataset.world.dest`.`game_event_npc_vendor` genv
+FROM `game_event_npc_vendor` genv
 JOIN tmp_removed_creature_guids rc ON rc.guid = genv.guid;
 
 DELETE gef
-FROM `default.dataset.world.dest`.`game_event_npcflag` gef
+FROM `game_event_npcflag` gef
 JOIN tmp_removed_creature_guids rc ON rc.guid = gef.guid;
 
 DELETE va
-FROM `default.dataset.world.dest`.`vehicle_accessory` va
+FROM `vehicle_accessory` va
 JOIN tmp_removed_creature_guids rc ON rc.guid = va.guid;
 
 DELETE ga
-FROM `default.dataset.world.dest`.`gameobject_addon` ga
+FROM `gameobject_addon` ga
 JOIN tmp_removed_gameobject_guids rg ON rg.guid = ga.guid;
 
 DELETE geg
-FROM `default.dataset.world.dest`.`game_event_gameobject` geg
+FROM `game_event_gameobject` geg
 JOIN tmp_removed_gameobject_guids rg ON rg.guid = geg.guid;
 
 DELETE sg
-FROM `default.dataset.world.dest`.`spawn_group` sg
+FROM `spawn_group` sg
 WHERE (sg.spawnType = 0 AND sg.spawnId IN (SELECT guid FROM tmp_removed_creature_guids))
    OR (sg.spawnType = 1 AND sg.spawnId IN (SELECT guid FROM tmp_removed_gameobject_guids));
 
 DELETE isg
-FROM `default.dataset.world.dest`.`instance_spawn_groups` isg
+FROM `instance_spawn_groups` isg
 JOIN tmp_removed_maps m ON m.map = isg.instanceMapId;
 
 DELETE sgt
-FROM `default.dataset.world.dest`.`spawn_group_template` sgt
+FROM `spawn_group_template` sgt
 JOIN tmp_removed_spawn_group_ids rsg ON rsg.groupId = sgt.groupId
-WHERE NOT EXISTS (SELECT 1 FROM `default.dataset.world.dest`.`spawn_group` sg WHERE sg.groupId = sgt.groupId)
-  AND NOT EXISTS (SELECT 1 FROM `default.dataset.world.dest`.`instance_spawn_groups` isg WHERE isg.spawnGroupId = sgt.groupId);
+WHERE NOT EXISTS (SELECT 1 FROM `spawn_group` sg WHERE sg.groupId = sgt.groupId)
+  AND NOT EXISTS (SELECT 1 FROM `instance_spawn_groups` isg WHERE isg.spawnGroupId = sgt.groupId);
 
 DELETE ibc
-FROM `default.dataset.world.dest`.`instance_boss_creature` ibc
+FROM `instance_boss_creature` ibc
 JOIN tmp_removed_creature_guids rc ON rc.guid = ibc.guid;
 
 DELETE c
-FROM `default.dataset.world.dest`.`creature` c
+FROM `creature` c
 JOIN tmp_removed_creature_guids rc ON rc.guid = c.guid;
 
 DELETE g
-FROM `default.dataset.world.dest`.`gameobject` g
+FROM `gameobject` g
 JOIN tmp_removed_gameobject_guids rg ON rg.guid = g.guid;
 
 DELETE gt
-FROM `default.dataset.world.dest`.`game_tele` gt
+FROM `game_tele` gt
 JOIN tmp_removed_maps m ON m.map = gt.map;
 
 DELETE ar
-FROM `default.dataset.world.dest`.`access_requirement` ar
+FROM `access_requirement` ar
 JOIN tmp_removed_maps m ON m.map = ar.mapId;
 
 DELETE qpp
-FROM `default.dataset.world.dest`.`quest_poi_points` qpp
+FROM `quest_poi_points` qpp
 JOIN tmp_removed_quest_poi rqp
   ON rqp.QuestID = qpp.QuestID
  AND rqp.id = qpp.Idx1;
 
 DELETE qp
-FROM `default.dataset.world.dest`.`quest_poi` qp
+FROM `quest_poi` qp
 JOIN tmp_removed_quest_poi rqp
   ON rqp.QuestID = qp.QuestID
  AND rqp.id = qp.id;
 
 DELETE stp
-FROM `default.dataset.world.dest`.`spell_target_position` stp
+FROM `spell_target_position` stp
 JOIN tmp_removed_maps m ON m.map = stp.MapID;
 
 DELETE pci
-FROM `default.dataset.world.dest`.`playercreateinfo` pci
+FROM `playercreateinfo` pci
 JOIN tmp_removed_maps m ON m.map = pci.map;
 
 DELETE bdo
-FROM `default.dataset.world.dest`.`battleground_door_object` bdo
+FROM `battleground_door_object` bdo
 JOIN tmp_removed_maps m ON m.map = bdo.map;
 
 DELETE ia
-FROM `default.dataset.world.dest`.`instance_addon` ia
+FROM `instance_addon` ia
 JOIN tmp_removed_maps m ON m.map = ia.map;
 
 DELETE ibb
-FROM `default.dataset.world.dest`.`instance_boss_boundary` ibb
+FROM `instance_boss_boundary` ibb
 JOIN tmp_removed_maps m ON m.map = ibb.map;
 
 DELETE ido
-FROM `default.dataset.world.dest`.`instance_door_object` ido
+FROM `instance_door_object` ido
 JOIN tmp_removed_maps m ON m.map = ido.map;
 
 DELETE iea
-FROM `default.dataset.world.dest`.`instance_encounter_achievement` iea
+FROM `instance_encounter_achievement` iea
 JOIN tmp_removed_maps m ON m.map = iea.map;
 
 DELETE it
-FROM `default.dataset.world.dest`.`instance_template` it
+FROM `instance_template` it
 JOIN tmp_removed_maps m ON m.map = it.map;
 
 DELETE adbc
-FROM `default.dataset.world.dest`.`achievement_dbc` adbc
+FROM `achievement_dbc` adbc
 JOIN tmp_removed_maps m ON m.map = adbc.mapID;
 
 DELETE md
-FROM `default.dataset.world.dest`.`map_dbc` md
+FROM `map_dbc` md
 JOIN tmp_removed_maps m
   ON m.map = md.ID
   OR m.map = md.CorpseMapID;
 
 -- Post-check. All should be zero.
-SELECT 'creature' AS table_name, COUNT(*) AS remaining_rows FROM `default.dataset.world.dest`.`creature` c JOIN tmp_removed_maps m ON m.map = c.map;
-SELECT 'gameobject' AS table_name, COUNT(*) AS remaining_rows FROM `default.dataset.world.dest`.`gameobject` g JOIN tmp_removed_maps m ON m.map = g.map;
-SELECT 'game_tele' AS table_name, COUNT(*) AS remaining_rows FROM `default.dataset.world.dest`.`game_tele` gt JOIN tmp_removed_maps m ON m.map = gt.map;
-SELECT 'access_requirement' AS table_name, COUNT(*) AS remaining_rows FROM `default.dataset.world.dest`.`access_requirement` ar JOIN tmp_removed_maps m ON m.map = ar.mapId;
-SELECT 'quest_poi' AS table_name, COUNT(*) AS remaining_rows FROM `default.dataset.world.dest`.`quest_poi` qp JOIN tmp_removed_maps m ON m.map = qp.MapID;
-SELECT 'spell_target_position' AS table_name, COUNT(*) AS remaining_rows FROM `default.dataset.world.dest`.`spell_target_position` stp JOIN tmp_removed_maps m ON m.map = stp.MapID;
-SELECT 'instance_template' AS table_name, COUNT(*) AS remaining_rows FROM `default.dataset.world.dest`.`instance_template` it JOIN tmp_removed_maps m ON m.map = it.map;
-SELECT 'instance_spawn_groups' AS table_name, COUNT(*) AS remaining_rows FROM `default.dataset.world.dest`.`instance_spawn_groups` isg JOIN tmp_removed_maps m ON m.map = isg.instanceMapId;
+SELECT 'creature' AS table_name, COUNT(*) AS remaining_rows FROM `creature` c JOIN tmp_removed_maps m ON m.map = c.map;
+SELECT 'gameobject' AS table_name, COUNT(*) AS remaining_rows FROM `gameobject` g JOIN tmp_removed_maps m ON m.map = g.map;
+SELECT 'game_tele' AS table_name, COUNT(*) AS remaining_rows FROM `game_tele` gt JOIN tmp_removed_maps m ON m.map = gt.map;
+SELECT 'access_requirement' AS table_name, COUNT(*) AS remaining_rows FROM `access_requirement` ar JOIN tmp_removed_maps m ON m.map = ar.mapId;
+SELECT 'quest_poi' AS table_name, COUNT(*) AS remaining_rows FROM `quest_poi` qp JOIN tmp_removed_maps m ON m.map = qp.MapID;
+SELECT 'spell_target_position' AS table_name, COUNT(*) AS remaining_rows FROM `spell_target_position` stp JOIN tmp_removed_maps m ON m.map = stp.MapID;
+SELECT 'instance_template' AS table_name, COUNT(*) AS remaining_rows FROM `instance_template` it JOIN tmp_removed_maps m ON m.map = it.map;
+SELECT 'instance_spawn_groups' AS table_name, COUNT(*) AS remaining_rows FROM `instance_spawn_groups` isg JOIN tmp_removed_maps m ON m.map = isg.instanceMapId;
 SELECT 'map_dbc' AS table_name, COUNT(DISTINCT md.ID) AS remaining_rows
-FROM `default.dataset.world.dest`.`map_dbc` md
+FROM `map_dbc` md
 JOIN tmp_removed_maps m
   ON m.map = md.ID
   OR m.map = md.CorpseMapID;

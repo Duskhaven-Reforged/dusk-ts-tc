@@ -16,37 +16,37 @@ INSERT INTO tmp_levels_1_80 (`level`) VALUES
 (61),(62),(63),(64),(65),(66),(67),(68),(69),(70),
 (71),(72),(73),(74),(75),(76),(77),(78),(79),(80);
 
-INSERT IGNORE INTO `default.dataset.world.dest`.`player_levelstats`
+INSERT IGNORE INTO `player_levelstats`
   (`race`,`class`,`level`,`str`,`agi`,`sta`,`inte`,`spi`)
 SELECT rc.`race`, rc.`class`, lvl.`level`,
        src.`str`, src.`agi`, src.`sta`, src.`inte`, src.`spi`
 FROM (
   SELECT DISTINCT `race`, `class`
-  FROM `default.dataset.world.dest`.`player_levelstats`
+  FROM `player_levelstats`
   WHERE `level` = 1
 ) rc
 JOIN tmp_levels_1_80 lvl ON lvl.`level` > 1
-LEFT JOIN `default.dataset.world.dest`.`player_levelstats` existing
+LEFT JOIN `player_levelstats` existing
   ON existing.`race` = rc.`race`
  AND existing.`class` = rc.`class`
  AND existing.`level` = lvl.`level`
-JOIN `default.dataset.world.dest`.`player_levelstats` src
+JOIN `player_levelstats` src
   ON src.`race` = rc.`race`
  AND src.`class` = rc.`class`
  AND src.`level` = (
    SELECT MAX(prev.`level`)
-   FROM `default.dataset.world.dest`.`player_levelstats` prev
+   FROM `player_levelstats` prev
    WHERE prev.`race` = rc.`race`
      AND prev.`class` = rc.`class`
      AND prev.`level` < lvl.`level`
  )
 WHERE existing.`race` IS NULL;
 
-UPDATE `default.dataset.world.dest`.`creature_template`
+UPDATE `creature_template`
 SET `minlevel` = 1
 WHERE `minlevel` = 0;
 
-UPDATE `default.dataset.world.dest`.`creature_template`
+UPDATE `creature_template`
 SET `maxlevel` = `minlevel`
 WHERE `maxlevel` < `minlevel`;
 
@@ -59,11 +59,11 @@ CREATE TEMPORARY TABLE tmp_needed_creature_classlevelstats (
 
 INSERT IGNORE INTO tmp_needed_creature_classlevelstats (`level`, `class`)
 SELECT DISTINCT lvl.`level`, ct.`unit_class`
-FROM `default.dataset.world.dest`.`creature_template` ct
+FROM `creature_template` ct
 JOIN tmp_levels_1_80 lvl ON lvl.`level` BETWEEN ct.`minlevel` AND ct.`maxlevel`
 WHERE ct.`unit_class` > 0;
 
-INSERT IGNORE INTO `default.dataset.world.dest`.`creature_classlevelstats`
+INSERT IGNORE INTO `creature_classlevelstats`
   (`level`,`class`,`basehp0`,`basehp1`,`basehp2`,`basehp3`,`basemana`,`basearmor`,
    `attackpower`,`rangedattackpower`,`damage_base`,`damage_exp1`,`damage_exp2`,`comment`)
 SELECT need.`level`, need.`class`,
@@ -71,14 +71,14 @@ SELECT need.`level`, need.`class`,
        src.`attackpower`, src.`rangedattackpower`, src.`damage_base`, src.`damage_exp1`, src.`damage_exp2`,
        'Copied from nearest lower level by DBErrors cleanup'
 FROM tmp_needed_creature_classlevelstats need
-LEFT JOIN `default.dataset.world.dest`.`creature_classlevelstats` existing
+LEFT JOIN `creature_classlevelstats` existing
   ON existing.`level` = need.`level`
  AND existing.`class` = need.`class`
-JOIN `default.dataset.world.dest`.`creature_classlevelstats` src
+JOIN `creature_classlevelstats` src
   ON src.`class` = need.`class`
  AND src.`level` = (
    SELECT MAX(prev.`level`)
-   FROM `default.dataset.world.dest`.`creature_classlevelstats` prev
+   FROM `creature_classlevelstats` prev
    WHERE prev.`class` = need.`class`
      AND prev.`level` < need.`level`
  )

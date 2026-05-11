@@ -2,7 +2,7 @@
 -- Scope: current `default.dataset.world.dest` world schema only.
 
 -- Link events without a valid source event never trigger.
-UPDATE `default.dataset.world.dest`.`smart_scripts`
+UPDATE `smart_scripts`
 SET link = 0
 WHERE (entryorguid, source_type, id) IN (
     (644, 0, 5),

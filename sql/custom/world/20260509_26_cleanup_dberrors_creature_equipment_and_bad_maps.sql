@@ -2,7 +2,7 @@
 -- Scope: current `default.dataset.world.dest` world schema only.
 
 -- Creature spawns using missing equipment sets.
-UPDATE `default.dataset.world.dest`.`creature`
+UPDATE `creature`
 SET equipment_id = 0
 WHERE (id, equipment_id) IN (
     (47701, 1),
@@ -58,23 +58,23 @@ WHERE (id, equipment_id) IN (
 );
 
 -- Creature spawns on maps absent from current client data.
-DELETE FROM `default.dataset.world.dest`.`creature_addon`
+DELETE FROM `creature_addon`
 WHERE guid IN (226507, 226506, 226505, 224145, 224144, 224143, 224142, 224141, 224140, 224139, 224138, 224137, 224136, 224135, 224134, 224133, 224132, 224131);
 
-DELETE FROM `default.dataset.world.dest`.`creature_formations`
+DELETE FROM `creature_formations`
 WHERE leaderGUID IN (226507, 226506, 226505, 224145, 224144, 224143, 224142, 224141, 224140, 224139, 224138, 224137, 224136, 224135, 224134, 224133, 224132, 224131) OR memberGUID IN (226507, 226506, 226505, 224145, 224144, 224143, 224142, 224141, 224140, 224139, 224138, 224137, 224136, 224135, 224134, 224133, 224132, 224131);
 
-DELETE FROM `default.dataset.world.dest`.`spawn_group`
+DELETE FROM `spawn_group`
 WHERE spawnType = 0 AND spawnId IN (226507, 226506, 226505, 224145, 224144, 224143, 224142, 224141, 224140, 224139, 224138, 224137, 224136, 224135, 224134, 224133, 224132, 224131);
 
-DELETE FROM `default.dataset.world.dest`.`pool_members`
+DELETE FROM `pool_members`
 WHERE type = 0 AND spawnId IN (226507, 226506, 226505, 224145, 224144, 224143, 224142, 224141, 224140, 224139, 224138, 224137, 224136, 224135, 224134, 224133, 224132, 224131);
 
-DELETE FROM `default.dataset.world.dest`.`linked_respawn`
+DELETE FROM `linked_respawn`
 WHERE (linkType IN (0, 2) AND guid IN (226507, 226506, 226505, 224145, 224144, 224143, 224142, 224141, 224140, 224139, 224138, 224137, 224136, 224135, 224134, 224133, 224132, 224131))
    OR (linkType IN (0, 1) AND linkedGuid IN (226507, 226506, 226505, 224145, 224144, 224143, 224142, 224141, 224140, 224139, 224138, 224137, 224136, 224135, 224134, 224133, 224132, 224131));
 
-DELETE FROM `default.dataset.world.dest`.`creature`
+DELETE FROM `creature`
 WHERE (guid, map) IN (
     (226507, 739),
     (226506, 739),

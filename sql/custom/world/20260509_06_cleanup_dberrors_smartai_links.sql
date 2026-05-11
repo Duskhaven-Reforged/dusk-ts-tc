@@ -2,7 +2,7 @@
 
 -- Persist load-time "not repeatable" correction for timed SmartAI events with
 -- zero repeat timers.
-UPDATE `default.dataset.world.dest`.`smart_scripts`
+UPDATE `smart_scripts`
 SET `event_flags` = `event_flags` | 1
 WHERE `source_type` <> 9
   AND (`event_flags` & 1) = 0
@@ -16,8 +16,8 @@ WHERE `source_type` <> 9
   );
 
 -- Broken link fields should not point at missing events.
-UPDATE `default.dataset.world.dest`.`smart_scripts` ss
-LEFT JOIN `default.dataset.world.dest`.`smart_scripts` linked
+UPDATE `smart_scripts` ss
+LEFT JOIN `smart_scripts` linked
   ON linked.`entryorguid` = ss.`entryorguid`
  AND linked.`source_type` = ss.`source_type`
  AND linked.`id` = ss.`link`
@@ -27,8 +27,8 @@ WHERE ss.`link` <> 0
 
 -- Link events without a source event can never trigger.
 DELETE link_event
-FROM `default.dataset.world.dest`.`smart_scripts` link_event
-LEFT JOIN `default.dataset.world.dest`.`smart_scripts` source_event
+FROM `smart_scripts` link_event
+LEFT JOIN `smart_scripts` source_event
   ON source_event.`entryorguid` = link_event.`entryorguid`
  AND source_event.`source_type` = link_event.`source_type`
  AND source_event.`link` = link_event.`id`
@@ -37,9 +37,9 @@ WHERE link_event.`event_type` = 61
 
 -- Creature GUID SmartAI rows are valid only if the spawned template uses SmartAI.
 DELETE ss
-FROM `default.dataset.world.dest`.`smart_scripts` ss
-JOIN `default.dataset.world.dest`.`creature` cr ON cr.`guid` = -ss.`entryorguid`
-JOIN `default.dataset.world.dest`.`creature_template` ct ON ct.`entry` = cr.`id`
+FROM `smart_scripts` ss
+JOIN `creature` cr ON cr.`guid` = -ss.`entryorguid`
+JOIN `creature_template` ct ON ct.`entry` = cr.`id`
 WHERE ss.`source_type` = 0
   AND ss.`entryorguid` < 0
   AND ct.`AIName` <> 'SmartAI';

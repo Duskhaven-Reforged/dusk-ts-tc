@@ -2,7 +2,7 @@
 -- Scope: current `default.dataset.world.dest` world schema only.
 
 -- Remove SmartAI rows with missing creatures, bad text, bad targets, bad spells, bad summons, or retired quests.
-DELETE FROM `default.dataset.world.dest`.`smart_scripts`
+DELETE FROM `smart_scripts`
 WHERE (entryorguid, source_type, id) IN (
     (263, 0, 1),
     (468, 0, 0),
@@ -38,7 +38,7 @@ WHERE (entryorguid, source_type, id) IN (
 );
 
 -- Timed/action events with no repeat window need NOT_REPEATABLE.
-UPDATE `default.dataset.world.dest`.`smart_scripts`
+UPDATE `smart_scripts`
 SET event_flags = event_flags | 1
 WHERE (entryorguid, source_type, id) IN (
     (644, 0, 6),
@@ -58,7 +58,7 @@ WHERE (entryorguid, source_type, id) IN (
 );
 
 -- Link targets that point at missing rows.
-UPDATE `default.dataset.world.dest`.`smart_scripts`
+UPDATE `smart_scripts`
 SET link = 0
 WHERE (entryorguid, source_type, id) IN (
     (644, 0, 5),

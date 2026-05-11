@@ -2,7 +2,7 @@
 -- Scope: current `default.dataset.world.dest` world schema only.
 
 -- Conditions referencing removed creatures/invalid instance data.
-DELETE FROM `default.dataset.world.dest`.`conditions`
+DELETE FROM `conditions`
 WHERE (SourceTypeOrReferenceId, SourceGroup, SourceEntry, SourceId, ConditionTypeOrReference, ConditionValue1) IN (
     (15, 58038, 0, 0, 9, 45077),
     (13, 1, 27892, 0, 31, 127618),

@@ -2,7 +2,7 @@
 -- Scope: current `default.dataset.world.dest` world schema only.
 
 -- DB rows point at scripts no longer registered in this core.
-UPDATE `default.dataset.world.dest`.`creature_template`
+UPDATE `creature_template`
 SET ScriptName = ''
 WHERE ScriptName IN ('npc_aeranas',
     'npc_webbed_creature',
@@ -87,7 +87,7 @@ WHERE ScriptName IN ('npc_aeranas',
     'pyrewood_ambush',
     'trigger_periodic');
 
-UPDATE `default.dataset.world.dest`.`gameobject_template`
+UPDATE `gameobject_template`
 SET ScriptName = ''
 WHERE ScriptName IN ('npc_aeranas',
     'npc_webbed_creature',
@@ -172,7 +172,7 @@ WHERE ScriptName IN ('npc_aeranas',
     'pyrewood_ambush',
     'trigger_periodic');
 
-UPDATE `default.dataset.world.dest`.`gameobject`
+UPDATE `gameobject`
 SET ScriptName = ''
 WHERE ScriptName IN ('npc_aeranas',
     'npc_webbed_creature',

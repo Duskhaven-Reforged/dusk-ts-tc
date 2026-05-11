@@ -2,7 +2,7 @@
 -- Scope: current `default.dataset.world.dest` world schema only.
 
 -- Server.log: DB-linked spell scripts whose target spell data no longer matches this client DBC set.
-DELETE FROM `default.dataset.world.dest`.`spell_script_names`
+DELETE FROM `spell_script_names`
 WHERE (spell_id, ScriptName) IN (
     (15337, 'spell_pri_improved_spirit_tap'),
     (15338, 'spell_pri_improved_spirit_tap'),

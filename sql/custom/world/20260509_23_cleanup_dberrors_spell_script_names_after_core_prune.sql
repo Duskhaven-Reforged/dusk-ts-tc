@@ -3,7 +3,7 @@
 
 -- SpellScript registrations were pruned from core because their spells/ranks are absent.
 -- Remove DB links to those now-disabled script names.
-DELETE FROM `default.dataset.world.dest`.`spell_script_names`
+DELETE FROM `spell_script_names`
 WHERE ScriptName IN (
     'spell_dk_icebound_fortitude',
     'spell_warl_life_tap',
