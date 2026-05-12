@@ -17,11 +17,13 @@
 
 #include "WorldBotMgr.h"
 #include "Bag.h"
+#include "CharacterCache.h"
 #include "CellImpl.h"
 #include "Corpse.h"
 #include "Creature.h"
 #include "CreatureAI.h"
 #include "CreatureData.h"
+#include "DatabaseEnv.h"
 #include "DBCStructure.h"
 #include "DBCStores.h"
 #include "GridNotifiersImpl.h"
@@ -36,6 +38,7 @@
 #include "Player.h"
 #include "QuestDef.h"
 #include "Random.h"
+#include "ScriptMgr.h"
 #include "SmartEnum.h"
 #include "Spell.h"
 #include "SpellAuraDefines.h"
@@ -45,11 +48,16 @@
 #include "World.h"
 #include "WorldBotSession.h"
 #include "WorldSession.h"
+// @tswow-begin
+#include "TSPlayer.h"
+#include "TSEvents.h"
+// @tswow-end
 #include "Log.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <list>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -588,6 +596,7 @@ void WorldBotMgr::LoadConfig(bool reload)
     _debugQuestTargetTimer = 0;
     _debugQuestTravelTimer = 0;
     _debugDeathReleased = false;
+    _generatedPrepareAttempted = false;
     _debugLootTargetGuid.Clear();
     _debugQuestTargetGuid.Clear();
     _debugLootBlacklist.clear();
@@ -610,6 +619,10 @@ void WorldBotMgr::OnStartup()
 
     if (_config.DebugCharacterGuid)
         TC_LOG_INFO("server.worldbots", "WorldBots debug character {} will be loaded on first world update.", _config.DebugCharacterGuid);
+
+    if (_config.GeneratedEnabled)
+        TC_LOG_INFO("server.worldbots", "WorldBots generated profile preparation enabled: account={} count={} profiles={}.",
+            _config.GeneratedAccountId, _config.GeneratedCount, _config.GeneratedProfiles.size());
 }
 
 void WorldBotMgr::Shutdown()
@@ -627,6 +640,7 @@ void WorldBotMgr::Update(uint32 diff)
     if (!_config.Enabled)
         return;
 
+    PrepareGeneratedBots();
     EnsureDebugBot();
     UpdateDebugBot(diff);
 
@@ -657,6 +671,9 @@ void WorldBotMgr::UpdateMap(Map* map, uint32 diff)
     if (UpdateDebugBotRecovery(map, diff))
         return;
 
+    if (UpdateDebugBotQuestPlanCompletion(map))
+        return;
+
     if (UpdateDebugBotQuesting(map, diff))
         return;
 
@@ -675,6 +692,165 @@ void WorldBotMgr::UpdateMap(Map* map, uint32 diff)
         return;
 
     UpdateDebugBotRoam(map, diff);
+}
+
+void WorldBotMgr::PrepareGeneratedBots()
+{
+    if (_generatedPrepareAttempted || !_config.GeneratedEnabled)
+        return;
+
+    _generatedPrepareAttempted = true;
+
+    if (!_config.GeneratedAccountId)
+    {
+        TC_LOG_WARN("server.worldbots", "Skipping generated WorldBot preparation: WorldBots.Generated.AccountId is 0.");
+        return;
+    }
+
+    if (_config.GeneratedProfiles.empty())
+    {
+        TC_LOG_WARN("server.worldbots", "Skipping generated WorldBot preparation: no generated profiles configured.");
+        return;
+    }
+
+    uint32 const targetCount = _config.GeneratedCount ? _config.GeneratedCount : uint32(_config.GeneratedProfiles.size());
+    if (!targetCount)
+        return;
+
+    uint32 createdCount = 0;
+    uint32 existingCount = 0;
+    for (uint32 index = 0; index < targetCount; ++index)
+    {
+        std::string const name = BuildGeneratedBotName(index);
+        if (sCharacterCache->GetCharacterCacheByName(name))
+        {
+            ++existingCount;
+            TC_LOG_DEBUG("server.worldbots", "Generated WorldBot {} already exists; keeping existing character.", name);
+            continue;
+        }
+
+        WorldBotGeneratedProfile const& profile = _config.GeneratedProfiles[index % _config.GeneratedProfiles.size()];
+        if (MaterializeGeneratedBotProfile(profile, index))
+            ++createdCount;
+    }
+
+    TC_LOG_INFO("server.worldbots", "Generated WorldBot preparation complete: target={}, created={}, existing={}.", targetCount, createdCount, existingCount);
+}
+
+std::string WorldBotMgr::BuildGeneratedBotName(uint32 index) const
+{
+    std::string suffix;
+    uint32 value = index;
+    do
+    {
+        suffix.insert(suffix.begin(), char('a' + (value % 26)));
+        value = value / 26;
+    } while (value);
+
+    std::string prefix = _config.GeneratedNamePrefix.empty() ? "Worldbot" : _config.GeneratedNamePrefix;
+    if (prefix.size() + suffix.size() > 12)
+        prefix.resize(12 - std::min<size_t>(suffix.size(), 12));
+
+    std::string name = prefix + suffix;
+    if (!normalizePlayerName(name))
+        name = "Worldbot" + suffix;
+
+    if (name.size() > 12)
+        name.resize(12);
+
+    normalizePlayerName(name);
+    return name;
+}
+
+bool WorldBotMgr::MaterializeGeneratedBotProfile(WorldBotGeneratedProfile const& profile, uint32 index)
+{
+    if (!profile.Race || !profile.Class)
+    {
+        TC_LOG_WARN("server.worldbots", "Skipping generated WorldBot profile '{}': race/class must be configured.", profile.Id);
+        return false;
+    }
+
+    if (!sObjectMgr->GetPlayerInfo(profile.Race, profile.Class))
+    {
+        TC_LOG_WARN("server.worldbots", "Skipping generated WorldBot profile '{}': invalid race/class pair {}/{}.", profile.Id,
+            uint32(profile.Race), uint32(profile.Class));
+        return false;
+    }
+
+    std::string const name = BuildGeneratedBotName(index);
+    if (ObjectMgr::CheckPlayerName(name, LOCALE_enUS, true) != CHAR_NAME_SUCCESS)
+    {
+        TC_LOG_WARN("server.worldbots", "Skipping generated WorldBot profile '{}': generated name '{}' is invalid.", profile.Id, name);
+        return false;
+    }
+
+    if (sCharacterCache->GetCharacterCacheByName(name))
+        return false;
+
+    CharacterCreateInfo createInfo;
+    createInfo.Name = name;
+    createInfo.Race = profile.Race;
+    createInfo.Class = profile.Class;
+    createInfo.Gender = profile.Gender;
+    createInfo.OutfitId = 0;
+
+    std::string accountName = "WorldBotGenerator" + std::to_string(_config.GeneratedAccountId);
+    std::unique_ptr<WorldSession> session = WorldBotSession::Create(_config.GeneratedAccountId, std::move(accountName),
+        uint8(sWorld->getIntConfig(CONFIG_EXPANSION)));
+    std::unique_ptr<Player, void(*)(Player*)> newChar(new Player(session.get()), [](Player* player)
+    {
+        if (player)
+        {
+            player->CleanupsBeforeDelete();
+            delete player;
+        }
+    });
+
+    newChar->GetMotionMaster()->Initialize();
+    if (!newChar->Create(sObjectMgr->GetGenerator<HighGuid::Player>().Generate(), &createInfo))
+    {
+        TC_LOG_WARN("server.worldbots", "Failed to create generated WorldBot character '{}' from profile '{}'.", name, profile.Id);
+        return false;
+    }
+
+    // @tswow-begin
+    FIRE(Player,OnCreateEarly,TSPlayer(newChar.get()));
+    // @tswow-end
+
+    uint32 const maxLevel = uint32(sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL));
+    uint8 const requestedLevel = uint8(std::max<uint32>(1, std::min<uint32>(profile.Level, maxLevel)));
+    if (requestedLevel != newChar->GetLevel())
+        newChar->GiveLevel(requestedLevel);
+
+    for (uint32 spellId : profile.SpellIds)
+    {
+        if (sSpellMgr->GetSpellInfo(spellId))
+            newChar->LearnSpell(spellId, false, 0, false);
+        else
+            TC_LOG_WARN("server.worldbots", "Generated WorldBot {} profile '{}' references unknown spell {}.", name, profile.Id, spellId);
+    }
+
+    for (uint32 itemId : profile.GearItemIds)
+        if (!newChar->StoreNewItemInBestSlots(itemId, 1))
+            TC_LOG_WARN("server.worldbots", "Generated WorldBot {} profile '{}' could not equip/store item {}.", name, profile.Id, itemId);
+
+    newChar->SetFullHealth();
+    newChar->SetFullPower(POWER_MANA);
+    newChar->SetAtLoginFlag(AT_LOGIN_FIRST);
+
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    newChar->SaveToDB(trans, true);
+    CharacterDatabase.CommitTransaction(trans);
+
+    sCharacterCache->AddCharacterCacheEntry(newChar->GetGUID(), _config.GeneratedAccountId, newChar->GetName(), newChar->GetNativeGender(),
+        newChar->GetRace(), newChar->GetClass(), newChar->GetLevel());
+    sWorld->UpdateRealmCharCount(_config.GeneratedAccountId);
+    sScriptMgr->OnPlayerCreate(newChar.get());
+
+    TC_LOG_INFO("server.worldbots", "Created generated WorldBot {} guid={} profile='{}' account={} level={} spells={} gear={} questPlan={} despawnOnPlanComplete={}.",
+        newChar->GetName(), newChar->GetGUID().ToString(), profile.Id, _config.GeneratedAccountId, newChar->GetLevel(), profile.SpellIds.size(),
+        profile.GearItemIds.size(), profile.QuestPlanIds.size(), profile.DespawnOnQuestPlanComplete);
+    return true;
 }
 
 void WorldBotMgr::EnsureDebugBot()
@@ -1131,6 +1307,30 @@ bool WorldBotMgr::UpdateDebugBotConsumables(Player* bot, bool needsHealth, bool 
     return false;
 }
 
+bool WorldBotMgr::UpdateDebugBotQuestPlanCompletion(Map* map)
+{
+    if (!_config.DebugDespawnOnQuestPlanComplete || !_debugSession)
+        return false;
+
+    Player* bot = _debugSession->GetPlayer();
+    if (!bot || bot->GetMap() != map)
+        return false;
+
+    if (!IsDebugBotQuestPlanComplete(bot))
+        return false;
+
+    TC_LOG_INFO("server.worldbots", "WorldBot {} completed quest plan. Despawning debug bot.", bot->GetName());
+
+    _debugSession->LogoutPlayer(true);
+    _debugSession.reset();
+    _activeBotCount = 0;
+    _debugLootTargetGuid.Clear();
+    _debugQuestTargetGuid.Clear();
+    _debugLootBlacklist.clear();
+
+    return true;
+}
+
 bool WorldBotMgr::UpdateDebugBotQuesting(Map* map, uint32 diff)
 {
     if (!_debugSession)
@@ -1252,6 +1452,29 @@ bool WorldBotMgr::UpdateDebugBotQuestTravel(Map* map, uint32 diff)
         if (Creature* killTarget = SelectDebugBotPlannedQuestKillTarget(bot, liveTargetRange))
         {
             float const distance = bot->GetDistance(killTarget);
+            if (distance <= _config.DebugCombatSearchRange)
+            {
+                if (bot->IsMounted())
+                    bot->Dismount();
+
+                if (bot->Attack(killTarget, true))
+                {
+                    bot->GetMotionMaster()->MoveChase(killTarget);
+
+                    if (_config.Debug)
+                        TC_LOG_INFO("server.worldbots", "WorldBot {} engaging live planned quest target entry={} guid={} distance={} questScore={}.",
+                            bot->GetName(), killTarget->GetEntry(), killTarget->GetGUID().ToString(), distance,
+                            GetDebugBotPlannedQuestKillScore(bot, killTarget));
+
+                    return true;
+                }
+
+                if (_config.Debug)
+                    TC_LOG_WARN("server.worldbots", "WorldBot {} found live planned quest target entry={} guid={} distance={} but Attack() failed validAttack={} targetable={} los={}.",
+                        bot->GetName(), killTarget->GetEntry(), killTarget->GetGUID().ToString(), distance, bot->IsValidAttackTarget(killTarget),
+                        killTarget->isTargetableForAttack(false), bot->IsWithinLOSInMap(killTarget));
+            }
+
             if (distance > std::max(5.0f, _config.DebugCombatSearchRange * 0.5f))
             {
                 if (bot->IsMounted())
@@ -1300,7 +1523,48 @@ bool WorldBotMgr::UpdateDebugBotQuestTravel(Map* map, uint32 diff)
 
     float const distance = bot->GetDistance(destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
     if (distance <= arrivalDistance)
+    {
+        if (_debugQuestTravelTimer > diff)
+            _debugQuestTravelTimer -= diff;
+        else if (_config.Debug)
+        {
+            _debugQuestTravelTimer = 3000;
+            float const liveTargetRange = std::max(_config.DebugQuestSearchRange, _config.DebugCombatSearchRange * 2.0f);
+            Creature* liveTarget = action && std::string(action) == "kill" ? SelectDebugBotPlannedQuestKillTarget(bot, liveTargetRange) : nullptr;
+            uint32 matchingEntryCount = 0;
+            uint32 matchingAliveCount = 0;
+            uint32 matchingValidAttackCount = 0;
+            uint32 matchingQuestScoreCount = 0;
+
+            if (action && std::string(action) == "kill" && targetEntry)
+            {
+                std::list<Creature*> nearbyCreatures;
+                Trinity::AllCreaturesOfEntryInRange check(bot, targetEntry, liveTargetRange);
+                Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(bot, nearbyCreatures, check);
+                Cell::VisitAllObjects(bot, searcher, liveTargetRange);
+
+                for (Creature* creature : nearbyCreatures)
+                {
+                    ++matchingEntryCount;
+                    if (creature->IsAlive())
+                        ++matchingAliveCount;
+                    if (creature->IsAlive() && creature->isTargetableForAttack(false) && bot->IsValidAttackTarget(creature) &&
+                        bot->CanSeeOrDetect(creature))
+                        ++matchingValidAttackCount;
+                    if (GetDebugBotPlannedQuestKillScore(bot, creature))
+                        ++matchingQuestScoreCount;
+                }
+            }
+
+            TC_LOG_INFO("server.worldbots", "WorldBot {} arrived at quest point quest={} action={} entry={} map={} distance={} arrivalDistance={} activeKill={} liveTarget={} liveTargetDistance={} matchingEntry={} matchingAlive={} matchingValidAttack={} matchingQuestScore={} combatScanTimer={} attackers={}.",
+                bot->GetName(), questId, action ? action : "unknown", targetEntry, targetMapId, distance, arrivalDistance,
+                HasDebugBotActivePlannedKillObjective(bot), liveTarget ? liveTarget->GetGUID().ToString() : "none",
+                liveTarget ? bot->GetDistance(liveTarget) : 0.0f, matchingEntryCount, matchingAliveCount, matchingValidAttackCount,
+                matchingQuestScoreCount, _debugCombatScanTimer, bot->getAttackers().size());
+        }
+
         return false;
+    }
 
     if (bot->IsMounted())
         bot->Dismount();
@@ -1690,6 +1954,24 @@ bool WorldBotMgr::IsDebugBotPlannedQuest(uint32 questId) const
     return std::find(_config.DebugQuestPlanIds.begin(), _config.DebugQuestPlanIds.end(), questId) != _config.DebugQuestPlanIds.end();
 }
 
+bool WorldBotMgr::IsDebugBotQuestPlanComplete(Player* bot) const
+{
+    if (!bot || _config.DebugQuestPlanIds.empty())
+        return false;
+
+    for (uint32 questId : _config.DebugQuestPlanIds)
+    {
+        Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
+        if (!quest)
+            return false;
+
+        if (!bot->GetQuestRewardStatus(questId) && bot->GetQuestStatus(questId) != QUEST_STATUS_REWARDED)
+            return false;
+    }
+
+    return true;
+}
+
 bool WorldBotMgr::HasDebugBotActivePlannedKillObjective(Player* bot) const
 {
     if (!_config.DebugQuesting || _config.DebugQuestPlanIds.empty() || !bot)
@@ -1767,28 +2049,18 @@ Creature* WorldBotMgr::SelectDebugBotPlannedQuestKillTarget(Player* bot, float r
     if (!bot || !_config.DebugQuesting || _config.DebugQuestPlanIds.empty())
         return nullptr;
 
-    std::list<Unit*> targets;
-    Trinity::AnyUnfriendlyUnitInObjectRangeCheck check(bot, bot, range);
-    Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(bot, targets, check);
+    std::list<Creature*> targets;
+    Trinity::AllCreaturesOfEntryInRange check(bot, 0, range);
+    Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(bot, targets, check);
     Cell::VisitAllObjects(bot, searcher, range);
 
     Creature* bestTarget = nullptr;
     float bestDistance = range;
     uint32 bestQuestScore = 0;
 
-    for (Unit* unit : targets)
+    for (Creature* creature : targets)
     {
-        if (!unit || unit == bot || unit->GetTypeId() != TYPEID_UNIT)
-            continue;
-
-        Creature* creature = unit->ToCreature();
-        if (!creature || creature->IsPet() || creature->IsTotem() || creature->IsCritter() || creature->IsSpiritService())
-            continue;
-
-        if (creature->IsCivilian() || creature->IsGuard() || creature->IsTrigger() || creature->isWorldBoss() || creature->IsInEvadeMode())
-            continue;
-
-        if (creature->IsFlying() || creature->IsInCombat())
+        if (!creature || !creature->IsAlive())
             continue;
 
         if (!creature->isTargetableForAttack(false) || !bot->IsValidAttackTarget(creature) || !bot->CanSeeOrDetect(creature))

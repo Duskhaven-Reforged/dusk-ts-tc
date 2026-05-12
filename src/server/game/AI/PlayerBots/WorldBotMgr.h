@@ -53,11 +53,15 @@ private:
     WorldBotMgr() = default;
 
     void EnsureDebugBot();
+    void PrepareGeneratedBots();
+    bool MaterializeGeneratedBotProfile(WorldBotGeneratedProfile const& profile, uint32 index);
+    std::string BuildGeneratedBotName(uint32 index) const;
     void UpdateDebugBot(uint32 diff);
     bool UpdateDebugBotDeath(Map* map, uint32 diff);
     bool UpdateDebugBotLoot(Map* map, uint32 diff);
     bool UpdateDebugBotRecovery(Map* map, uint32 diff);
     bool UpdateDebugBotConsumables(Player* bot, bool needsHealth, bool needsMana, uint32 diff);
+    bool UpdateDebugBotQuestPlanCompletion(Map* map);
     bool UpdateDebugBotQuesting(Map* map, uint32 diff);
     bool UpdateDebugBotQuestTravel(Map* map, uint32 diff);
     bool UpdateDebugBotCombat(Map* map, uint32 diff);
@@ -69,6 +73,7 @@ private:
     bool TurnInDebugBotQuest(Player* bot, Creature* creature, uint32 questId);
     bool AcceptDebugBotQuest(Player* bot, Creature* creature, uint32 questId);
     bool IsDebugBotPlannedQuest(uint32 questId) const;
+    bool IsDebugBotQuestPlanComplete(Player* bot) const;
     bool HasDebugBotActivePlannedKillObjective(Player* bot) const;
     uint32 GetDebugBotPlannedQuestKillScore(Player* bot, Creature* creature) const;
     Creature* SelectDebugBotPlannedQuestKillTarget(Player* bot, float range) const;
@@ -90,6 +95,7 @@ private:
     uint32 _updateCount = 0;
     uint32 _activeBotCount = 0;
     bool _debugLoginAttempted = false;
+    bool _generatedPrepareAttempted = false;
     uint32 _debugCombatScanTimer = 0;
     uint32 _debugCombatNoVictimLogTimer = 0;
     uint32 _debugSpellCastTimer = 0;

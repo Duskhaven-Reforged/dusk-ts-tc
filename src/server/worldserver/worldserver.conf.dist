@@ -5016,4 +5016,92 @@ WorldBots.Debug.QuestInteractTimeoutMs = 15000
 WorldBots.Debug.QuestPlan = ""
 
 #
+#    WorldBots.Debug.DespawnOnQuestPlanComplete
+#        Description: Despawns/logs out the debug bot after every quest id in
+#                     WorldBots.Debug.QuestPlan has been rewarded.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+WorldBots.Debug.DespawnOnQuestPlanComplete = 0
+
+#
+#    WorldBots.Generated.Enable
+#        Description: Enables generated bot profile preparation. Missing profile characters are
+#                     created on first world update.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+WorldBots.Generated.Enable = 0
+
+#
+#    WorldBots.Generated.AccountId
+#        Description: Account id used when creating generated bot characters. Defaults to
+#                     WorldBots.Debug.AccountId when omitted.
+#        Default:     0
+#
+
+WorldBots.Generated.AccountId = 0
+
+#
+#    WorldBots.Generated.Count
+#        Description: Target number of generated bots to prepare from configured profiles.
+#        Default:     0
+#
+
+WorldBots.Generated.Count = 0
+
+#
+#    WorldBots.Generated.NamePrefix
+#        Description: Reserved character name prefix for generated world bots.
+#        Default:     "Worldbot"
+#
+
+WorldBots.Generated.NamePrefix = "Worldbot"
+
+#
+#    WorldBots.Generated.Profiles
+#        Description: Comma-separated generated bot profile ids. Each profile can define Race,
+#                     Class, Gender, Level, Gear, Spells, QuestPlan, and
+#                     DespawnOnQuestPlanComplete keys under
+#                     WorldBots.Generated.Profile.<id>.
+#        Default:     ""
+#
+
+WorldBots.Generated.Profiles = ""
+
+#
+#    WorldBots.Generated.Profile.<id>.Race
+#    WorldBots.Generated.Profile.<id>.Class
+#    WorldBots.Generated.Profile.<id>.Gender
+#    WorldBots.Generated.Profile.<id>.Level
+#    WorldBots.Generated.Profile.<id>.Gear
+#    WorldBots.Generated.Profile.<id>.Spells
+#    WorldBots.Generated.Profile.<id>.QuestPlan
+#    WorldBots.Generated.Profile.<id>.DespawnOnQuestPlanComplete
+#        Description: Per-profile generated bot character shape. Gear, Spells, and QuestPlan are
+#                     comma-separated ID lists.
+#
+#        Example:
+#                     WorldBots.Generated.Profiles = "human-warrior-1,gnome-mage-5"
+#                     WorldBots.Generated.Profile.human-warrior-1.Race = 1
+#                     WorldBots.Generated.Profile.human-warrior-1.Class = 1
+#                     WorldBots.Generated.Profile.human-warrior-1.Gender = 0
+#                     WorldBots.Generated.Profile.human-warrior-1.Level = 4
+#                     WorldBots.Generated.Profile.human-warrior-1.Gear = "25,38,39"
+#                     WorldBots.Generated.Profile.human-warrior-1.Spells = "78,772"
+#                     WorldBots.Generated.Profile.human-warrior-1.QuestPlan = "783,7,15"
+#                     WorldBots.Generated.Profile.human-warrior-1.DespawnOnQuestPlanComplete = 1
+#                     WorldBots.Generated.Profile.gnome-mage-5.Race = 7
+#                     WorldBots.Generated.Profile.gnome-mage-5.Class = 8
+#                     WorldBots.Generated.Profile.gnome-mage-5.Gender = 0
+#                     WorldBots.Generated.Profile.gnome-mage-5.Level = 5
+#                     WorldBots.Generated.Profile.gnome-mage-5.Gear = "35,6096"
+#                     WorldBots.Generated.Profile.gnome-mage-5.Spells = "133,116,2136"
+#                     WorldBots.Generated.Profile.gnome-mage-5.QuestPlan = "7,15,21"
+#                     WorldBots.Generated.Profile.gnome-mage-5.DespawnOnQuestPlanComplete = 1
+#
+
+#
 ###################################################################################################

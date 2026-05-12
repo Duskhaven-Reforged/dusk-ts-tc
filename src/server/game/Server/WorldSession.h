@@ -374,6 +374,7 @@ public:
 // only to prevent bloating the parameter list
 class CharacterCreateInfo
 {
+    friend class WorldBotMgr;
     friend class WorldSession;
     friend class Player;
 

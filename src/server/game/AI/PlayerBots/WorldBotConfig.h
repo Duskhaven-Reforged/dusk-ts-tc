@@ -19,7 +19,21 @@
 #define TRINITY_WORLDBOTCONFIG_H
 
 #include "Common.h"
+#include <string>
 #include <vector>
+
+struct WorldBotGeneratedProfile
+{
+    std::string Id;
+    uint8 Race = 0;
+    uint8 Class = 0;
+    uint8 Gender = 0;
+    uint32 Level = 1;
+    std::vector<uint32> GearItemIds;
+    std::vector<uint32> SpellIds;
+    std::vector<uint32> QuestPlanIds;
+    bool DespawnOnQuestPlanComplete = false;
+};
 
 struct TC_GAME_API WorldBotConfig
 {
@@ -63,6 +77,13 @@ struct TC_GAME_API WorldBotConfig
     float DebugQuestSearchRange = 35.0f;
     uint32 DebugQuestInteractTimeoutMs = 15000;
     std::vector<uint32> DebugQuestPlanIds;
+    bool DebugDespawnOnQuestPlanComplete = false;
+    bool GeneratedEnabled = false;
+    uint32 GeneratedAccountId = 0;
+    uint32 GeneratedCount = 0;
+    std::string GeneratedNamePrefix = "Worldbot";
+    std::vector<std::string> GeneratedProfileIds;
+    std::vector<WorldBotGeneratedProfile> GeneratedProfiles;
 };
 
 #endif

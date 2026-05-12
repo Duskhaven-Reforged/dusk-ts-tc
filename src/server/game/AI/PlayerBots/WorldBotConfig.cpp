@@ -25,6 +25,32 @@
 #include <string_view>
 #include <utility>
 
+namespace
+{
+    std::vector<uint32> ParseWorldBotUInt32List(std::string const& value, std::string_view keyName)
+    {
+        std::vector<uint32> values;
+        for (std::string_view token : Trinity::Tokenize(value, ',', false))
+        {
+            if (Optional<uint32> parsed = Trinity::StringTo<uint32>(token))
+                values.push_back(*parsed);
+            else
+                TC_LOG_WARN("server.worldbots", "Ignoring invalid uint32 token '{}' in {}.", token, keyName);
+        }
+
+        return values;
+    }
+
+    std::vector<std::string> ParseWorldBotStringList(std::string const& value)
+    {
+        std::vector<std::string> values;
+        for (std::string_view token : Trinity::Tokenize(value, ',', false))
+            values.emplace_back(token);
+
+        return values;
+    }
+}
+
 void WorldBotConfig::Load(bool reload)
 {
     Enabled = sConfigMgr->GetBoolDefault("WorldBots.Enable", false);
@@ -64,14 +90,30 @@ void WorldBotConfig::Load(bool reload)
     DebugQuestScanIntervalMs = sConfigMgr->GetIntDefault("WorldBots.Debug.QuestScanIntervalMs", 3000);
     DebugQuestSearchRange = sConfigMgr->GetFloatDefault("WorldBots.Debug.QuestSearchRange", 35.0f);
     DebugQuestInteractTimeoutMs = sConfigMgr->GetIntDefault("WorldBots.Debug.QuestInteractTimeoutMs", 15000);
-    DebugQuestPlanIds.clear();
-    std::string questPlan = sConfigMgr->GetStringDefault("WorldBots.Debug.QuestPlan", "");
-    for (std::string_view token : Trinity::Tokenize(questPlan, ',', false))
+    DebugDespawnOnQuestPlanComplete = sConfigMgr->GetBoolDefault("WorldBots.Debug.DespawnOnQuestPlanComplete", false);
+    DebugQuestPlanIds = ParseWorldBotUInt32List(sConfigMgr->GetStringDefault("WorldBots.Debug.QuestPlan", ""), "WorldBots.Debug.QuestPlan");
+    GeneratedEnabled = sConfigMgr->GetBoolDefault("WorldBots.Generated.Enable", false);
+    GeneratedAccountId = sConfigMgr->GetIntDefault("WorldBots.Generated.AccountId", 0);
+    if (!GeneratedAccountId)
+        GeneratedAccountId = DebugAccountId;
+    GeneratedCount = sConfigMgr->GetIntDefault("WorldBots.Generated.Count", 0);
+    GeneratedNamePrefix = sConfigMgr->GetStringDefault("WorldBots.Generated.NamePrefix", "Worldbot");
+    GeneratedProfileIds = ParseWorldBotStringList(sConfigMgr->GetStringDefault("WorldBots.Generated.Profiles", ""));
+    GeneratedProfiles.clear();
+    for (std::string const& profileId : GeneratedProfileIds)
     {
-        if (Optional<uint32> questId = Trinity::StringTo<uint32>(token))
-            DebugQuestPlanIds.push_back(*questId);
-        else
-            TC_LOG_WARN("server.worldbots", "Ignoring invalid quest id '{}' in WorldBots.Debug.QuestPlan.", token);
+        std::string const keyPrefix = "WorldBots.Generated.Profile." + profileId + ".";
+        WorldBotGeneratedProfile profile;
+        profile.Id = profileId;
+        profile.Race = uint8(sConfigMgr->GetIntDefault(keyPrefix + "Race", 0));
+        profile.Class = uint8(sConfigMgr->GetIntDefault(keyPrefix + "Class", 0));
+        profile.Gender = uint8(sConfigMgr->GetIntDefault(keyPrefix + "Gender", 0));
+        profile.Level = sConfigMgr->GetIntDefault(keyPrefix + "Level", 1);
+        profile.GearItemIds = ParseWorldBotUInt32List(sConfigMgr->GetStringDefault(keyPrefix + "Gear", ""), keyPrefix + "Gear");
+        profile.SpellIds = ParseWorldBotUInt32List(sConfigMgr->GetStringDefault(keyPrefix + "Spells", ""), keyPrefix + "Spells");
+        profile.QuestPlanIds = ParseWorldBotUInt32List(sConfigMgr->GetStringDefault(keyPrefix + "QuestPlan", ""), keyPrefix + "QuestPlan");
+        profile.DespawnOnQuestPlanComplete = sConfigMgr->GetBoolDefault(keyPrefix + "DespawnOnQuestPlanComplete", false);
+        GeneratedProfiles.push_back(std::move(profile));
     }
 
     if (UpdateIntervalMs < 100)
@@ -243,11 +285,19 @@ void WorldBotConfig::Load(bool reload)
     if (DebugQuesting && DebugQuestPlanIds.empty())
         TC_LOG_WARN("server.worldbots", "WorldBots.Debug.Questing is enabled but WorldBots.Debug.QuestPlan is empty. Bot will not opportunistically accept unrelated quests.");
 
-    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}, debugSpellRotation={}, debugSpellCastIntervalMs={}, debugLoot={}, debugLootScanIntervalMs={}, debugLootSearchRange={}, debugLootBlacklistMs={}, debugRecovery={}, debugRecoveryStartHealthPct={}, debugRecoveryStopHealthPct={}, debugRecoveryStartManaPct={}, debugRecoveryStopManaPct={}, debugConsumables={}, debugConsumableScanIntervalMs={}, debugDeathHandling={}, debugDeathReleaseDelayMs={}, debugDeathRespawnDelayMs={}, debugQuesting={}, debugQuestScanIntervalMs={}, debugQuestSearchRange={}, debugQuestInteractTimeoutMs={}, debugQuestPlanCount={}",
+    if (GeneratedEnabled && GeneratedProfiles.empty())
+        TC_LOG_WARN("server.worldbots", "WorldBots.Generated.Enable is enabled but WorldBots.Generated.Profiles is empty.");
+
+    if (GeneratedEnabled && !GeneratedAccountId)
+        TC_LOG_WARN("server.worldbots", "WorldBots.Generated.Enable is enabled but WorldBots.Generated.AccountId is 0. Generated character creation will be skipped.");
+
+    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}, debugSpellRotation={}, debugSpellCastIntervalMs={}, debugLoot={}, debugLootScanIntervalMs={}, debugLootSearchRange={}, debugLootBlacklistMs={}, debugRecovery={}, debugRecoveryStartHealthPct={}, debugRecoveryStopHealthPct={}, debugRecoveryStartManaPct={}, debugRecoveryStopManaPct={}, debugConsumables={}, debugConsumableScanIntervalMs={}, debugDeathHandling={}, debugDeathReleaseDelayMs={}, debugDeathRespawnDelayMs={}, debugQuesting={}, debugQuestScanIntervalMs={}, debugQuestSearchRange={}, debugQuestInteractTimeoutMs={}, debugDespawnOnQuestPlanComplete={}, debugQuestPlanCount={}, generatedEnabled={}, generatedAccountId={}, generatedCount={}, generatedNamePrefix={}, generatedProfileCount={}",
         reload ? "reloaded" : "loaded", Enabled, MaxActiveBots, UpdateIntervalMs, MapTickBudgetMs, Debug, DebugCharacterGuid, DebugAccountId,
         DebugRoam, DebugRoamIntervalMs, DebugRoamRadius, DebugRoamMinDistance, DebugCombat, DebugCombatScanIntervalMs, DebugCombatSearchRange,
         DebugCombatLeashRange, DebugCombatMinLevelDelta, DebugCombatMaxLevelDelta, DebugSpellRotation, DebugSpellCastIntervalMs, DebugLoot,
         DebugLootScanIntervalMs, DebugLootSearchRange, DebugLootBlacklistMs, DebugRecovery, DebugRecoveryStartHealthPct, DebugRecoveryStopHealthPct,
         DebugRecoveryStartManaPct, DebugRecoveryStopManaPct, DebugConsumables, DebugConsumableScanIntervalMs, DebugDeathHandling, DebugDeathReleaseDelayMs,
-        DebugDeathRespawnDelayMs, DebugQuesting, DebugQuestScanIntervalMs, DebugQuestSearchRange, DebugQuestInteractTimeoutMs, DebugQuestPlanIds.size());
+        DebugDeathRespawnDelayMs, DebugQuesting, DebugQuestScanIntervalMs, DebugQuestSearchRange, DebugQuestInteractTimeoutMs,
+        DebugDespawnOnQuestPlanComplete, DebugQuestPlanIds.size(), GeneratedEnabled, GeneratedAccountId, GeneratedCount, GeneratedNamePrefix,
+        GeneratedProfiles.size());
 }
