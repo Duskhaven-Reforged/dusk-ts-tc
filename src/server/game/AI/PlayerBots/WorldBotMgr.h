@@ -55,6 +55,7 @@ private:
     void UpdateDebugBot(uint32 diff);
     bool UpdateDebugBotLoot(Map* map, uint32 diff);
     bool UpdateDebugBotRecovery(Map* map, uint32 diff);
+    bool UpdateDebugBotConsumables(Player* bot, bool needsHealth, bool needsMana, uint32 diff);
     bool UpdateDebugBotCombat(Map* map, uint32 diff);
     bool UpdateDebugBotSpellRotation(Player* bot, Unit* victim, uint32 diff);
     void UpdateDebugBotRoam(Map* map, uint32 diff);
@@ -78,6 +79,7 @@ private:
     uint32 _debugLootScanTimer = 0;
     uint32 _debugLootMoveTimer = 0;
     uint32 _debugLootTargetTimer = 0;
+    uint32 _debugConsumableScanTimer = 0;
     bool _debugRecovering = false;
     uint32 _debugRoamTimer = 0;
     uint32 _debugMovePointId = 1;

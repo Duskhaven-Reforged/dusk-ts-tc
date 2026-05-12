@@ -16,6 +16,7 @@
  */
 
 #include "WorldBotMgr.h"
+#include "Bag.h"
 #include "CellImpl.h"
 #include "Creature.h"
 #include "DBCStructure.h"
@@ -25,10 +26,12 @@
 #include "MotionMaster.h"
 #include "ObjectDefines.h"
 #include "ObjectGuid.h"
+#include "Item.h"
 #include "Player.h"
 #include "Random.h"
 #include "SmartEnum.h"
 #include "Spell.h"
+#include "SpellAuraDefines.h"
 #include "SpellHistory.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
@@ -170,6 +173,81 @@ namespace
 
         WorldBotSpellDiagnostics* Previous;
     };
+
+    struct WorldBotConsumableCandidate
+    {
+        Item* Consumable = nullptr;
+        uint32 SpellId = 0;
+        bool RestoresHealth = false;
+        bool RestoresMana = false;
+
+        explicit operator bool() const { return Consumable != nullptr; }
+    };
+
+    bool WorldBotSpellRestoresForRecovery(SpellInfo const* spellInfo, bool& restoresHealth, bool& restoresMana)
+    {
+        if (!spellInfo)
+            return false;
+
+        for (SpellEffectInfo const& effect : spellInfo->GetEffects())
+        {
+            if (!effect.IsAura())
+                continue;
+
+            switch (effect.ApplyAuraName)
+            {
+                case SPELL_AURA_MOD_REGEN:
+                case SPELL_AURA_MOD_REGEN_DURING_COMBAT:
+                    restoresHealth = true;
+                    break;
+                case SPELL_AURA_MOD_POWER_REGEN:
+                case SPELL_AURA_MOD_POWER_REGEN_PERCENT:
+                    if (effect.MiscValue == POWER_MANA || effect.MiscValue < 0)
+                        restoresMana = true;
+                    break;
+                case SPELL_AURA_PERIODIC_ENERGIZE:
+                    if (effect.MiscValue == POWER_MANA)
+                        restoresMana = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        return restoresHealth || restoresMana;
+    }
+
+    WorldBotConsumableCandidate GetWorldBotConsumableCandidate(Item* item, bool needsHealth, bool needsMana)
+    {
+        if (!item)
+            return {};
+
+        ItemTemplate const* itemTemplate = item->GetTemplate();
+        if (!itemTemplate || itemTemplate->Class != ITEM_CLASS_CONSUMABLE || itemTemplate->SubClass != ITEM_SUBCLASS_FOOD)
+            return {};
+
+        for (_Spell const& spellData : itemTemplate->Spells)
+        {
+            if (spellData.SpellId <= 0)
+                continue;
+
+            if (spellData.SpellTrigger != ITEM_SPELLTRIGGER_ON_USE)
+                continue;
+
+            bool restoresHealth = false;
+            bool restoresMana = false;
+            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellData.SpellId);
+            if (!WorldBotSpellRestoresForRecovery(spellInfo, restoresHealth, restoresMana))
+                return {};
+
+            if ((needsHealth && restoresHealth) || (needsMana && restoresMana))
+                return { item, uint32(spellData.SpellId), restoresHealth, restoresMana };
+
+            return {};
+        }
+
+        return {};
+    }
 
     WorldBotPreparedSpell VerifyWorldBotSpellCast(Player* bot, uint32 spellId, Unit* target, bool debug)
     {
@@ -717,7 +795,7 @@ bool WorldBotMgr::UpdateDebugBotLoot(Map* map, uint32 diff)
     return true;
 }
 
-bool WorldBotMgr::UpdateDebugBotRecovery(Map* map, uint32 /*diff*/)
+bool WorldBotMgr::UpdateDebugBotRecovery(Map* map, uint32 diff)
 {
     if (!_debugSession)
         return false;
@@ -731,6 +809,7 @@ bool WorldBotMgr::UpdateDebugBotRecovery(Map* map, uint32 /*diff*/)
         if (_debugRecovering)
         {
             _debugRecovering = false;
+            _debugConsumableScanTimer = 0;
             if (!bot->IsStandState())
                 bot->SetStandState(UNIT_STAND_STATE_STAND);
         }
@@ -744,6 +823,7 @@ bool WorldBotMgr::UpdateDebugBotRecovery(Map* map, uint32 /*diff*/)
     if (!bot->IsInWorld() || !bot->IsAlive() || bot->IsBeingTeleported())
     {
         _debugRecovering = false;
+        _debugConsumableScanTimer = 0;
         return false;
     }
 
@@ -763,6 +843,7 @@ bool WorldBotMgr::UpdateDebugBotRecovery(Map* map, uint32 /*diff*/)
     if (_debugRecovering && healthReady && manaReady)
     {
         _debugRecovering = false;
+        _debugConsumableScanTimer = 0;
         if (!bot->IsStandState())
             bot->SetStandState(UNIT_STAND_STATE_STAND);
 
@@ -776,6 +857,7 @@ bool WorldBotMgr::UpdateDebugBotRecovery(Map* map, uint32 /*diff*/)
     if (!_debugRecovering)
     {
         _debugRecovering = true;
+        _debugConsumableScanTimer = 0;
         if (_config.Debug)
             TC_LOG_DEBUG("server.worldbots", "WorldBot {} entering recovery healthPct={} manaPct={}.", bot->GetName(),
                 bot->GetHealthPct(), hasActiveMana ? bot->GetPowerPct(POWER_MANA) : 100.0f);
@@ -787,10 +869,86 @@ bool WorldBotMgr::UpdateDebugBotRecovery(Map* map, uint32 /*diff*/)
     if (!bot->IsStopped())
         bot->StopMoving();
 
+    UpdateDebugBotConsumables(bot, needsHealth, needsMana, diff);
+
     if (bot->GetStandState() != UNIT_STAND_STATE_SIT)
         bot->SetStandState(UNIT_STAND_STATE_SIT);
 
     return true;
+}
+
+bool WorldBotMgr::UpdateDebugBotConsumables(Player* bot, bool needsHealth, bool needsMana, uint32 diff)
+{
+    if (!_config.DebugConsumables || !bot || bot->IsInCombat() || bot->GetVictim())
+        return false;
+
+    bool const needsFood = needsHealth && !bot->HasAuraType(SPELL_AURA_MOD_REGEN) && !bot->HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT);
+    bool const needsDrink = needsMana && !bot->HasAuraType(SPELL_AURA_MOD_POWER_REGEN) && !bot->HasAuraType(SPELL_AURA_PERIODIC_ENERGIZE);
+    if (!needsFood && !needsDrink)
+        return false;
+
+    if (_debugConsumableScanTimer > diff)
+    {
+        _debugConsumableScanTimer -= diff;
+        return false;
+    }
+
+    _debugConsumableScanTimer = _config.DebugConsumableScanIntervalMs;
+
+    auto tryUseConsumable = [&](Item* item) -> bool
+    {
+        WorldBotConsumableCandidate candidate = GetWorldBotConsumableCandidate(item, needsFood, needsDrink);
+        if (!candidate)
+            return false;
+
+        InventoryResult result = bot->CanUseItem(candidate.Consumable);
+        if (result != EQUIP_ERR_OK)
+        {
+            if (_config.Debug)
+                TC_LOG_INFO("server.worldbots", "WorldBot {} cannot use recovery consumable {}: result={}.", bot->GetName(),
+                    candidate.Consumable->GetEntry(), uint32(result));
+
+            return false;
+        }
+
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(candidate.SpellId);
+        SpellCastTargets targets;
+        if (spellInfo && spellInfo->NeedsExplicitUnitTarget())
+            targets.SetUnitTarget(bot);
+
+        uint32 const itemEntry = candidate.Consumable->GetEntry();
+        bot->CastItemUseSpell(candidate.Consumable, targets, 0, 0);
+
+        if (bot->GetStandState() != UNIT_STAND_STATE_SIT)
+            bot->SetStandState(UNIT_STAND_STATE_SIT);
+
+        if (_config.Debug)
+            TC_LOG_INFO("server.worldbots", "WorldBot {} using recovery consumable {} spell={} restoresHealth={} restoresMana={} healthPct={} manaPct={}.",
+                bot->GetName(), itemEntry, candidate.SpellId, candidate.RestoresHealth, candidate.RestoresMana, bot->GetHealthPct(),
+                bot->GetMaxPower(POWER_MANA) ? bot->GetPowerPct(POWER_MANA) : 100.0f);
+
+        return true;
+    };
+
+    for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
+        if (tryUseConsumable(bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot)))
+            return true;
+
+    for (uint8 bagSlot = INVENTORY_SLOT_BAG_START; bagSlot < INVENTORY_SLOT_BAG_END; ++bagSlot)
+    {
+        Bag* bag = bot->GetBagByPos(bagSlot);
+        if (!bag)
+            continue;
+
+        for (uint32 slot = 0; slot < bag->GetBagSize(); ++slot)
+            if (tryUseConsumable(bag->GetItemByPos(uint8(slot))))
+                return true;
+    }
+
+    if (_config.Debug)
+        TC_LOG_INFO("server.worldbots", "WorldBot {} found no recovery consumable needsFood={} needsDrink={}.", bot->GetName(), needsFood, needsDrink);
+
+    return false;
 }
 
 bool WorldBotMgr::UpdateDebugBotCombat(Map* map, uint32 diff)

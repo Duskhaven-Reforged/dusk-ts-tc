@@ -51,6 +51,8 @@ void WorldBotConfig::Load(bool reload)
     DebugRecoveryStopHealthPct = sConfigMgr->GetFloatDefault("WorldBots.Debug.RecoveryStopHealthPct", 85.0f);
     DebugRecoveryStartManaPct = sConfigMgr->GetFloatDefault("WorldBots.Debug.RecoveryStartManaPct", 20.0f);
     DebugRecoveryStopManaPct = sConfigMgr->GetFloatDefault("WorldBots.Debug.RecoveryStopManaPct", 75.0f);
+    DebugConsumables = sConfigMgr->GetBoolDefault("WorldBots.Debug.Consumables", false);
+    DebugConsumableScanIntervalMs = sConfigMgr->GetIntDefault("WorldBots.Debug.ConsumableScanIntervalMs", 2000);
 
     if (UpdateIntervalMs < 100)
     {
@@ -174,10 +176,19 @@ void WorldBotConfig::Load(bool reload)
     else if (DebugRecoveryStopManaPct > 100.0f)
         DebugRecoveryStopManaPct = 100.0f;
 
-    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}, debugSpellRotation={}, debugSpellCastIntervalMs={}, debugLoot={}, debugLootScanIntervalMs={}, debugLootSearchRange={}, debugLootBlacklistMs={}, debugRecovery={}, debugRecoveryStartHealthPct={}, debugRecoveryStopHealthPct={}, debugRecoveryStartManaPct={}, debugRecoveryStopManaPct={}",
+    if (DebugConsumables && !DebugRecovery)
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.Consumables is enabled but WorldBots.Debug.Recovery is disabled. Consumables will not be used.");
+
+    if (DebugConsumableScanIntervalMs < 500)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.ConsumableScanIntervalMs ({}) is too low. Using 500.", DebugConsumableScanIntervalMs);
+        DebugConsumableScanIntervalMs = 500;
+    }
+
+    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}, debugSpellRotation={}, debugSpellCastIntervalMs={}, debugLoot={}, debugLootScanIntervalMs={}, debugLootSearchRange={}, debugLootBlacklistMs={}, debugRecovery={}, debugRecoveryStartHealthPct={}, debugRecoveryStopHealthPct={}, debugRecoveryStartManaPct={}, debugRecoveryStopManaPct={}, debugConsumables={}, debugConsumableScanIntervalMs={}",
         reload ? "reloaded" : "loaded", Enabled, MaxActiveBots, UpdateIntervalMs, MapTickBudgetMs, Debug, DebugCharacterGuid, DebugAccountId,
         DebugRoam, DebugRoamIntervalMs, DebugRoamRadius, DebugRoamMinDistance, DebugCombat, DebugCombatScanIntervalMs, DebugCombatSearchRange,
         DebugCombatLeashRange, DebugCombatMinLevelDelta, DebugCombatMaxLevelDelta, DebugSpellRotation, DebugSpellCastIntervalMs, DebugLoot,
         DebugLootScanIntervalMs, DebugLootSearchRange, DebugLootBlacklistMs, DebugRecovery, DebugRecoveryStartHealthPct, DebugRecoveryStopHealthPct,
-        DebugRecoveryStartManaPct, DebugRecoveryStopManaPct);
+        DebugRecoveryStartManaPct, DebugRecoveryStopManaPct, DebugConsumables, DebugConsumableScanIntervalMs);
 }

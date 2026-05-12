@@ -4924,4 +4924,23 @@ WorldBots.Debug.RecoveryStartManaPct = 20
 WorldBots.Debug.RecoveryStopManaPct = 75
 
 #
+#    WorldBots.Debug.Consumables
+#        Description: Enables simple food/drink use during debug recovery. The bot scans its
+#                     carried inventory for consumable food items with health or mana recovery
+#                     auras, uses one when needed, then sits.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+WorldBots.Debug.Consumables = 0
+
+#
+#    WorldBots.Debug.ConsumableScanIntervalMs
+#        Description: Milliseconds between recovery consumable inventory scans.
+#        Default:     2000
+#
+
+WorldBots.Debug.ConsumableScanIntervalMs = 2000
+
+#
 ###################################################################################################
