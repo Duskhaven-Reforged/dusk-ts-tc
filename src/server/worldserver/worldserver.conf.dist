@@ -4782,7 +4782,7 @@ WorldBots.Debug.RoamMinDistance = 8
 #
 #    WorldBots.Debug.Combat
 #        Description: Enables target scan, chase, and melee auto-attack for the single
-#                     debug bot. Spell rotations are not implemented yet.
+#                     debug bot.
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 #
@@ -4828,6 +4828,24 @@ WorldBots.Debug.CombatMinLevelDelta = -5
 #
 
 WorldBots.Debug.CombatMaxLevelDelta = 2
+
+#
+#    WorldBots.Debug.SpellRotation
+#        Description: Enables simple class offensive spell rotation for the single debug bot.
+#                     Requires WorldBots.Debug.Combat = 1.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+WorldBots.Debug.SpellRotation = 0
+
+#
+#    WorldBots.Debug.SpellCastIntervalMs
+#        Description: Milliseconds between debug bot spell selection attempts while in combat.
+#        Default:     1500
+#
+
+WorldBots.Debug.SpellCastIntervalMs = 1500
 
 #
 ###################################################################################################

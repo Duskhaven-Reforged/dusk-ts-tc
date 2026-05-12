@@ -41,6 +41,8 @@ struct TC_GAME_API WorldBotConfig
     float DebugCombatLeashRange = 60.0f;
     int32 DebugCombatMinLevelDelta = -5;
     int32 DebugCombatMaxLevelDelta = 2;
+    bool DebugSpellRotation = false;
+    uint32 DebugSpellCastIntervalMs = 1500;
 };
 
 #endif

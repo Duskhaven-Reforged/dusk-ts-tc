@@ -39,6 +39,8 @@ void WorldBotConfig::Load(bool reload)
     DebugCombatLeashRange = sConfigMgr->GetFloatDefault("WorldBots.Debug.CombatLeashRange", 60.0f);
     DebugCombatMinLevelDelta = sConfigMgr->GetIntDefault("WorldBots.Debug.CombatMinLevelDelta", -5);
     DebugCombatMaxLevelDelta = sConfigMgr->GetIntDefault("WorldBots.Debug.CombatMaxLevelDelta", 2);
+    DebugSpellRotation = sConfigMgr->GetBoolDefault("WorldBots.Debug.SpellRotation", false);
+    DebugSpellCastIntervalMs = sConfigMgr->GetIntDefault("WorldBots.Debug.SpellCastIntervalMs", 1500);
 
     if (UpdateIntervalMs < 100)
     {
@@ -110,8 +112,14 @@ void WorldBotConfig::Load(bool reload)
         std::swap(DebugCombatMinLevelDelta, DebugCombatMaxLevelDelta);
     }
 
-    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}",
+    if (DebugSpellCastIntervalMs < 500)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.SpellCastIntervalMs ({}) is too low. Using 500.", DebugSpellCastIntervalMs);
+        DebugSpellCastIntervalMs = 500;
+    }
+
+    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}, debugSpellRotation={}, debugSpellCastIntervalMs={}",
         reload ? "reloaded" : "loaded", Enabled, MaxActiveBots, UpdateIntervalMs, MapTickBudgetMs, Debug, DebugCharacterGuid, DebugAccountId,
         DebugRoam, DebugRoamIntervalMs, DebugRoamRadius, DebugRoamMinDistance, DebugCombat, DebugCombatScanIntervalMs, DebugCombatSearchRange,
-        DebugCombatLeashRange, DebugCombatMinLevelDelta, DebugCombatMaxLevelDelta);
+        DebugCombatLeashRange, DebugCombatMinLevelDelta, DebugCombatMaxLevelDelta, DebugSpellRotation, DebugSpellCastIntervalMs);
 }

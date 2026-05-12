@@ -50,6 +50,7 @@ private:
     void EnsureDebugBot();
     void UpdateDebugBot(uint32 diff);
     bool UpdateDebugBotCombat(Map* map, uint32 diff);
+    bool UpdateDebugBotSpellRotation(Player* bot, Unit* victim, uint32 diff);
     void UpdateDebugBotRoam(Map* map, uint32 diff);
     Unit* SelectDebugBotCombatTarget(Player* bot) const;
 
@@ -59,6 +60,7 @@ private:
     uint32 _activeBotCount = 0;
     bool _debugLoginAttempted = false;
     uint32 _debugCombatScanTimer = 0;
+    uint32 _debugSpellCastTimer = 0;
     uint32 _debugRoamTimer = 0;
     uint32 _debugMovePointId = 1;
     std::unique_ptr<WorldSession> _debugSession;
