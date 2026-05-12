@@ -18,6 +18,7 @@
 #include "WorldBotMgr.h"
 #include "Bag.h"
 #include "CellImpl.h"
+#include "Corpse.h"
 #include "Creature.h"
 #include "DBCStructure.h"
 #include "GridNotifiersImpl.h"
@@ -247,6 +248,23 @@ namespace
         }
 
         return {};
+    }
+
+    bool FinishWorldBotNearTeleport(Player* bot)
+    {
+        if (!bot || !bot->IsBeingTeleportedNear())
+            return false;
+
+        bot->SetSemaphoreTeleportNear(false);
+
+        WorldLocation const& destination = bot->GetTeleportDest();
+        bot->UpdatePosition(destination, true);
+        bot->UpdateArea(bot->GetAreaIdFromPosition());
+        bot->SetFallInformation(0, bot->GetPositionZ());
+        bot->ResummonPetTemporaryUnSummonedIfAny();
+        bot->ProcessDelayedOperations();
+
+        return true;
     }
 
     WorldBotPreparedSpell VerifyWorldBotSpellCast(Player* bot, uint32 spellId, Unit* target, bool debug)
@@ -553,6 +571,10 @@ void WorldBotMgr::LoadConfig(bool reload)
     _debugLootMoveTimer = 0;
     _debugLootTargetTimer = 0;
     _debugRecovering = false;
+    _debugConsumableScanTimer = 0;
+    _debugDeathReleaseTimer = 0;
+    _debugDeathRespawnTimer = 0;
+    _debugDeathReleased = false;
     _debugLootTargetGuid.Clear();
     _debugLootBlacklist.clear();
     _debugRoamTimer = 0;
@@ -610,6 +632,9 @@ void WorldBotMgr::Update(uint32 diff)
 void WorldBotMgr::UpdateMap(Map* map, uint32 diff)
 {
     if (!_config.Enabled)
+        return;
+
+    if (UpdateDebugBotDeath(map, diff))
         return;
 
     if (UpdateDebugBotLoot(map, diff))
@@ -792,6 +817,132 @@ bool WorldBotMgr::UpdateDebugBotLoot(Map* map, uint32 diff)
     _debugLootTargetGuid = target->GetGUID();
     _debugLootMoveTimer = 0;
     _debugLootTargetTimer = 15000;
+    return true;
+}
+
+bool WorldBotMgr::UpdateDebugBotDeath(Map* map, uint32 diff)
+{
+    if (!_debugSession)
+        return false;
+
+    Player* bot = _debugSession->GetPlayer();
+    if (!bot || bot->GetMap() != map)
+        return false;
+
+    if (!_config.DebugDeathHandling)
+    {
+        _debugDeathReleaseTimer = 0;
+        _debugDeathRespawnTimer = 0;
+        _debugDeathReleased = false;
+        return false;
+    }
+
+    if (!map || !map->GetEntry() || !map->GetEntry()->IsContinent())
+        return false;
+
+    if (bot->IsAlive())
+    {
+        _debugDeathReleaseTimer = 0;
+        _debugDeathRespawnTimer = 0;
+        _debugDeathReleased = false;
+        return false;
+    }
+
+    bot->AttackStop();
+    bot->CombatStop(true);
+    _debugRecovering = false;
+    _debugLootTargetGuid.Clear();
+    _debugLootMoveTimer = 0;
+    _debugLootTargetTimer = 0;
+    _debugSpellCastTimer = 0;
+
+    if (bot->getDeathState() == JUST_DIED)
+    {
+        bot->KillPlayer();
+        return true;
+    }
+
+    if (bot->getDeathState() == CORPSE)
+    {
+        if (!_debugDeathReleaseTimer)
+        {
+            _debugDeathReleaseTimer = _config.DebugDeathReleaseDelayMs;
+            if (_config.Debug)
+                TC_LOG_INFO("server.worldbots", "WorldBot {} died. Releasing in {} ms.", bot->GetName(), _debugDeathReleaseTimer);
+        }
+
+        if (_debugDeathReleaseTimer > diff)
+        {
+            _debugDeathReleaseTimer -= diff;
+            return true;
+        }
+
+        bot->BuildPlayerRepop();
+        bot->RepopAtGraveyard();
+        _debugDeathReleaseTimer = 0;
+        _debugDeathRespawnTimer = _config.DebugDeathRespawnDelayMs;
+        _debugDeathReleased = true;
+
+        if (_config.Debug)
+            TC_LOG_INFO("server.worldbots", "WorldBot {} released to graveyard. Corpse teleport in {} ms.", bot->GetName(), _debugDeathRespawnTimer);
+
+        return true;
+    }
+
+    if (bot->getDeathState() == DEAD)
+    {
+        if (!_debugDeathReleased)
+        {
+            _debugDeathReleased = true;
+            _debugDeathRespawnTimer = _config.DebugDeathRespawnDelayMs;
+        }
+
+        if (_debugDeathRespawnTimer > diff)
+        {
+            _debugDeathRespawnTimer -= diff;
+            return true;
+        }
+
+        if (bot->IsBeingTeleportedFar())
+            return true;
+
+        if (FinishWorldBotNearTeleport(bot) && _config.Debug)
+            TC_LOG_INFO("server.worldbots", "WorldBot {} completed corpse near-teleport server-side.", bot->GetName());
+
+        if (bot->HasCorpse())
+        {
+            WorldLocation const& corpseLocation = bot->GetCorpseLocation();
+            if (bot->GetMapId() != corpseLocation.GetMapId() || !bot->IsWithinDist3d(&corpseLocation, CORPSE_RECLAIM_RADIUS))
+            {
+                bot->TeleportTo(corpseLocation.GetMapId(), corpseLocation.GetPositionX(), corpseLocation.GetPositionY(),
+                    corpseLocation.GetPositionZ(), corpseLocation.GetOrientation());
+
+                if (_config.Debug)
+                    TC_LOG_INFO("server.worldbots", "WorldBot {} teleporting ghost to corpse at map={} x={} y={} z={}.", bot->GetName(),
+                        corpseLocation.GetMapId(), corpseLocation.GetPositionX(), corpseLocation.GetPositionY(), corpseLocation.GetPositionZ());
+
+                return true;
+            }
+        }
+        else if (_config.Debug)
+            TC_LOG_INFO("server.worldbots", "WorldBot {} has no corpse location; resurrecting at current ghost position.", bot->GetName());
+
+        bot->ResurrectPlayer(0.5f, false);
+        bot->SpawnCorpseBones();
+        if (!bot->IsStandState())
+            bot->SetStandState(UNIT_STAND_STATE_STAND);
+
+        _debugDeathReleaseTimer = 0;
+        _debugDeathRespawnTimer = 0;
+        _debugDeathReleased = false;
+
+        if (_config.Debug)
+            TC_LOG_INFO("server.worldbots", "WorldBot {} respawned at corpse without death penalty healthPct={} manaPct={}.", bot->GetName(),
+                bot->GetHealthPct(), bot->GetMaxPower(POWER_MANA) ? bot->GetPowerPct(POWER_MANA) : 100.0f);
+
+        return true;
+    }
+
     return true;
 }
 

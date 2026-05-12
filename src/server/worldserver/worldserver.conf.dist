@@ -4943,4 +4943,33 @@ WorldBots.Debug.Consumables = 0
 WorldBots.Debug.ConsumableScanIntervalMs = 2000
 
 #
+#    WorldBots.Debug.DeathHandling
+#        Description: Enables simple death recovery for the single debug bot. The bot releases
+#                     after a delay, teleports its ghost back to the corpse after another delay,
+#                     resurrects without spirit-healer sickness/durability penalties, and resumes
+#                     behavior.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+WorldBots.Debug.DeathHandling = 0
+
+#
+#    WorldBots.Debug.DeathReleaseDelayMs
+#        Description: Milliseconds to wait after death before releasing spirit.
+#        Default:     5000
+#
+
+WorldBots.Debug.DeathReleaseDelayMs = 5000
+
+#
+#    WorldBots.Debug.DeathRespawnDelayMs
+#        Description: Milliseconds to wait after reaching graveyard before teleporting to corpse
+#                     and respawning.
+#        Default:     10000
+#
+
+WorldBots.Debug.DeathRespawnDelayMs = 10000
+
+#
 ###################################################################################################

@@ -53,6 +53,9 @@ void WorldBotConfig::Load(bool reload)
     DebugRecoveryStopManaPct = sConfigMgr->GetFloatDefault("WorldBots.Debug.RecoveryStopManaPct", 75.0f);
     DebugConsumables = sConfigMgr->GetBoolDefault("WorldBots.Debug.Consumables", false);
     DebugConsumableScanIntervalMs = sConfigMgr->GetIntDefault("WorldBots.Debug.ConsumableScanIntervalMs", 2000);
+    DebugDeathHandling = sConfigMgr->GetBoolDefault("WorldBots.Debug.DeathHandling", false);
+    DebugDeathReleaseDelayMs = sConfigMgr->GetIntDefault("WorldBots.Debug.DeathReleaseDelayMs", 5000);
+    DebugDeathRespawnDelayMs = sConfigMgr->GetIntDefault("WorldBots.Debug.DeathRespawnDelayMs", 10000);
 
     if (UpdateIntervalMs < 100)
     {
@@ -185,10 +188,23 @@ void WorldBotConfig::Load(bool reload)
         DebugConsumableScanIntervalMs = 500;
     }
 
-    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}, debugSpellRotation={}, debugSpellCastIntervalMs={}, debugLoot={}, debugLootScanIntervalMs={}, debugLootSearchRange={}, debugLootBlacklistMs={}, debugRecovery={}, debugRecoveryStartHealthPct={}, debugRecoveryStopHealthPct={}, debugRecoveryStartManaPct={}, debugRecoveryStopManaPct={}, debugConsumables={}, debugConsumableScanIntervalMs={}",
+    if (DebugDeathReleaseDelayMs < 1000)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.DeathReleaseDelayMs ({}) is too low. Using 1000.", DebugDeathReleaseDelayMs);
+        DebugDeathReleaseDelayMs = 1000;
+    }
+
+    if (DebugDeathRespawnDelayMs < 1000)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.DeathRespawnDelayMs ({}) is too low. Using 1000.", DebugDeathRespawnDelayMs);
+        DebugDeathRespawnDelayMs = 1000;
+    }
+
+    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}, debugSpellRotation={}, debugSpellCastIntervalMs={}, debugLoot={}, debugLootScanIntervalMs={}, debugLootSearchRange={}, debugLootBlacklistMs={}, debugRecovery={}, debugRecoveryStartHealthPct={}, debugRecoveryStopHealthPct={}, debugRecoveryStartManaPct={}, debugRecoveryStopManaPct={}, debugConsumables={}, debugConsumableScanIntervalMs={}, debugDeathHandling={}, debugDeathReleaseDelayMs={}, debugDeathRespawnDelayMs={}",
         reload ? "reloaded" : "loaded", Enabled, MaxActiveBots, UpdateIntervalMs, MapTickBudgetMs, Debug, DebugCharacterGuid, DebugAccountId,
         DebugRoam, DebugRoamIntervalMs, DebugRoamRadius, DebugRoamMinDistance, DebugCombat, DebugCombatScanIntervalMs, DebugCombatSearchRange,
         DebugCombatLeashRange, DebugCombatMinLevelDelta, DebugCombatMaxLevelDelta, DebugSpellRotation, DebugSpellCastIntervalMs, DebugLoot,
         DebugLootScanIntervalMs, DebugLootSearchRange, DebugLootBlacklistMs, DebugRecovery, DebugRecoveryStartHealthPct, DebugRecoveryStopHealthPct,
-        DebugRecoveryStartManaPct, DebugRecoveryStopManaPct, DebugConsumables, DebugConsumableScanIntervalMs);
+        DebugRecoveryStartManaPct, DebugRecoveryStopManaPct, DebugConsumables, DebugConsumableScanIntervalMs, DebugDeathHandling, DebugDeathReleaseDelayMs,
+        DebugDeathRespawnDelayMs);
 }

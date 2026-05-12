@@ -53,6 +53,7 @@ private:
 
     void EnsureDebugBot();
     void UpdateDebugBot(uint32 diff);
+    bool UpdateDebugBotDeath(Map* map, uint32 diff);
     bool UpdateDebugBotLoot(Map* map, uint32 diff);
     bool UpdateDebugBotRecovery(Map* map, uint32 diff);
     bool UpdateDebugBotConsumables(Player* bot, bool needsHealth, bool needsMana, uint32 diff);
@@ -80,7 +81,10 @@ private:
     uint32 _debugLootMoveTimer = 0;
     uint32 _debugLootTargetTimer = 0;
     uint32 _debugConsumableScanTimer = 0;
+    uint32 _debugDeathReleaseTimer = 0;
+    uint32 _debugDeathRespawnTimer = 0;
     bool _debugRecovering = false;
+    bool _debugDeathReleased = false;
     uint32 _debugRoamTimer = 0;
     uint32 _debugMovePointId = 1;
     ObjectGuid _debugLootTargetGuid;

@@ -54,6 +54,9 @@ struct TC_GAME_API WorldBotConfig
     float DebugRecoveryStopManaPct = 75.0f;
     bool DebugConsumables = false;
     uint32 DebugConsumableScanIntervalMs = 2000;
+    bool DebugDeathHandling = false;
+    uint32 DebugDeathReleaseDelayMs = 5000;
+    uint32 DebugDeathRespawnDelayMs = 10000;
 };
 
 #endif
