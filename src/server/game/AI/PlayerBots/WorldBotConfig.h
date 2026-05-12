@@ -15,14 +15,26 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// This is where scripts' loading functions should be declared:
-void AddSC_Transmogrification();
-void AddSC_worldbots();
+#ifndef TRINITY_WORLDBOTCONFIG_H
+#define TRINITY_WORLDBOTCONFIG_H
 
-// The name of this function should match:
-// void Add${NameOfDirectory}Scripts()
-void AddCustomScripts()
+#include "Common.h"
+
+struct TC_GAME_API WorldBotConfig
 {
-    AddSC_Transmogrification();
-    AddSC_worldbots();
-}
+    void Load(bool reload);
+
+    bool Enabled = false;
+    bool Debug = false;
+    uint32 MaxActiveBots = 0;
+    uint32 UpdateIntervalMs = 1000;
+    uint32 MapTickBudgetMs = 2;
+    uint32 DebugCharacterGuid = 0;
+    uint32 DebugAccountId = 0;
+    bool DebugRoam = false;
+    uint32 DebugRoamIntervalMs = 5000;
+    float DebugRoamRadius = 35.0f;
+    float DebugRoamMinDistance = 8.0f;
+};
+
+#endif

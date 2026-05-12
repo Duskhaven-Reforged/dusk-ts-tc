@@ -116,13 +116,14 @@ bool WorldSessionFilter::Process(WorldPacket* packet)
 
 /// WorldSession constructor
 WorldSession::WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion, time_t mute_time,
-    Minutes timezoneOffset, LocaleConstant locale, uint32 recruiter, bool isARecruiter):
+    Minutes timezoneOffset, LocaleConstant locale, uint32 recruiter, bool isARecruiter, WorldSessionKind kind):
     m_muteTime(mute_time),
     m_timeOutTime(0),
     AntiDOS(this),
     m_GUIDLow(0),
     _player(nullptr),
     m_Socket(std::move(sock)),
+    _sessionKind(kind),
     _security(sec),
     _accountId(id),
     _accountName(std::move(name)),
@@ -186,7 +187,8 @@ WorldSession::~WorldSession()
     while (_recvQueue.next(packet))
         delete packet;
 
-    LoginDatabase.PExecute("UPDATE account SET online = 0 WHERE id = {};", GetAccountId());     // One-time query
+    if (!IsWorldBotSession())
+        LoginDatabase.PExecute("UPDATE account SET online = 0 WHERE id = {};", GetAccountId());     // One-time query
 }
 
 std::string const & WorldSession::GetPlayerName() const
@@ -289,7 +291,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
     ///- Before we process anything:
     /// If necessary, kick the player because the client didn't send anything for too long
     /// (or they've been idling in character select)
-    if (IsConnectionIdle() && !HasPermission(rbac::RBAC_PERM_IGNORE_IDLE_CONNECTION))
+    if (IsConnectionIdle() && m_Socket && !HasPermission(rbac::RBAC_PERM_IGNORE_IDLE_CONNECTION))
         m_Socket->CloseSocket();
 
     ///- Retrieve packets from the receive queue and call the appropriate handlers
@@ -490,7 +492,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
             }
         }
 
-        if (!m_Socket)
+        if (!m_Socket && !IsWorldBotSession())
             return false;                                       //Will remove this session from the world session map
     }
 
@@ -636,9 +638,12 @@ void WorldSession::LogoutPlayer(bool save)
         TC_LOG_DEBUG("network", "SESSION: Sent SMSG_LOGOUT_COMPLETE Message");
 
         //! Since each account can only have one online character at any given time, ensure all characters for active account are marked as offline
-        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_ACCOUNT_ONLINE);
-        stmt->setUInt32(0, GetAccountId());
-        CharacterDatabase.Execute(stmt);
+        if (!IsWorldBotSession())
+        {
+            CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_ACCOUNT_ONLINE);
+            stmt->setUInt32(0, GetAccountId());
+            CharacterDatabase.Execute(stmt);
+        }
     }
 
     m_playerLogout = false;
@@ -650,6 +655,14 @@ void WorldSession::LogoutPlayer(bool save)
 /// Kick a player out of the World
 void WorldSession::KickPlayer(std::string const& reason)
 {
+    if (IsWorldBotSession())
+    {
+        TC_LOG_INFO("network.kick", "WorldBot account: {} character: '{}' {} kicked with reason: {}", GetAccountId(),
+            _player ? _player->GetName() : "<none>", _player ? _player->GetGUID().ToString() : "", reason);
+        forceExit = true;
+        return;
+    }
+
     if (m_Socket)
     {
         TC_LOG_INFO("network.kick", "Account: {} Character: '{}' {} kicked with reason: {}", GetAccountId(), _player ? _player->GetName() : "<none>",
@@ -753,6 +766,9 @@ void WorldSession::ResetTimeOutTime(bool onlyActive)
 
 bool WorldSession::IsConnectionIdle() const
 {
+    if (IsWorldBotSession())
+        return false;
+
     return m_timeOutTime < GameTime::GetGameTime() && !m_inQueue;
 }
 

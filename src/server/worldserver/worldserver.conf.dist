@@ -4678,3 +4678,106 @@ TSWoW.EnableLua = false
 
 #
 ###################################################################################################
+
+###################################################################################################
+# WORLDBOTS SETTINGS
+#
+# Open-world pseudo-player bot system. This is disabled by default while the implementation is
+# built in phases. Current debug path can load one configured character as a socketless bot.
+#
+#    WorldBots.Enable
+#        Description: Enables / disables WorldBots.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+WorldBots.Enable = 0
+
+#
+#    WorldBots.MaxActiveBots
+#        Description: Maximum active open-world bots. Must be greater than 0 for the
+#                     single debug bot login path to run.
+#        Default:     0
+#
+
+WorldBots.MaxActiveBots = 0
+
+#
+#    WorldBots.UpdateIntervalMs
+#        Description: Global manager tick interval in milliseconds.
+#        Default:     1000
+#
+
+WorldBots.UpdateIntervalMs = 1000
+
+#
+#    WorldBots.MapTickBudgetMs
+#        Description: Intended per-map bot AI budget in milliseconds for future map contexts.
+#        Default:     2
+#
+
+WorldBots.MapTickBudgetMs = 2
+
+#
+#    WorldBots.Debug
+#        Description: Enables verbose WorldBots debug logs.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+WorldBots.Debug = 0
+
+#
+#    WorldBots.Debug.CharacterGuid
+#        Description: Character GUID low to load as the first debug WorldBot. Requires
+#                     WorldBots.Enable = 1 and WorldBots.Debug.AccountId.
+#        Default:     0 - (Disabled)
+#
+
+WorldBots.Debug.CharacterGuid = 0
+
+#
+#    WorldBots.Debug.AccountId
+#        Description: Account ID that owns WorldBots.Debug.CharacterGuid. Player::LoadFromDB
+#                     verifies this, so mismatches fail safely.
+#        Default:     0 - (Disabled)
+#
+
+WorldBots.Debug.AccountId = 0
+
+#
+#    WorldBots.Debug.Roam
+#        Description: Enables local random roaming for the single debug bot. Roam decisions
+#                     run from the owning continent map update hook.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+WorldBots.Debug.Roam = 0
+
+#
+#    WorldBots.Debug.RoamIntervalMs
+#        Description: Milliseconds between local roam destination attempts for the debug bot.
+#        Default:     5000
+#
+
+WorldBots.Debug.RoamIntervalMs = 5000
+
+#
+#    WorldBots.Debug.RoamRadius
+#        Description: Maximum local roam distance in yards.
+#        Default:     35
+#
+
+WorldBots.Debug.RoamRadius = 35
+
+#
+#    WorldBots.Debug.RoamMinDistance
+#        Description: Minimum local roam distance in yards.
+#        Default:     8
+#
+
+WorldBots.Debug.RoamMinDistance = 8
+
+#
+###################################################################################################

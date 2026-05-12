@@ -1065,36 +1065,44 @@ void WorldSession::HandleCharDeleteOpcode(WorldPacket& recvData)
 
 void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recvData)
 {
+    ObjectGuid playerGuid;
+    recvData >> playerGuid;
+
+    BeginPlayerLogin(playerGuid, true);
+}
+
+bool WorldSession::BeginPlayerLogin(ObjectGuid playerGuid, bool validateCharacterForAccount)
+{
     if (PlayerLoading() || GetPlayer() != nullptr)
     {
         TC_LOG_ERROR("network", "Player tries to login again, AccountId = {}", GetAccountId());
         KickPlayer("WorldSession::HandlePlayerLoginOpcode Another client logging in");
-        return;
+        return false;
     }
 
     m_playerLoading = true;
-    ObjectGuid playerGuid;
 
-    recvData >> playerGuid;
-
-    if (!IsLegitCharacterForAccount(playerGuid))
+    if (validateCharacterForAccount && !IsLegitCharacterForAccount(playerGuid))
     {
         TC_LOG_ERROR("network", "Account ({}) can't login with that character ({}).", GetAccountId(), playerGuid.ToString());
+        m_playerLoading = false;
         KickPlayer("WorldSession::HandlePlayerLoginOpcode Trying to login with a character of another account");
-        return;
+        return false;
     }
 
     std::shared_ptr<LoginQueryHolder> holder = std::make_shared<LoginQueryHolder>(GetAccountId(), playerGuid);
     if (!holder->Initialize())
     {
         m_playerLoading = false;
-        return;
+        return false;
     }
 
     AddQueryHolderCallback(CharacterDatabase.DelayQueryHolder(holder)).AfterComplete([this](SQLQueryHolderBase const& holder)
     {
         HandlePlayerLogin(static_cast<LoginQueryHolder const&>(holder));
     });
+
+    return true;
 }
 
 void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
@@ -1202,17 +1210,19 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
 
     pCurrChar->SendInitialPacketsAfterAddToMap();
 
-    CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_ONLINE);
+    if (!IsWorldBotSession())
+    {
+        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_ONLINE);
+        stmt->setUInt32(0, pCurrChar->GetGUID().GetCounter());
+        CharacterDatabase.Execute(stmt);
+    }
 
-    stmt->setUInt32(0, pCurrChar->GetGUID().GetCounter());
-
-    CharacterDatabase.Execute(stmt);
-
-    LoginDatabasePreparedStatement* loginStmt = LoginDatabase.GetPreparedStatement(LOGIN_UPD_ACCOUNT_ONLINE);
-
-    loginStmt->setUInt32(0, GetAccountId());
-
-    LoginDatabase.Execute(loginStmt);
+    if (!IsWorldBotSession())
+    {
+        LoginDatabasePreparedStatement* loginStmt = LoginDatabase.GetPreparedStatement(LOGIN_UPD_ACCOUNT_ONLINE);
+        loginStmt->setUInt32(0, GetAccountId());
+        LoginDatabase.Execute(loginStmt);
+    }
 
     pCurrChar->SetInGameTime(GameTime::GetGameTimeMS());
 

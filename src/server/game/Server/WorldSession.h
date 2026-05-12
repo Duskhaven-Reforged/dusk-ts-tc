@@ -433,19 +433,26 @@ struct PacketCounter
     uint32 amountCounter;
 };
 
+enum class WorldSessionKind : uint8
+{
+    Player,
+    WorldBot
+};
+
 /// Player session in the World
 class TC_GAME_API WorldSession
 {
     public:
         WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion, time_t mute_time,
-            Minutes timezoneOffset, LocaleConstant locale, uint32 recruiter, bool isARecruiter);
+            Minutes timezoneOffset, LocaleConstant locale, uint32 recruiter, bool isARecruiter, WorldSessionKind kind = WorldSessionKind::Player);
         ~WorldSession();
 
         bool PlayerLoading() const { return m_playerLoading; }
         bool PlayerLogout() const { return m_playerLogout; }
         bool PlayerLogoutWithSave() const { return m_playerLogout && m_playerSave; }
         bool PlayerRecentlyLoggedOut() const { return m_playerRecentlyLogout; }
-        bool PlayerDisconnected() const { return !m_Socket; }
+        bool PlayerDisconnected() const { return !m_Socket && !IsWorldBotSession(); }
+        bool IsWorldBotSession() const { return _sessionKind == WorldSessionKind::WorldBot; }
 
         void ReadAddonsInfo(ByteBuffer& data);
         void SendAddonsInfo();
@@ -665,6 +672,7 @@ class TC_GAME_API WorldSession
         void HandleCharDeleteOpcode(WorldPacket& recvPacket);
         void HandleCharCreateOpcode(WorldPacket& recvPacket);
         void HandlePlayerLoginOpcode(WorldPacket& recvPacket);
+        bool BeginPlayerLogin(ObjectGuid playerGuid, bool validateCharacterForAccount = true);
         void HandleCharEnum(PreparedQueryResult result);
         void HandlePlayerLogin(LoginQueryHolder const& holder);
         void HandleCharFactionOrRaceChange(WorldPacket& recvData);
@@ -1250,6 +1258,7 @@ class TC_GAME_API WorldSession
         ObjectGuid::LowType m_GUIDLow;                      // set logined or recently logout player (while m_playerRecentlyLogout set)
         Player* _player;
         std::shared_ptr<WorldSocket> m_Socket;
+        WorldSessionKind _sessionKind;
         std::string m_Address;                              // Current Remote Address
      // std::string m_LAddress;                             // Last Attempted Remote Adress - we can not set attempted ip for a non-existing session!
 

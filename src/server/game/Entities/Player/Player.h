@@ -1788,6 +1788,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void RemovedInsignia(Player* looterPlr);
 
         WorldSession* GetSession() const { return m_session; }
+        bool IsWorldBot() const;
         GameClient* GetGameClient() const;
 
         void BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target) const override;

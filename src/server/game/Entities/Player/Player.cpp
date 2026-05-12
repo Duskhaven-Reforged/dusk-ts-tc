@@ -17790,6 +17790,11 @@ bool Player::IsLoading() const
     return GetSession()->PlayerLoading();
 }
 
+bool Player::IsWorldBot() const
+{
+    return m_session && m_session->IsWorldBotSession();
+}
+
 bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& holder)
 {
     //                                                       0     1        2     3     4      5       6      7   8      9     10    11         12         13           14         15         16
@@ -18000,6 +18005,11 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
     {
         TC_LOG_ERROR("entities.player.loading", "Player::LoadFromDB: Player ({}) has invalid coordinates (MapId: {} X: {} Y: {} Z: {} O: {}). Teleport to default race/class locations.",
             guid.ToString(), mapId, GetPositionX(), GetPositionY(), GetPositionZ(), GetOrientation());
+        RelocateToHomebind();
+    }
+    else if (IsWorldBot() && !mapEntry->IsContinent())
+    {
+        TC_LOG_INFO("server.worldbots", "WorldBot {} loaded on forbidden map {}. Moving to homebind.", guid.ToString(), mapId);
         RelocateToHomebind();
     }
     // Player was saved in Arena or Bg
