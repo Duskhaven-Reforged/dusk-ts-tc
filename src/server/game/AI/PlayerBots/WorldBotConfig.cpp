@@ -18,6 +18,7 @@
 #include "WorldBotConfig.h"
 #include "Config.h"
 #include "Log.h"
+#include <utility>
 
 void WorldBotConfig::Load(bool reload)
 {
@@ -32,6 +33,12 @@ void WorldBotConfig::Load(bool reload)
     DebugRoamIntervalMs = sConfigMgr->GetIntDefault("WorldBots.Debug.RoamIntervalMs", 5000);
     DebugRoamRadius = sConfigMgr->GetFloatDefault("WorldBots.Debug.RoamRadius", 35.0f);
     DebugRoamMinDistance = sConfigMgr->GetFloatDefault("WorldBots.Debug.RoamMinDistance", 8.0f);
+    DebugCombat = sConfigMgr->GetBoolDefault("WorldBots.Debug.Combat", false);
+    DebugCombatScanIntervalMs = sConfigMgr->GetIntDefault("WorldBots.Debug.CombatScanIntervalMs", 1500);
+    DebugCombatSearchRange = sConfigMgr->GetFloatDefault("WorldBots.Debug.CombatSearchRange", 25.0f);
+    DebugCombatLeashRange = sConfigMgr->GetFloatDefault("WorldBots.Debug.CombatLeashRange", 60.0f);
+    DebugCombatMinLevelDelta = sConfigMgr->GetIntDefault("WorldBots.Debug.CombatMinLevelDelta", -5);
+    DebugCombatMaxLevelDelta = sConfigMgr->GetIntDefault("WorldBots.Debug.CombatMaxLevelDelta", 2);
 
     if (UpdateIntervalMs < 100)
     {
@@ -74,7 +81,37 @@ void WorldBotConfig::Load(bool reload)
         DebugRoamMinDistance = DebugRoamRadius;
     }
 
-    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}",
+    if (DebugCombatScanIntervalMs < 500)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.CombatScanIntervalMs ({}) is too low. Using 500.", DebugCombatScanIntervalMs);
+        DebugCombatScanIntervalMs = 500;
+    }
+
+    if (DebugCombatSearchRange < 5.0f)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.CombatSearchRange ({}) is too low. Using 5.", DebugCombatSearchRange);
+        DebugCombatSearchRange = 5.0f;
+    }
+    else if (DebugCombatSearchRange > 80.0f)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.CombatSearchRange ({}) is too high. Using 80.", DebugCombatSearchRange);
+        DebugCombatSearchRange = 80.0f;
+    }
+
+    if (DebugCombatLeashRange < DebugCombatSearchRange)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.CombatLeashRange ({}) is below search range ({}). Using search range.", DebugCombatLeashRange, DebugCombatSearchRange);
+        DebugCombatLeashRange = DebugCombatSearchRange;
+    }
+
+    if (DebugCombatMinLevelDelta > DebugCombatMaxLevelDelta)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.CombatMinLevelDelta ({}) is above max delta ({}). Swapping.", DebugCombatMinLevelDelta, DebugCombatMaxLevelDelta);
+        std::swap(DebugCombatMinLevelDelta, DebugCombatMaxLevelDelta);
+    }
+
+    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}",
         reload ? "reloaded" : "loaded", Enabled, MaxActiveBots, UpdateIntervalMs, MapTickBudgetMs, Debug, DebugCharacterGuid, DebugAccountId,
-        DebugRoam, DebugRoamIntervalMs, DebugRoamRadius, DebugRoamMinDistance);
+        DebugRoam, DebugRoamIntervalMs, DebugRoamRadius, DebugRoamMinDistance, DebugCombat, DebugCombatScanIntervalMs, DebugCombatSearchRange,
+        DebugCombatLeashRange, DebugCombatMinLevelDelta, DebugCombatMaxLevelDelta);
 }

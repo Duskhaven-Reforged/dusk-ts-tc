@@ -4780,4 +4780,54 @@ WorldBots.Debug.RoamRadius = 35
 WorldBots.Debug.RoamMinDistance = 8
 
 #
+#    WorldBots.Debug.Combat
+#        Description: Enables target scan, chase, and melee auto-attack for the single
+#                     debug bot. Spell rotations are not implemented yet.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+WorldBots.Debug.Combat = 0
+
+#
+#    WorldBots.Debug.CombatScanIntervalMs
+#        Description: Milliseconds between hostile target scans while the debug bot is idle.
+#        Default:     1500
+#
+
+WorldBots.Debug.CombatScanIntervalMs = 1500
+
+#
+#    WorldBots.Debug.CombatSearchRange
+#        Description: Target search radius in yards.
+#        Default:     25
+#
+
+WorldBots.Debug.CombatSearchRange = 25
+
+#
+#    WorldBots.Debug.CombatLeashRange
+#        Description: Distance from target at which the debug bot gives up combat.
+#        Default:     60
+#
+
+WorldBots.Debug.CombatLeashRange = 60
+
+#
+#    WorldBots.Debug.CombatMinLevelDelta
+#        Description: Lowest target level delta relative to bot level.
+#        Default:     -5
+#
+
+WorldBots.Debug.CombatMinLevelDelta = -5
+
+#
+#    WorldBots.Debug.CombatMaxLevelDelta
+#        Description: Highest target level delta relative to bot level.
+#        Default:     2
+#
+
+WorldBots.Debug.CombatMaxLevelDelta = 2
+
+#
 ###################################################################################################

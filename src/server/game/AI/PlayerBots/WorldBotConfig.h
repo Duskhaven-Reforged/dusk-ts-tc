@@ -35,6 +35,12 @@ struct TC_GAME_API WorldBotConfig
     uint32 DebugRoamIntervalMs = 5000;
     float DebugRoamRadius = 35.0f;
     float DebugRoamMinDistance = 8.0f;
+    bool DebugCombat = false;
+    uint32 DebugCombatScanIntervalMs = 1500;
+    float DebugCombatSearchRange = 25.0f;
+    float DebugCombatLeashRange = 60.0f;
+    int32 DebugCombatMinLevelDelta = -5;
+    int32 DebugCombatMaxLevelDelta = 2;
 };
 
 #endif

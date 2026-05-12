@@ -16,7 +16,10 @@
  */
 
 #include "WorldBotMgr.h"
+#include "CellImpl.h"
+#include "Creature.h"
 #include "DBCStructure.h"
+#include "GridNotifiersImpl.h"
 #include "Map.h"
 #include "MotionMaster.h"
 #include "ObjectGuid.h"
@@ -26,6 +29,7 @@
 #include "WorldBotSession.h"
 #include "WorldSession.h"
 #include "Log.h"
+#include <list>
 #include <string>
 #include <utility>
 
@@ -47,6 +51,7 @@ void WorldBotMgr::LoadConfig(bool reload)
     _config.Load(reload);
     _updateTimer = 0;
     _debugLoginAttempted = false;
+    _debugCombatScanTimer = 0;
     _debugRoamTimer = 0;
 
     if (!_config.Enabled && _debugSession)
@@ -101,7 +106,13 @@ void WorldBotMgr::Update(uint32 diff)
 
 void WorldBotMgr::UpdateMap(Map* map, uint32 diff)
 {
-    if (!_config.Enabled || !_config.DebugRoam)
+    if (!_config.Enabled)
+        return;
+
+    if (UpdateDebugBotCombat(map, diff))
+        return;
+
+    if (!_config.DebugRoam)
         return;
 
     UpdateDebugBotRoam(map, diff);
@@ -169,6 +180,70 @@ void WorldBotMgr::UpdateDebugBot(uint32 diff)
     _activeBotCount = _debugSession->GetPlayer() ? 1 : 0;
 }
 
+bool WorldBotMgr::UpdateDebugBotCombat(Map* map, uint32 diff)
+{
+    if (!_debugSession)
+        return false;
+
+    Player* bot = _debugSession->GetPlayer();
+    if (!bot || bot->GetMap() != map)
+        return false;
+
+    if (!map || !map->GetEntry() || !map->GetEntry()->IsContinent())
+        return false;
+
+    Unit* victim = bot->GetVictim();
+    if (victim)
+    {
+        if (!victim->IsAlive() || !bot->IsValidAttackTarget(victim) || !bot->IsWithinDistInMap(victim, _config.DebugCombatLeashRange))
+        {
+            bot->AttackStop();
+            bot->CombatStop(true);
+            return false;
+        }
+
+        if (!bot->IsWithinMeleeRange(victim) && bot->IsStopped())
+            bot->GetMotionMaster()->MoveChase(victim);
+
+        return true;
+    }
+
+    if (bot->IsInCombat())
+        return true;
+
+    if (!_config.DebugCombat)
+        return false;
+
+    if (_debugCombatScanTimer > diff)
+    {
+        _debugCombatScanTimer -= diff;
+        return false;
+    }
+
+    _debugCombatScanTimer = _config.DebugCombatScanIntervalMs;
+
+    if (!bot->IsInWorld() || !bot->IsAlive() || bot->IsBeingTeleported() || bot->HasUnitState(UNIT_STATE_NOT_MOVE))
+        return false;
+
+    Unit* target = SelectDebugBotCombatTarget(bot);
+    if (!target)
+        return false;
+
+    if (bot->IsMounted())
+        bot->Dismount();
+
+    if (!bot->Attack(target, true))
+        return false;
+
+    bot->GetMotionMaster()->MoveChase(target);
+
+    if (_config.Debug)
+        TC_LOG_DEBUG("server.worldbots", "WorldBot {} attacking {} level={} distance={}", bot->GetName(), target->GetGUID().ToString(),
+            target->GetLevelForTarget(bot), bot->GetDistance(target));
+
+    return true;
+}
+
 void WorldBotMgr::UpdateDebugBotRoam(Map* map, uint32 diff)
 {
     if (!_debugSession)
@@ -217,4 +292,47 @@ void WorldBotMgr::UpdateDebugBotRoam(Map* map, uint32 diff)
     if (_config.Debug)
         TC_LOG_DEBUG("server.worldbots", "WorldBot {} could not find a roam destination near map={} x={} y={} z={}", bot->GetName(),
             map->GetId(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ());
+}
+
+Unit* WorldBotMgr::SelectDebugBotCombatTarget(Player* bot) const
+{
+    std::list<Unit*> targets;
+    Trinity::AnyUnfriendlyUnitInObjectRangeCheck check(bot, bot, _config.DebugCombatSearchRange);
+    Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(bot, targets, check);
+    Cell::VisitAllObjects(bot, searcher, _config.DebugCombatSearchRange);
+
+    Unit* bestTarget = nullptr;
+    float bestDistance = _config.DebugCombatSearchRange;
+
+    for (Unit* unit : targets)
+    {
+        if (!unit || unit == bot || unit->GetTypeId() != TYPEID_UNIT)
+            continue;
+
+        Creature* creature = unit->ToCreature();
+        if (!creature || creature->IsPet() || creature->IsTotem() || creature->IsCritter() || creature->IsSpiritService())
+            continue;
+
+        if (creature->IsCivilian() || creature->IsGuard() || creature->IsTrigger() || creature->isWorldBoss() || creature->IsInEvadeMode())
+            continue;
+
+        if (creature->IsFlying() || creature->IsInCombat())
+            continue;
+
+        if (!creature->isTargetableForAttack(false) || !bot->IsValidAttackTarget(creature) || !bot->CanSeeOrDetect(creature) || !bot->IsWithinLOSInMap(creature))
+            continue;
+
+        int32 levelDelta = int32(creature->GetLevelForTarget(bot)) - int32(bot->GetLevel());
+        if (levelDelta < _config.DebugCombatMinLevelDelta || levelDelta > _config.DebugCombatMaxLevelDelta)
+            continue;
+
+        float distance = bot->GetDistance(creature);
+        if (distance > bestDistance)
+            continue;
+
+        bestDistance = distance;
+        bestTarget = creature;
+    }
+
+    return bestTarget;
 }
