@@ -19,10 +19,14 @@
 #define TRINITY_WORLDBOTMGR_H
 
 #include "Common.h"
+#include "ObjectGuid.h"
 #include "WorldBotConfig.h"
 #include <memory>
+#include <utility>
+#include <vector>
 
 class WorldSession;
+class Creature;
 class Map;
 class Player;
 class Unit;
@@ -49,10 +53,17 @@ private:
 
     void EnsureDebugBot();
     void UpdateDebugBot(uint32 diff);
+    bool UpdateDebugBotLoot(Map* map, uint32 diff);
     bool UpdateDebugBotCombat(Map* map, uint32 diff);
     bool UpdateDebugBotSpellRotation(Player* bot, Unit* victim, uint32 diff);
     void UpdateDebugBotRoam(Map* map, uint32 diff);
     Unit* SelectDebugBotCombatTarget(Player* bot) const;
+    Creature* SelectDebugBotLootTarget(Player* bot) const;
+    bool IsDebugBotLootCandidate(Player* bot, Creature* creature) const;
+    bool LootDebugBotCreature(Player* bot, Creature* creature);
+    void BlacklistDebugLootTarget(ObjectGuid const& guid);
+    bool IsDebugLootTargetBlacklisted(ObjectGuid const& guid) const;
+    void UpdateDebugLootBlacklist(uint32 diff);
 
     WorldBotConfig _config;
     uint32 _updateTimer = 0;
@@ -61,8 +72,13 @@ private:
     bool _debugLoginAttempted = false;
     uint32 _debugCombatScanTimer = 0;
     uint32 _debugSpellCastTimer = 0;
+    uint32 _debugLootScanTimer = 0;
+    uint32 _debugLootMoveTimer = 0;
+    uint32 _debugLootTargetTimer = 0;
     uint32 _debugRoamTimer = 0;
     uint32 _debugMovePointId = 1;
+    ObjectGuid _debugLootTargetGuid;
+    std::vector<std::pair<ObjectGuid, uint32>> _debugLootBlacklist;
     std::unique_ptr<WorldSession> _debugSession;
 };
 

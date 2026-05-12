@@ -43,6 +43,10 @@ struct TC_GAME_API WorldBotConfig
     int32 DebugCombatMaxLevelDelta = 2;
     bool DebugSpellRotation = false;
     uint32 DebugSpellCastIntervalMs = 1500;
+    bool DebugLoot = false;
+    uint32 DebugLootScanIntervalMs = 1000;
+    float DebugLootSearchRange = 30.0f;
+    uint32 DebugLootBlacklistMs = 30000;
 };
 
 #endif

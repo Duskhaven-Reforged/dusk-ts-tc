@@ -18,6 +18,7 @@
 #include "WorldBotConfig.h"
 #include "Config.h"
 #include "Log.h"
+#include "ObjectDefines.h"
 #include <utility>
 
 void WorldBotConfig::Load(bool reload)
@@ -41,6 +42,10 @@ void WorldBotConfig::Load(bool reload)
     DebugCombatMaxLevelDelta = sConfigMgr->GetIntDefault("WorldBots.Debug.CombatMaxLevelDelta", 2);
     DebugSpellRotation = sConfigMgr->GetBoolDefault("WorldBots.Debug.SpellRotation", false);
     DebugSpellCastIntervalMs = sConfigMgr->GetIntDefault("WorldBots.Debug.SpellCastIntervalMs", 1500);
+    DebugLoot = sConfigMgr->GetBoolDefault("WorldBots.Debug.Loot", false);
+    DebugLootScanIntervalMs = sConfigMgr->GetIntDefault("WorldBots.Debug.LootScanIntervalMs", 1000);
+    DebugLootSearchRange = sConfigMgr->GetFloatDefault("WorldBots.Debug.LootSearchRange", 30.0f);
+    DebugLootBlacklistMs = sConfigMgr->GetIntDefault("WorldBots.Debug.LootBlacklistMs", 30000);
 
     if (UpdateIntervalMs < 100)
     {
@@ -118,8 +123,32 @@ void WorldBotConfig::Load(bool reload)
         DebugSpellCastIntervalMs = 500;
     }
 
-    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}, debugSpellRotation={}, debugSpellCastIntervalMs={}",
+    if (DebugLootScanIntervalMs < 500)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.LootScanIntervalMs ({}) is too low. Using 500.", DebugLootScanIntervalMs);
+        DebugLootScanIntervalMs = 500;
+    }
+
+    if (DebugLootSearchRange < INTERACTION_DISTANCE)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.LootSearchRange ({}) is too low. Using {}.", DebugLootSearchRange, INTERACTION_DISTANCE);
+        DebugLootSearchRange = INTERACTION_DISTANCE;
+    }
+    else if (DebugLootSearchRange > 80.0f)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.LootSearchRange ({}) is too high. Using 80.", DebugLootSearchRange);
+        DebugLootSearchRange = 80.0f;
+    }
+
+    if (DebugLootBlacklistMs < 1000)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.LootBlacklistMs ({}) is too low. Using 1000.", DebugLootBlacklistMs);
+        DebugLootBlacklistMs = 1000;
+    }
+
+    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}, debugSpellRotation={}, debugSpellCastIntervalMs={}, debugLoot={}, debugLootScanIntervalMs={}, debugLootSearchRange={}, debugLootBlacklistMs={}",
         reload ? "reloaded" : "loaded", Enabled, MaxActiveBots, UpdateIntervalMs, MapTickBudgetMs, Debug, DebugCharacterGuid, DebugAccountId,
         DebugRoam, DebugRoamIntervalMs, DebugRoamRadius, DebugRoamMinDistance, DebugCombat, DebugCombatScanIntervalMs, DebugCombatSearchRange,
-        DebugCombatLeashRange, DebugCombatMinLevelDelta, DebugCombatMaxLevelDelta, DebugSpellRotation, DebugSpellCastIntervalMs);
+        DebugCombatLeashRange, DebugCombatMinLevelDelta, DebugCombatMaxLevelDelta, DebugSpellRotation, DebugSpellCastIntervalMs, DebugLoot,
+        DebugLootScanIntervalMs, DebugLootSearchRange, DebugLootBlacklistMs);
 }

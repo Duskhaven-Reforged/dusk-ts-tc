@@ -4848,4 +4848,38 @@ WorldBots.Debug.SpellRotation = 0
 WorldBots.Debug.SpellCastIntervalMs = 1500
 
 #
+#    WorldBots.Debug.Loot
+#        Description: Enables server-side corpse looting for the single debug bot. This consumes
+#                     bot loot state without requiring client loot packets.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+WorldBots.Debug.Loot = 0
+
+#
+#    WorldBots.Debug.LootScanIntervalMs
+#        Description: Milliseconds between nearby lootable corpse scans.
+#        Default:     1000
+#
+
+WorldBots.Debug.LootScanIntervalMs = 1000
+
+#
+#    WorldBots.Debug.LootSearchRange
+#        Description: Search range in yards for lootable corpses owned by the debug bot.
+#        Default:     30
+#
+
+WorldBots.Debug.LootSearchRange = 30
+
+#
+#    WorldBots.Debug.LootBlacklistMs
+#        Description: Milliseconds to skip a corpse after failed/no-progress loot attempt.
+#        Default:     30000
+#
+
+WorldBots.Debug.LootBlacklistMs = 30000
+
+#
 ###################################################################################################

@@ -20,8 +20,10 @@
 #include "Creature.h"
 #include "DBCStructure.h"
 #include "GridNotifiersImpl.h"
+#include "Loot.h"
 #include "Map.h"
 #include "MotionMaster.h"
+#include "ObjectDefines.h"
 #include "ObjectGuid.h"
 #include "Player.h"
 #include "Random.h"
@@ -341,6 +343,11 @@ void WorldBotMgr::LoadConfig(bool reload)
     _debugLoginAttempted = false;
     _debugCombatScanTimer = 0;
     _debugSpellCastTimer = 0;
+    _debugLootScanTimer = 0;
+    _debugLootMoveTimer = 0;
+    _debugLootTargetTimer = 0;
+    _debugLootTargetGuid.Clear();
+    _debugLootBlacklist.clear();
     _debugRoamTimer = 0;
 
     if (!_config.Enabled && _debugSession)
@@ -396,6 +403,9 @@ void WorldBotMgr::Update(uint32 diff)
 void WorldBotMgr::UpdateMap(Map* map, uint32 diff)
 {
     if (!_config.Enabled)
+        return;
+
+    if (UpdateDebugBotLoot(map, diff))
         return;
 
     if (UpdateDebugBotCombat(map, diff))
@@ -467,6 +477,112 @@ void WorldBotMgr::UpdateDebugBot(uint32 diff)
     }
 
     _activeBotCount = _debugSession->GetPlayer() ? 1 : 0;
+}
+
+bool WorldBotMgr::UpdateDebugBotLoot(Map* map, uint32 diff)
+{
+    if (!_debugSession)
+        return false;
+
+    Player* bot = _debugSession->GetPlayer();
+    if (!bot || bot->GetMap() != map)
+        return false;
+
+    if (!map || !map->GetEntry() || !map->GetEntry()->IsContinent())
+        return false;
+
+    UpdateDebugLootBlacklist(diff);
+
+    if (ObjectGuid lootGuid = bot->GetLootGUID())
+    {
+        if (!_config.DebugLoot)
+        {
+            _debugSession->DoLootRelease(lootGuid);
+            return false;
+        }
+
+        if (lootGuid.IsCreatureOrVehicle())
+            if (Creature* creature = map->GetCreature(lootGuid))
+                return LootDebugBotCreature(bot, creature);
+
+        _debugSession->DoLootRelease(lootGuid);
+        BlacklistDebugLootTarget(lootGuid);
+        return false;
+    }
+
+    if (!_config.DebugLoot)
+        return false;
+
+    if (!bot->IsInWorld() || !bot->IsAlive() || bot->IsInCombat() || bot->GetVictim() || bot->IsBeingTeleported())
+        return false;
+
+    if (_debugLootTargetGuid)
+    {
+        if (_debugLootTargetTimer <= diff)
+        {
+            BlacklistDebugLootTarget(_debugLootTargetGuid);
+            _debugLootTargetGuid.Clear();
+            _debugLootMoveTimer = 0;
+            _debugLootTargetTimer = 0;
+            return false;
+        }
+
+        _debugLootTargetTimer -= diff;
+
+        Creature* creature = map->GetCreature(_debugLootTargetGuid);
+        if (!IsDebugBotLootCandidate(bot, creature))
+        {
+            BlacklistDebugLootTarget(_debugLootTargetGuid);
+            _debugLootTargetGuid.Clear();
+            _debugLootMoveTimer = 0;
+            _debugLootTargetTimer = 0;
+            return false;
+        }
+
+        if (!bot->IsWithinDistInMap(creature, INTERACTION_DISTANCE))
+        {
+            if (bot->IsMounted())
+                bot->Dismount();
+
+            if (_debugLootMoveTimer > diff && !bot->IsStopped())
+            {
+                _debugLootMoveTimer -= diff;
+                return true;
+            }
+
+            _debugLootMoveTimer = 1000;
+            Position destination = creature->GetPosition();
+            bot->GetMotionMaster()->MovePoint(_debugMovePointId++, destination, true);
+
+            if (_config.Debug)
+                TC_LOG_DEBUG("server.worldbots", "WorldBot {} moving to loot {} distance={}.", bot->GetName(),
+                    creature->GetGUID().ToString(), bot->GetDistance(creature));
+
+            return true;
+        }
+
+        _debugLootTargetGuid.Clear();
+        _debugLootMoveTimer = 0;
+        _debugLootTargetTimer = 0;
+        return LootDebugBotCreature(bot, creature);
+    }
+
+    if (_debugLootScanTimer > diff)
+    {
+        _debugLootScanTimer -= diff;
+        return false;
+    }
+
+    _debugLootScanTimer = _config.DebugLootScanIntervalMs;
+
+    Creature* target = SelectDebugBotLootTarget(bot);
+    if (!target)
+        return false;
+
+    _debugLootTargetGuid = target->GetGUID();
+    _debugLootMoveTimer = 0;
+    _debugLootTargetTimer = 15000;
+    return true;
 }
 
 bool WorldBotMgr::UpdateDebugBotCombat(Map* map, uint32 diff)
@@ -587,6 +703,176 @@ bool WorldBotMgr::UpdateDebugBotSpellRotation(Player* bot, Unit* victim, uint32 
         TC_LOG_DEBUG("server.worldbots", "WorldBot {} casting spell {} at {}.", bot->GetName(), spell.SpellId, spell.Target->GetGUID().ToString());
 
     return true;
+}
+
+Creature* WorldBotMgr::SelectDebugBotLootTarget(Player* bot) const
+{
+    std::list<Unit*> targets;
+    Trinity::AllDeadCreaturesInRange check(bot, _config.DebugLootSearchRange);
+    Trinity::UnitListSearcher<Trinity::AllDeadCreaturesInRange> searcher(bot, targets, check);
+    Cell::VisitAllObjects(bot, searcher, _config.DebugLootSearchRange);
+
+    Creature* bestTarget = nullptr;
+    float bestDistance = _config.DebugLootSearchRange;
+
+    for (Unit* unit : targets)
+    {
+        Creature* creature = unit ? unit->ToCreature() : nullptr;
+        if (!IsDebugBotLootCandidate(bot, creature))
+            continue;
+
+        if (IsDebugLootTargetBlacklisted(creature->GetGUID()))
+            continue;
+
+        float distance = bot->GetDistance(creature);
+        if (distance > bestDistance)
+            continue;
+
+        bestDistance = distance;
+        bestTarget = creature;
+    }
+
+    return bestTarget;
+}
+
+bool WorldBotMgr::IsDebugBotLootCandidate(Player* bot, Creature* creature) const
+{
+    if (!bot || !creature || creature->IsAlive() || creature->GetMap() != bot->GetMap())
+        return false;
+
+    if (!creature->HasDynamicFlag(UNIT_DYNFLAG_LOOTABLE) || creature->loot.isLooted())
+        return false;
+
+    if (creature->GetLootRecipientGUID() != bot->GetGUID() && creature->loot.lootOwnerGUID != bot->GetGUID())
+        return false;
+
+    if (!creature->IsWithinDistInMap(bot, _config.DebugLootSearchRange))
+        return false;
+
+    return true;
+}
+
+bool WorldBotMgr::LootDebugBotCreature(Player* bot, Creature* creature)
+{
+    if (!IsDebugBotLootCandidate(bot, creature))
+    {
+        if (creature)
+            BlacklistDebugLootTarget(creature->GetGUID());
+
+        return false;
+    }
+
+    if (!bot->IsWithinDistInMap(creature, INTERACTION_DISTANCE))
+    {
+        _debugLootTargetGuid = creature->GetGUID();
+        if (!_debugLootTargetTimer)
+            _debugLootTargetTimer = 15000;
+        return true;
+    }
+
+    if (!bot->IsStopped())
+        bot->StopMoving();
+
+    ObjectGuid const lootGuid = creature->GetGUID();
+    if (bot->GetLootGUID() != lootGuid)
+        bot->SendLoot(lootGuid, LOOT_CORPSE);
+
+    if (bot->GetLootGUID() != lootGuid)
+    {
+        BlacklistDebugLootTarget(lootGuid);
+        return false;
+    }
+
+    Loot* loot = &creature->loot;
+    uint8 const startUnlootedCount = loot->unlootedCount;
+    uint32 const startGold = loot->gold;
+
+    if (loot->gold)
+    {
+        uint32 gold = loot->gold;
+        uint32 const goldMod = CalculatePct(gold, bot->GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_MONEY_GAIN, 0)) +
+            CalculatePct(gold, bot->GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_MONEY_GAIN, 2));
+        if (goldMod)
+            gold += goldMod;
+
+        loot->NotifyMoneyRemoved();
+        bot->ModifyMoney(gold);
+        bot->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_MONEY, gold);
+        loot->gold = 0;
+    }
+
+    uint32 const maxSlot = loot->GetMaxSlotInLootFor(bot);
+    for (uint32 slot = 0; slot < maxSlot && !loot->isLooted(); ++slot)
+    {
+        LootItem* item = loot->LootItemInSlot(slot, bot);
+        if (!item || item->is_looted)
+            continue;
+
+        bot->StoreLootItem(uint8(slot), loot);
+    }
+
+    bool const progressed = startGold != loot->gold || startUnlootedCount != loot->unlootedCount;
+    bool const fullyLooted = loot->isLooted();
+    uint8 const remainingItems = loot->unlootedCount;
+    uint32 const remainingGold = loot->gold;
+
+    _debugSession->DoLootRelease(lootGuid);
+
+    if (!progressed || !fullyLooted)
+        BlacklistDebugLootTarget(lootGuid);
+
+    if (_config.Debug)
+        TC_LOG_DEBUG("server.worldbots", "WorldBot {} looted {} progressed={} fullyLooted={} remainingItems={} remainingGold={}.",
+            bot->GetName(), lootGuid.ToString(), progressed, fullyLooted, remainingItems, remainingGold);
+
+    return true;
+}
+
+void WorldBotMgr::BlacklistDebugLootTarget(ObjectGuid const& guid)
+{
+    if (!guid)
+        return;
+
+    if (_debugLootTargetGuid == guid)
+    {
+        _debugLootTargetGuid.Clear();
+        _debugLootMoveTimer = 0;
+        _debugLootTargetTimer = 0;
+    }
+
+    for (auto& blocked : _debugLootBlacklist)
+    {
+        if (blocked.first == guid)
+        {
+            blocked.second = _config.DebugLootBlacklistMs;
+            return;
+        }
+    }
+
+    _debugLootBlacklist.push_back({ guid, _config.DebugLootBlacklistMs });
+}
+
+bool WorldBotMgr::IsDebugLootTargetBlacklisted(ObjectGuid const& guid) const
+{
+    for (auto const& blocked : _debugLootBlacklist)
+        if (blocked.first == guid)
+            return true;
+
+    return false;
+}
+
+void WorldBotMgr::UpdateDebugLootBlacklist(uint32 diff)
+{
+    for (auto itr = _debugLootBlacklist.begin(); itr != _debugLootBlacklist.end();)
+    {
+        if (itr->second <= diff)
+            itr = _debugLootBlacklist.erase(itr);
+        else
+        {
+            itr->second -= diff;
+            ++itr;
+        }
+    }
 }
 
 void WorldBotMgr::UpdateDebugBotRoam(Map* map, uint32 diff)
