@@ -19,6 +19,7 @@
 #define TRINITY_WORLDBOTCONFIG_H
 
 #include "Common.h"
+#include <vector>
 
 struct TC_GAME_API WorldBotConfig
 {
@@ -57,6 +58,11 @@ struct TC_GAME_API WorldBotConfig
     bool DebugDeathHandling = false;
     uint32 DebugDeathReleaseDelayMs = 5000;
     uint32 DebugDeathRespawnDelayMs = 10000;
+    bool DebugQuesting = false;
+    uint32 DebugQuestScanIntervalMs = 3000;
+    float DebugQuestSearchRange = 35.0f;
+    uint32 DebugQuestInteractTimeoutMs = 15000;
+    std::vector<uint32> DebugQuestPlanIds;
 };
 
 #endif

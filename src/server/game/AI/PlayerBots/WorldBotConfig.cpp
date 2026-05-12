@@ -19,6 +19,10 @@
 #include "Config.h"
 #include "Log.h"
 #include "ObjectDefines.h"
+#include "StringConvert.h"
+#include "Util.h"
+#include <string>
+#include <string_view>
 #include <utility>
 
 void WorldBotConfig::Load(bool reload)
@@ -56,6 +60,19 @@ void WorldBotConfig::Load(bool reload)
     DebugDeathHandling = sConfigMgr->GetBoolDefault("WorldBots.Debug.DeathHandling", false);
     DebugDeathReleaseDelayMs = sConfigMgr->GetIntDefault("WorldBots.Debug.DeathReleaseDelayMs", 5000);
     DebugDeathRespawnDelayMs = sConfigMgr->GetIntDefault("WorldBots.Debug.DeathRespawnDelayMs", 10000);
+    DebugQuesting = sConfigMgr->GetBoolDefault("WorldBots.Debug.Questing", false);
+    DebugQuestScanIntervalMs = sConfigMgr->GetIntDefault("WorldBots.Debug.QuestScanIntervalMs", 3000);
+    DebugQuestSearchRange = sConfigMgr->GetFloatDefault("WorldBots.Debug.QuestSearchRange", 35.0f);
+    DebugQuestInteractTimeoutMs = sConfigMgr->GetIntDefault("WorldBots.Debug.QuestInteractTimeoutMs", 15000);
+    DebugQuestPlanIds.clear();
+    std::string questPlan = sConfigMgr->GetStringDefault("WorldBots.Debug.QuestPlan", "");
+    for (std::string_view token : Trinity::Tokenize(questPlan, ',', false))
+    {
+        if (Optional<uint32> questId = Trinity::StringTo<uint32>(token))
+            DebugQuestPlanIds.push_back(*questId);
+        else
+            TC_LOG_WARN("server.worldbots", "Ignoring invalid quest id '{}' in WorldBots.Debug.QuestPlan.", token);
+    }
 
     if (UpdateIntervalMs < 100)
     {
@@ -200,11 +217,37 @@ void WorldBotConfig::Load(bool reload)
         DebugDeathRespawnDelayMs = 1000;
     }
 
-    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}, debugSpellRotation={}, debugSpellCastIntervalMs={}, debugLoot={}, debugLootScanIntervalMs={}, debugLootSearchRange={}, debugLootBlacklistMs={}, debugRecovery={}, debugRecoveryStartHealthPct={}, debugRecoveryStopHealthPct={}, debugRecoveryStartManaPct={}, debugRecoveryStopManaPct={}, debugConsumables={}, debugConsumableScanIntervalMs={}, debugDeathHandling={}, debugDeathReleaseDelayMs={}, debugDeathRespawnDelayMs={}",
+    if (DebugQuestScanIntervalMs < 1000)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.QuestScanIntervalMs ({}) is too low. Using 1000.", DebugQuestScanIntervalMs);
+        DebugQuestScanIntervalMs = 1000;
+    }
+
+    if (DebugQuestSearchRange < INTERACTION_DISTANCE)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.QuestSearchRange ({}) is too low. Using {}.", DebugQuestSearchRange, INTERACTION_DISTANCE);
+        DebugQuestSearchRange = INTERACTION_DISTANCE;
+    }
+    else if (DebugQuestSearchRange > 100.0f)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.QuestSearchRange ({}) is too high. Using 100.", DebugQuestSearchRange);
+        DebugQuestSearchRange = 100.0f;
+    }
+
+    if (DebugQuestInteractTimeoutMs < 3000)
+    {
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.QuestInteractTimeoutMs ({}) is too low. Using 3000.", DebugQuestInteractTimeoutMs);
+        DebugQuestInteractTimeoutMs = 3000;
+    }
+
+    if (DebugQuesting && DebugQuestPlanIds.empty())
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.Questing is enabled but WorldBots.Debug.QuestPlan is empty. Bot will not opportunistically accept unrelated quests.");
+
+    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}, debugSpellRotation={}, debugSpellCastIntervalMs={}, debugLoot={}, debugLootScanIntervalMs={}, debugLootSearchRange={}, debugLootBlacklistMs={}, debugRecovery={}, debugRecoveryStartHealthPct={}, debugRecoveryStopHealthPct={}, debugRecoveryStartManaPct={}, debugRecoveryStopManaPct={}, debugConsumables={}, debugConsumableScanIntervalMs={}, debugDeathHandling={}, debugDeathReleaseDelayMs={}, debugDeathRespawnDelayMs={}, debugQuesting={}, debugQuestScanIntervalMs={}, debugQuestSearchRange={}, debugQuestInteractTimeoutMs={}, debugQuestPlanCount={}",
         reload ? "reloaded" : "loaded", Enabled, MaxActiveBots, UpdateIntervalMs, MapTickBudgetMs, Debug, DebugCharacterGuid, DebugAccountId,
         DebugRoam, DebugRoamIntervalMs, DebugRoamRadius, DebugRoamMinDistance, DebugCombat, DebugCombatScanIntervalMs, DebugCombatSearchRange,
         DebugCombatLeashRange, DebugCombatMinLevelDelta, DebugCombatMaxLevelDelta, DebugSpellRotation, DebugSpellCastIntervalMs, DebugLoot,
         DebugLootScanIntervalMs, DebugLootSearchRange, DebugLootBlacklistMs, DebugRecovery, DebugRecoveryStartHealthPct, DebugRecoveryStopHealthPct,
         DebugRecoveryStartManaPct, DebugRecoveryStopManaPct, DebugConsumables, DebugConsumableScanIntervalMs, DebugDeathHandling, DebugDeathReleaseDelayMs,
-        DebugDeathRespawnDelayMs);
+        DebugDeathRespawnDelayMs, DebugQuesting, DebugQuestScanIntervalMs, DebugQuestSearchRange, DebugQuestInteractTimeoutMs, DebugQuestPlanIds.size());
 }

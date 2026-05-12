@@ -4972,4 +4972,48 @@ WorldBots.Debug.DeathReleaseDelayMs = 5000
 WorldBots.Debug.DeathRespawnDelayMs = 10000
 
 #
+#    WorldBots.Debug.Questing
+#        Description: Enables first-pass plan-driven quest interaction for the single debug bot.
+#                     The bot only accepts/turns in quest ids listed in WorldBots.Debug.QuestPlan.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+WorldBots.Debug.Questing = 0
+
+#
+#    WorldBots.Debug.QuestScanIntervalMs
+#        Description: Milliseconds between nearby questgiver scans.
+#        Default:     3000
+#
+
+WorldBots.Debug.QuestScanIntervalMs = 3000
+
+#
+#    WorldBots.Debug.QuestSearchRange
+#        Description: Maximum range for nearby questgiver discovery.
+#        Default:     35
+#
+
+WorldBots.Debug.QuestSearchRange = 35
+
+#
+#    WorldBots.Debug.QuestInteractTimeoutMs
+#        Description: Milliseconds before giving up on the current questgiver movement target.
+#        Default:     15000
+#
+
+WorldBots.Debug.QuestInteractTimeoutMs = 15000
+
+#
+#    WorldBots.Debug.QuestPlan
+#        Description: Comma-separated ordered quest ids the debug bot is allowed to pursue. Nearby
+#                     questgiver interaction is only used to execute these known chain steps; the
+#                     bot does not opportunistically accept unrelated quests.
+#        Default:     ""
+#
+
+WorldBots.Debug.QuestPlan = ""
+
+#
 ###################################################################################################

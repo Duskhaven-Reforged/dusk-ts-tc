@@ -20,15 +20,21 @@
 #include "CellImpl.h"
 #include "Corpse.h"
 #include "Creature.h"
+#include "CreatureAI.h"
+#include "CreatureData.h"
 #include "DBCStructure.h"
+#include "DBCStores.h"
 #include "GridNotifiersImpl.h"
+#include "GossipDef.h"
 #include "Loot.h"
 #include "Map.h"
 #include "MotionMaster.h"
 #include "ObjectDefines.h"
 #include "ObjectGuid.h"
+#include "ObjectMgr.h"
 #include "Item.h"
 #include "Player.h"
+#include "QuestDef.h"
 #include "Random.h"
 #include "SmartEnum.h"
 #include "Spell.h"
@@ -40,6 +46,9 @@
 #include "WorldBotSession.h"
 #include "WorldSession.h"
 #include "Log.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <list>
 #include <string>
 #include <utility>
@@ -574,8 +583,13 @@ void WorldBotMgr::LoadConfig(bool reload)
     _debugConsumableScanTimer = 0;
     _debugDeathReleaseTimer = 0;
     _debugDeathRespawnTimer = 0;
+    _debugQuestScanTimer = 0;
+    _debugQuestMoveTimer = 0;
+    _debugQuestTargetTimer = 0;
+    _debugQuestTravelTimer = 0;
     _debugDeathReleased = false;
     _debugLootTargetGuid.Clear();
+    _debugQuestTargetGuid.Clear();
     _debugLootBlacklist.clear();
     _debugRoamTimer = 0;
 
@@ -643,8 +657,19 @@ void WorldBotMgr::UpdateMap(Map* map, uint32 diff)
     if (UpdateDebugBotRecovery(map, diff))
         return;
 
+    if (UpdateDebugBotQuesting(map, diff))
+        return;
+
+    if (UpdateDebugBotQuestTravel(map, diff))
+        return;
+
     if (UpdateDebugBotCombat(map, diff))
         return;
+
+    if (_debugSession)
+        if (Player* bot = _debugSession->GetPlayer())
+            if (bot->GetMap() == map && HasDebugBotActivePlannedKillObjective(bot))
+                return;
 
     if (!_config.DebugRoam)
         return;
@@ -854,6 +879,10 @@ bool WorldBotMgr::UpdateDebugBotDeath(Map* map, uint32 diff)
     _debugLootTargetGuid.Clear();
     _debugLootMoveTimer = 0;
     _debugLootTargetTimer = 0;
+    _debugQuestTargetGuid.Clear();
+    _debugQuestMoveTimer = 0;
+    _debugQuestTargetTimer = 0;
+    _debugQuestTravelTimer = 0;
     _debugSpellCastTimer = 0;
 
     if (bot->getDeathState() == JUST_DIED)
@@ -1102,6 +1131,197 @@ bool WorldBotMgr::UpdateDebugBotConsumables(Player* bot, bool needsHealth, bool 
     return false;
 }
 
+bool WorldBotMgr::UpdateDebugBotQuesting(Map* map, uint32 diff)
+{
+    if (!_debugSession)
+        return false;
+
+    Player* bot = _debugSession->GetPlayer();
+    if (!bot || bot->GetMap() != map)
+        return false;
+
+    if (!_config.DebugQuesting)
+    {
+        _debugQuestTargetGuid.Clear();
+        _debugQuestMoveTimer = 0;
+        _debugQuestTargetTimer = 0;
+        _debugQuestTravelTimer = 0;
+        return false;
+    }
+
+    if (!map || !map->GetEntry() || !map->GetEntry()->IsContinent())
+        return false;
+
+    if (!bot->IsInWorld() || !bot->IsAlive() || bot->IsInCombat() || bot->GetVictim() || bot->IsBeingTeleported())
+        return false;
+
+    if (_debugQuestTargetGuid)
+    {
+        if (_debugQuestTargetTimer <= diff)
+        {
+            if (_config.Debug)
+                TC_LOG_DEBUG("server.worldbots", "WorldBot {} abandoned questgiver target {} after timeout.", bot->GetName(),
+                    _debugQuestTargetGuid.ToString());
+
+            _debugQuestTargetGuid.Clear();
+            _debugQuestMoveTimer = 0;
+            _debugQuestTargetTimer = 0;
+            return false;
+        }
+
+        _debugQuestTargetTimer -= diff;
+
+        Creature* creature = map->GetCreature(_debugQuestTargetGuid);
+        if (!IsDebugBotQuestGiver(bot, creature))
+        {
+            _debugQuestTargetGuid.Clear();
+            _debugQuestMoveTimer = 0;
+            _debugQuestTargetTimer = 0;
+            return false;
+        }
+
+        if (!bot->CanInteractWithQuestGiver(creature))
+        {
+            if (bot->IsMounted())
+                bot->Dismount();
+
+            if (_debugQuestMoveTimer > diff && !bot->IsStopped())
+            {
+                _debugQuestMoveTimer -= diff;
+                return true;
+            }
+
+            _debugQuestMoveTimer = 1000;
+            bot->GetMotionMaster()->MovePoint(_debugMovePointId++, creature->GetPosition(), true);
+            return true;
+        }
+
+        if (!bot->IsStopped())
+            bot->StopMoving();
+
+        _debugQuestTargetGuid.Clear();
+        _debugQuestMoveTimer = 0;
+        _debugQuestTargetTimer = 0;
+        return UseDebugBotQuestGiver(bot, creature);
+    }
+
+    if (_debugQuestScanTimer > diff)
+    {
+        _debugQuestScanTimer -= diff;
+        return false;
+    }
+
+    _debugQuestScanTimer = _config.DebugQuestScanIntervalMs;
+
+    Creature* questGiver = SelectDebugBotQuestGiver(bot);
+    if (!questGiver)
+        return false;
+
+    if (bot->CanInteractWithQuestGiver(questGiver))
+        return UseDebugBotQuestGiver(bot, questGiver);
+
+    _debugQuestTargetGuid = questGiver->GetGUID();
+    _debugQuestMoveTimer = 0;
+    _debugQuestTargetTimer = _config.DebugQuestInteractTimeoutMs;
+
+    if (_config.Debug)
+        TC_LOG_DEBUG("server.worldbots", "WorldBot {} moving to questgiver {} entry={} distance={}.", bot->GetName(),
+            questGiver->GetGUID().ToString(), questGiver->GetEntry(), bot->GetDistance(questGiver));
+
+    return true;
+}
+
+bool WorldBotMgr::UpdateDebugBotQuestTravel(Map* map, uint32 diff)
+{
+    if (!_debugSession || !_config.DebugQuesting || _config.DebugQuestPlanIds.empty())
+        return false;
+
+    Player* bot = _debugSession->GetPlayer();
+    if (!bot || bot->GetMap() != map)
+        return false;
+
+    if (!map || !map->GetEntry() || !map->GetEntry()->IsContinent())
+        return false;
+
+    if (!bot->IsInWorld() || !bot->IsAlive() || bot->IsInCombat() || bot->GetVictim() || bot->IsBeingTeleported())
+        return false;
+
+    if (HasDebugBotActivePlannedKillObjective(bot))
+    {
+        float const liveTargetRange = std::max(_config.DebugQuestSearchRange, _config.DebugCombatSearchRange * 2.0f);
+        if (Creature* killTarget = SelectDebugBotPlannedQuestKillTarget(bot, liveTargetRange))
+        {
+            float const distance = bot->GetDistance(killTarget);
+            if (distance > std::max(5.0f, _config.DebugCombatSearchRange * 0.5f))
+            {
+                if (bot->IsMounted())
+                    bot->Dismount();
+
+                if (_debugQuestTravelTimer > diff && !bot->IsStopped())
+                {
+                    _debugQuestTravelTimer -= diff;
+                    return true;
+                }
+
+                _debugQuestTravelTimer = 1000;
+                bot->GetMotionMaster()->MovePoint(_debugMovePointId++, killTarget->GetPosition(), true);
+
+                if (_config.Debug)
+                    TC_LOG_INFO("server.worldbots", "WorldBot {} moving to live planned quest target entry={} guid={} distance={}.",
+                        bot->GetName(), killTarget->GetEntry(), killTarget->GetGUID().ToString(), distance);
+
+                return true;
+            }
+        }
+    }
+
+    uint32 targetMapId = MAPID_INVALID;
+    Position destination;
+    float arrivalDistance = 0.0f;
+    uint32 questId = 0;
+    uint32 targetEntry = 0;
+    char const* action = nullptr;
+    if (!SelectDebugBotQuestTravelDestination(bot, targetMapId, destination, arrivalDistance, questId, targetEntry, action))
+        return false;
+
+    if (targetMapId != bot->GetMapId())
+    {
+        if (_debugQuestTravelTimer > diff)
+            _debugQuestTravelTimer -= diff;
+        else
+            _debugQuestTravelTimer = _config.DebugQuestScanIntervalMs;
+
+        if (_config.Debug && _debugQuestTravelTimer == _config.DebugQuestScanIntervalMs)
+            TC_LOG_INFO("server.worldbots", "WorldBot {} knows quest target but cannot path cross-map yet: quest={} action={} entry={} currentMap={} targetMap={}.",
+                bot->GetName(), questId, action ? action : "unknown", targetEntry, bot->GetMapId(), targetMapId);
+
+        return true;
+    }
+
+    float const distance = bot->GetDistance(destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ());
+    if (distance <= arrivalDistance)
+        return false;
+
+    if (bot->IsMounted())
+        bot->Dismount();
+
+    if (_debugQuestTravelTimer > diff && !bot->IsStopped())
+    {
+        _debugQuestTravelTimer -= diff;
+        return true;
+    }
+
+    _debugQuestTravelTimer = 2000;
+    bot->GetMotionMaster()->MovePoint(_debugMovePointId++, destination, true);
+
+    if (_config.Debug)
+        TC_LOG_INFO("server.worldbots", "WorldBot {} traveling for quest={} action={} entry={} map={} x={} y={} z={} distance={} arrivalDistance={}.",
+            bot->GetName(), questId, action ? action : "unknown", targetEntry, targetMapId, destination.GetPositionX(), destination.GetPositionY(),
+            destination.GetPositionZ(), distance, arrivalDistance);
+
+    return true;
+}
+
 bool WorldBotMgr::UpdateDebugBotCombat(Map* map, uint32 diff)
 {
     if (!_debugSession)
@@ -1309,6 +1529,466 @@ bool WorldBotMgr::UpdateDebugBotSpellRotation(Player* bot, Unit* victim, uint32 
     }
 
     return result == SPELL_CAST_OK;
+}
+
+Creature* WorldBotMgr::SelectDebugBotQuestGiver(Player* bot) const
+{
+    std::list<Creature*> creatures;
+    Trinity::AllFriendlyCreaturesInGrid check(bot);
+    Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid> searcher(bot, creatures, check);
+    Cell::VisitAllObjects(bot, searcher, _config.DebugQuestSearchRange);
+
+    Creature* bestQuestGiver = nullptr;
+    float bestDistance = _config.DebugQuestSearchRange;
+
+    for (Creature* creature : creatures)
+    {
+        if (!IsDebugBotQuestGiver(bot, creature))
+            continue;
+
+        float distance = bot->GetDistance(creature);
+        if (distance > bestDistance)
+            continue;
+
+        bestDistance = distance;
+        bestQuestGiver = creature;
+    }
+
+    return bestQuestGiver;
+}
+
+bool WorldBotMgr::IsDebugBotQuestGiver(Player* bot, Creature* creature) const
+{
+    if (_config.DebugQuestPlanIds.empty())
+        return false;
+
+    if (!bot || !creature || creature->GetMap() != bot->GetMap() || !creature->IsAlive())
+        return false;
+
+    if (!creature->HasNpcFlag(UNIT_NPC_FLAG_QUESTGIVER) || creature->IsHostileTo(bot))
+        return false;
+
+    if (!creature->IsWithinDistInMap(bot, _config.DebugQuestSearchRange) || !bot->CanSeeOrDetect(creature) || !bot->IsWithinLOSInMap(creature))
+        return false;
+
+    QuestRelationResult involvedQuests = sObjectMgr->GetCreatureQuestInvolvedRelations(creature->GetEntry());
+    for (uint32 questId : involvedQuests)
+    {
+        if (!IsDebugBotPlannedQuest(questId))
+            continue;
+
+        Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
+        if (!quest)
+            continue;
+
+        if (bot->GetQuestStatus(questId) == QUEST_STATUS_COMPLETE && bot->CanRewardQuest(quest, false))
+            return true;
+    }
+
+    QuestRelationResult startQuests = sObjectMgr->GetCreatureQuestRelations(creature->GetEntry());
+    for (uint32 questId : startQuests)
+    {
+        if (!IsDebugBotPlannedQuest(questId))
+            continue;
+
+        Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
+        if (!quest)
+            continue;
+
+        if (bot->GetQuestStatus(questId) == QUEST_STATUS_NONE && bot->CanSeeStartQuest(quest) && bot->CanTakeQuest(quest, false) &&
+            bot->CanAddQuest(quest, false))
+            return true;
+    }
+
+    return false;
+}
+
+bool WorldBotMgr::UseDebugBotQuestGiver(Player* bot, Creature* creature)
+{
+    if (!IsDebugBotQuestGiver(bot, creature) || !bot->CanInteractWithQuestGiver(creature))
+        return false;
+
+    QuestRelationResult involvedQuests = sObjectMgr->GetCreatureQuestInvolvedRelations(creature->GetEntry());
+    for (uint32 questId : involvedQuests)
+        if (TurnInDebugBotQuest(bot, creature, questId))
+            return true;
+
+    QuestRelationResult startQuests = sObjectMgr->GetCreatureQuestRelations(creature->GetEntry());
+    for (uint32 questId : startQuests)
+        if (AcceptDebugBotQuest(bot, creature, questId))
+            return true;
+
+    return false;
+}
+
+bool WorldBotMgr::TurnInDebugBotQuest(Player* bot, Creature* creature, uint32 questId)
+{
+    if (!IsDebugBotPlannedQuest(questId))
+        return false;
+
+    Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
+    if (!quest || bot->GetQuestStatus(questId) != QUEST_STATUS_COMPLETE || !bot->CanRewardQuest(quest, false))
+        return false;
+
+    uint32 reward = 0;
+    if (quest->GetRewChoiceItemsCount() > 0)
+    {
+        bool foundReward = false;
+        for (uint32 rewardIndex = 0; rewardIndex < QUEST_REWARD_CHOICES_COUNT; ++rewardIndex)
+        {
+            if (!quest->RewardChoiceItemId[rewardIndex])
+                continue;
+
+            if (!bot->CanRewardQuest(quest, rewardIndex, false))
+                continue;
+
+            reward = rewardIndex;
+            foundReward = true;
+            break;
+        }
+
+        if (!foundReward)
+            return false;
+    }
+    else if (!bot->CanRewardQuest(quest, reward, false))
+        return false;
+
+    bot->RewardQuest(quest, reward, creature);
+    bot->PlayerTalkClass->ClearMenus();
+    creature->AI()->OnQuestReward(bot, quest, reward);
+
+    if (_config.Debug)
+        TC_LOG_INFO("server.worldbots", "WorldBot {} turned in quest {} ({}) to creature {} reward={}.", bot->GetName(),
+            quest->GetQuestId(), quest->GetTitle(), creature->GetEntry(), reward);
+
+    return true;
+}
+
+bool WorldBotMgr::AcceptDebugBotQuest(Player* bot, Creature* creature, uint32 questId)
+{
+    if (!IsDebugBotPlannedQuest(questId))
+        return false;
+
+    Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
+    if (!quest || bot->GetQuestStatus(questId) != QUEST_STATUS_NONE)
+        return false;
+
+    if (!bot->CanSeeStartQuest(quest) || !bot->CanTakeQuest(quest, false) || !bot->CanAddQuest(quest, false))
+        return false;
+
+    bot->AddQuestAndCheckCompletion(quest, creature);
+
+    if (_config.Debug)
+        TC_LOG_INFO("server.worldbots", "WorldBot {} accepted quest {} ({}) from creature {}.", bot->GetName(),
+            quest->GetQuestId(), quest->GetTitle(), creature->GetEntry());
+
+    return true;
+}
+
+bool WorldBotMgr::IsDebugBotPlannedQuest(uint32 questId) const
+{
+    return std::find(_config.DebugQuestPlanIds.begin(), _config.DebugQuestPlanIds.end(), questId) != _config.DebugQuestPlanIds.end();
+}
+
+bool WorldBotMgr::HasDebugBotActivePlannedKillObjective(Player* bot) const
+{
+    if (!_config.DebugQuesting || _config.DebugQuestPlanIds.empty() || !bot)
+        return false;
+
+    for (auto const& questStatusPair : bot->getQuestStatusMap())
+    {
+        uint32 questId = questStatusPair.first;
+        if (!IsDebugBotPlannedQuest(questId))
+            continue;
+
+        QuestStatusData const& questStatus = questStatusPair.second;
+        if (questStatus.Status != QUEST_STATUS_INCOMPLETE)
+            continue;
+
+        Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
+        if (!quest)
+            continue;
+
+        for (uint8 objectiveIndex = 0; objectiveIndex < QUEST_OBJECTIVES_COUNT; ++objectiveIndex)
+        {
+            if (quest->RequiredNpcOrGo[objectiveIndex] <= 0)
+                continue;
+
+            uint32 requiredCount = quest->RequiredNpcOrGoCount[objectiveIndex];
+            if (requiredCount && questStatus.CreatureOrGOCount[objectiveIndex] < requiredCount)
+                return true;
+        }
+    }
+
+    return false;
+}
+
+uint32 WorldBotMgr::GetDebugBotPlannedQuestKillScore(Player* bot, Creature* creature) const
+{
+    if (!_config.DebugQuesting || _config.DebugQuestPlanIds.empty() || !bot || !creature)
+        return 0;
+
+    uint32 score = 0;
+    for (auto const& questStatusPair : bot->getQuestStatusMap())
+    {
+        uint32 questId = questStatusPair.first;
+        if (!IsDebugBotPlannedQuest(questId))
+            continue;
+
+        QuestStatusData const& questStatus = questStatusPair.second;
+        if (questStatus.Status != QUEST_STATUS_INCOMPLETE)
+            continue;
+
+        Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
+        if (!quest)
+            continue;
+
+        for (uint8 objectiveIndex = 0; objectiveIndex < QUEST_OBJECTIVES_COUNT; ++objectiveIndex)
+        {
+            if (quest->RequiredNpcOrGo[objectiveIndex] <= 0)
+                continue;
+
+            if (uint32(quest->RequiredNpcOrGo[objectiveIndex]) != creature->GetEntry())
+                continue;
+
+            uint32 requiredCount = quest->RequiredNpcOrGoCount[objectiveIndex];
+            if (!requiredCount || questStatus.CreatureOrGOCount[objectiveIndex] >= requiredCount)
+                continue;
+
+            score = std::max(score, 1000u + requiredCount - questStatus.CreatureOrGOCount[objectiveIndex]);
+        }
+    }
+
+    return score;
+}
+
+Creature* WorldBotMgr::SelectDebugBotPlannedQuestKillTarget(Player* bot, float range) const
+{
+    if (!bot || !_config.DebugQuesting || _config.DebugQuestPlanIds.empty())
+        return nullptr;
+
+    std::list<Unit*> targets;
+    Trinity::AnyUnfriendlyUnitInObjectRangeCheck check(bot, bot, range);
+    Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(bot, targets, check);
+    Cell::VisitAllObjects(bot, searcher, range);
+
+    Creature* bestTarget = nullptr;
+    float bestDistance = range;
+    uint32 bestQuestScore = 0;
+
+    for (Unit* unit : targets)
+    {
+        if (!unit || unit == bot || unit->GetTypeId() != TYPEID_UNIT)
+            continue;
+
+        Creature* creature = unit->ToCreature();
+        if (!creature || creature->IsPet() || creature->IsTotem() || creature->IsCritter() || creature->IsSpiritService())
+            continue;
+
+        if (creature->IsCivilian() || creature->IsGuard() || creature->IsTrigger() || creature->isWorldBoss() || creature->IsInEvadeMode())
+            continue;
+
+        if (creature->IsFlying() || creature->IsInCombat())
+            continue;
+
+        if (!creature->isTargetableForAttack(false) || !bot->IsValidAttackTarget(creature) || !bot->CanSeeOrDetect(creature))
+            continue;
+
+        uint32 questScore = GetDebugBotPlannedQuestKillScore(bot, creature);
+        if (!questScore)
+            continue;
+
+        float distance = bot->GetDistance(creature);
+        if (questScore < bestQuestScore)
+            continue;
+
+        if (questScore == bestQuestScore && distance > bestDistance)
+            continue;
+
+        bestTarget = creature;
+        bestDistance = distance;
+        bestQuestScore = questScore;
+    }
+
+    return bestTarget;
+}
+
+bool WorldBotMgr::SelectDebugBotQuestTravelDestination(Player* bot, uint32& mapId, Position& destination, float& arrivalDistance,
+    uint32& questId, uint32& targetEntry, char const*& action) const
+{
+    if (!bot || _config.DebugQuestPlanIds.empty())
+        return false;
+
+    for (uint32 plannedQuestId : _config.DebugQuestPlanIds)
+    {
+        Quest const* quest = sObjectMgr->GetQuestTemplate(plannedQuestId);
+        if (!quest)
+            continue;
+
+        QuestStatus status = bot->GetQuestStatus(plannedQuestId);
+        if (status == QUEST_STATUS_REWARDED)
+            continue;
+
+        if (status == QUEST_STATUS_COMPLETE)
+        {
+            if (FindNearestDebugBotQuestCreatureSpawn(bot, plannedQuestId, true, mapId, destination, targetEntry))
+            {
+                questId = plannedQuestId;
+                action = "turn-in";
+                arrivalDistance = _config.DebugQuestSearchRange * 0.75f;
+                return true;
+            }
+
+            continue;
+        }
+
+        if (status == QUEST_STATUS_NONE)
+        {
+            if (FindNearestDebugBotQuestCreatureSpawn(bot, plannedQuestId, false, mapId, destination, targetEntry))
+            {
+                questId = plannedQuestId;
+                action = "accept";
+                arrivalDistance = _config.DebugQuestSearchRange * 0.75f;
+                return true;
+            }
+
+            continue;
+        }
+
+        if (status != QUEST_STATUS_INCOMPLETE)
+            continue;
+
+        auto questStatusItr = bot->getQuestStatusMap().find(plannedQuestId);
+        if (questStatusItr == bot->getQuestStatusMap().end())
+            continue;
+
+        QuestStatusData const& questStatus = questStatusItr->second;
+        for (uint8 objectiveIndex = 0; objectiveIndex < QUEST_OBJECTIVES_COUNT; ++objectiveIndex)
+        {
+            if (quest->RequiredNpcOrGo[objectiveIndex] <= 0)
+                continue;
+
+            uint32 requiredCount = quest->RequiredNpcOrGoCount[objectiveIndex];
+            if (!requiredCount || questStatus.CreatureOrGOCount[objectiveIndex] >= requiredCount)
+                continue;
+
+            uint32 objectiveEntry = uint32(quest->RequiredNpcOrGo[objectiveIndex]);
+            if (FindNearestDebugBotCreatureSpawn(bot, objectiveEntry, mapId, destination))
+            {
+                questId = plannedQuestId;
+                targetEntry = objectiveEntry;
+                action = "kill";
+                arrivalDistance = std::max(5.0f, _config.DebugCombatSearchRange * 0.65f);
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool WorldBotMgr::FindNearestDebugBotCreatureSpawn(Player* bot, uint32 entry, uint32& mapId, Position& destination) const
+{
+    if (!bot || !entry)
+        return false;
+
+    bool found = false;
+    bool foundSameMap = false;
+    float bestDistance = std::numeric_limits<float>::max();
+
+    for (auto const& spawnPair : sObjectMgr->GetAllCreatureData())
+    {
+        CreatureData const& data = spawnPair.second;
+        if (data.id != entry)
+            continue;
+
+        MapEntry const* mapEntry = sMapStore.LookupEntry(data.mapId);
+        if (!mapEntry || !mapEntry->IsContinent())
+            continue;
+
+        if (data.phaseMask && bot->GetPhaseMask() && !(data.phaseMask & bot->GetPhaseMask()))
+            continue;
+
+        bool const sameMap = data.mapId == bot->GetMapId();
+        if (foundSameMap && !sameMap)
+            continue;
+
+        float distance = 0.0f;
+        if (sameMap)
+        {
+            float const dx = bot->GetPositionX() - data.spawnPoint.GetPositionX();
+            float const dy = bot->GetPositionY() - data.spawnPoint.GetPositionY();
+            float const dz = bot->GetPositionZ() - data.spawnPoint.GetPositionZ();
+            distance = std::sqrt(dx * dx + dy * dy + dz * dz);
+        }
+        else
+            distance = foundSameMap ? std::numeric_limits<float>::max() : 1000000.0f;
+
+        if (!found || sameMap != foundSameMap || distance < bestDistance)
+        {
+            found = true;
+            foundSameMap = sameMap;
+            bestDistance = distance;
+            mapId = data.mapId;
+            destination = data.spawnPoint;
+        }
+    }
+
+    return found;
+}
+
+bool WorldBotMgr::FindNearestDebugBotQuestCreatureSpawn(Player* bot, uint32 questId, bool involvedRelation, uint32& mapId, Position& destination,
+    uint32& targetEntry) const
+{
+    if (!bot || !questId)
+        return false;
+
+    bool found = false;
+    bool foundSameMap = false;
+    float bestDistance = std::numeric_limits<float>::max();
+
+    for (auto const& spawnPair : sObjectMgr->GetAllCreatureData())
+    {
+        CreatureData const& data = spawnPair.second;
+        QuestRelationResult relations = involvedRelation ? sObjectMgr->GetCreatureQuestInvolvedRelations(data.id) :
+            sObjectMgr->GetCreatureQuestRelations(data.id);
+        if (!relations.HasQuest(questId))
+            continue;
+
+        MapEntry const* mapEntry = sMapStore.LookupEntry(data.mapId);
+        if (!mapEntry || !mapEntry->IsContinent())
+            continue;
+
+        if (data.phaseMask && bot->GetPhaseMask() && !(data.phaseMask & bot->GetPhaseMask()))
+            continue;
+
+        bool const sameMap = data.mapId == bot->GetMapId();
+        if (foundSameMap && !sameMap)
+            continue;
+
+        float distance = 0.0f;
+        if (sameMap)
+        {
+            float const dx = bot->GetPositionX() - data.spawnPoint.GetPositionX();
+            float const dy = bot->GetPositionY() - data.spawnPoint.GetPositionY();
+            float const dz = bot->GetPositionZ() - data.spawnPoint.GetPositionZ();
+            distance = std::sqrt(dx * dx + dy * dy + dz * dz);
+        }
+        else
+            distance = foundSameMap ? std::numeric_limits<float>::max() : 1000000.0f;
+
+        if (!found || sameMap != foundSameMap || distance < bestDistance)
+        {
+            found = true;
+            foundSameMap = sameMap;
+            bestDistance = distance;
+            mapId = data.mapId;
+            destination = data.spawnPoint;
+            targetEntry = data.id;
+        }
+    }
+
+    return found;
 }
 
 Creature* WorldBotMgr::SelectDebugBotLootTarget(Player* bot) const
@@ -1540,6 +2220,8 @@ Unit* WorldBotMgr::SelectDebugBotCombatTarget(Player* bot) const
 
     Unit* bestTarget = nullptr;
     float bestDistance = _config.DebugCombatSearchRange;
+    uint32 bestQuestScore = 0;
+    bool const strictQuestKillTarget = HasDebugBotActivePlannedKillObjective(bot);
 
     for (Unit* unit : targets)
     {
@@ -1564,10 +2246,23 @@ Unit* WorldBotMgr::SelectDebugBotCombatTarget(Player* bot) const
             continue;
 
         float distance = bot->GetDistance(creature);
-        if (distance > bestDistance)
+        uint32 questScore = GetDebugBotPlannedQuestKillScore(bot, creature);
+        if (strictQuestKillTarget && !questScore)
+            continue;
+
+        if (questScore || bestQuestScore)
+        {
+            if (questScore < bestQuestScore)
+                continue;
+
+            if (questScore == bestQuestScore && distance > bestDistance)
+                continue;
+        }
+        else if (distance > bestDistance)
             continue;
 
         bestDistance = distance;
+        bestQuestScore = questScore;
         bestTarget = creature;
     }
 

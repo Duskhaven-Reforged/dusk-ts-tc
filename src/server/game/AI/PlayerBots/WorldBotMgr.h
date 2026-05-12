@@ -20,6 +20,7 @@
 
 #include "Common.h"
 #include "ObjectGuid.h"
+#include "Position.h"
 #include "WorldBotConfig.h"
 #include <memory>
 #include <utility>
@@ -57,9 +58,25 @@ private:
     bool UpdateDebugBotLoot(Map* map, uint32 diff);
     bool UpdateDebugBotRecovery(Map* map, uint32 diff);
     bool UpdateDebugBotConsumables(Player* bot, bool needsHealth, bool needsMana, uint32 diff);
+    bool UpdateDebugBotQuesting(Map* map, uint32 diff);
+    bool UpdateDebugBotQuestTravel(Map* map, uint32 diff);
     bool UpdateDebugBotCombat(Map* map, uint32 diff);
     bool UpdateDebugBotSpellRotation(Player* bot, Unit* victim, uint32 diff);
     void UpdateDebugBotRoam(Map* map, uint32 diff);
+    Creature* SelectDebugBotQuestGiver(Player* bot) const;
+    bool IsDebugBotQuestGiver(Player* bot, Creature* creature) const;
+    bool UseDebugBotQuestGiver(Player* bot, Creature* creature);
+    bool TurnInDebugBotQuest(Player* bot, Creature* creature, uint32 questId);
+    bool AcceptDebugBotQuest(Player* bot, Creature* creature, uint32 questId);
+    bool IsDebugBotPlannedQuest(uint32 questId) const;
+    bool HasDebugBotActivePlannedKillObjective(Player* bot) const;
+    uint32 GetDebugBotPlannedQuestKillScore(Player* bot, Creature* creature) const;
+    Creature* SelectDebugBotPlannedQuestKillTarget(Player* bot, float range) const;
+    bool SelectDebugBotQuestTravelDestination(Player* bot, uint32& mapId, Position& destination, float& arrivalDistance, uint32& questId,
+        uint32& targetEntry, char const*& action) const;
+    bool FindNearestDebugBotCreatureSpawn(Player* bot, uint32 entry, uint32& mapId, Position& destination) const;
+    bool FindNearestDebugBotQuestCreatureSpawn(Player* bot, uint32 questId, bool involvedRelation, uint32& mapId, Position& destination,
+        uint32& targetEntry) const;
     Unit* SelectDebugBotCombatTarget(Player* bot) const;
     Creature* SelectDebugBotLootTarget(Player* bot) const;
     bool IsDebugBotLootCandidate(Player* bot, Creature* creature) const;
@@ -83,11 +100,16 @@ private:
     uint32 _debugConsumableScanTimer = 0;
     uint32 _debugDeathReleaseTimer = 0;
     uint32 _debugDeathRespawnTimer = 0;
+    uint32 _debugQuestScanTimer = 0;
+    uint32 _debugQuestMoveTimer = 0;
+    uint32 _debugQuestTargetTimer = 0;
+    uint32 _debugQuestTravelTimer = 0;
     bool _debugRecovering = false;
     bool _debugDeathReleased = false;
     uint32 _debugRoamTimer = 0;
     uint32 _debugMovePointId = 1;
     ObjectGuid _debugLootTargetGuid;
+    ObjectGuid _debugQuestTargetGuid;
     std::vector<std::pair<ObjectGuid, uint32>> _debugLootBlacklist;
     std::unique_ptr<WorldSession> _debugSession;
 };
