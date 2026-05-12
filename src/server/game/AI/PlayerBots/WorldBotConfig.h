@@ -47,6 +47,11 @@ struct TC_GAME_API WorldBotConfig
     uint32 DebugLootScanIntervalMs = 1000;
     float DebugLootSearchRange = 30.0f;
     uint32 DebugLootBlacklistMs = 30000;
+    bool DebugRecovery = false;
+    float DebugRecoveryStartHealthPct = 45.0f;
+    float DebugRecoveryStopHealthPct = 85.0f;
+    float DebugRecoveryStartManaPct = 20.0f;
+    float DebugRecoveryStopManaPct = 75.0f;
 };
 
 #endif

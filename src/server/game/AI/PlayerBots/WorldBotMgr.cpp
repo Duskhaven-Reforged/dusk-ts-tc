@@ -27,6 +27,7 @@
 #include "ObjectGuid.h"
 #include "Player.h"
 #include "Random.h"
+#include "SmartEnum.h"
 #include "Spell.h"
 #include "SpellHistory.h"
 #include "SpellInfo.h"
@@ -133,10 +134,49 @@ namespace
 
     using WorldBotPreparedSpellVector = std::vector<std::pair<WorldBotPreparedSpell, uint32>>;
 
-    WorldBotPreparedSpell VerifyWorldBotSpellCast(Player* bot, uint32 spellId, Unit* target)
+    struct WorldBotSpellDiagnostics
+    {
+        uint32 CandidateCount = 0;
+        uint32 AuraSkippedCount = 0;
+        uint32 KnownRankCount = 0;
+        uint32 ActiveSpellCount = 0;
+        uint32 InvalidInfoCount = 0;
+        uint32 PassiveCount = 0;
+        uint32 GlobalCooldownCount = 0;
+        uint32 CheckCastFailureCount = 0;
+        uint32 UsableCount = 0;
+        uint32 FirstNoKnownBaseSpell = 0;
+        uint32 FirstInactiveSpell = 0;
+        uint32 FirstCheckCastSpell = 0;
+        SpellCastResult FirstCheckCastResult = SPELL_CAST_OK;
+        float FirstCheckCastDistance = 0.0f;
+        bool FirstCheckCastMoving = false;
+        bool FirstCheckCastStopped = true;
+    };
+
+    WorldBotSpellDiagnostics* ActiveWorldBotSpellDiagnostics = nullptr;
+
+    struct WorldBotSpellDiagnosticsScope
+    {
+        explicit WorldBotSpellDiagnosticsScope(WorldBotSpellDiagnostics* diagnostics) : Previous(ActiveWorldBotSpellDiagnostics)
+        {
+            ActiveWorldBotSpellDiagnostics = diagnostics;
+        }
+
+        ~WorldBotSpellDiagnosticsScope()
+        {
+            ActiveWorldBotSpellDiagnostics = Previous;
+        }
+
+        WorldBotSpellDiagnostics* Previous;
+    };
+
+    WorldBotPreparedSpell VerifyWorldBotSpellCast(Player* bot, uint32 spellId, Unit* target, bool debug)
     {
         if (!bot || !spellId)
             return {};
+
+        WorldBotSpellDiagnostics* diagnostics = ActiveWorldBotSpellDiagnostics;
 
         uint32 knownRank = 0;
         uint32 nextRank = 0;
@@ -156,34 +196,122 @@ namespace
         }
 
         if (!knownRank)
+        {
+            if (diagnostics && !diagnostics->FirstNoKnownBaseSpell)
+                diagnostics->FirstNoKnownBaseSpell = spellId;
+
+            if (debug)
+                TC_LOG_DEBUG("server.worldbots", "WorldBot {} cannot cast base spell {}: no known rank.", bot->GetName(), spellId);
+
             return {};
+        }
+
+        if (diagnostics)
+            ++diagnostics->KnownRankCount;
+
+        if (!bot->HasActiveSpell(knownRank))
+        {
+            if (diagnostics && !diagnostics->FirstInactiveSpell)
+                diagnostics->FirstInactiveSpell = knownRank;
+
+            if (debug)
+                TC_LOG_DEBUG("server.worldbots", "WorldBot {} cannot cast spell {} from base {}: not active in spellbook.", bot->GetName(), knownRank, spellId);
+
+            return {};
+        }
+
+        if (diagnostics)
+            ++diagnostics->ActiveSpellCount;
 
         SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(knownRank);
         if (!spellInfo)
+        {
+            if (diagnostics)
+                ++diagnostics->InvalidInfoCount;
+
+            if (debug)
+                TC_LOG_DEBUG("server.worldbots", "WorldBot {} cannot cast spell {} from base {}: no SpellInfo.", bot->GetName(), knownRank, spellId);
+
             return {};
+        }
+
+        if (spellInfo->IsPassive())
+        {
+            if (diagnostics)
+                ++diagnostics->PassiveCount;
+
+            return {};
+        }
 
         if (bot->GetSpellHistory()->HasGlobalCooldown(spellInfo))
+        {
+            if (diagnostics)
+                ++diagnostics->GlobalCooldownCount;
+
+            if (debug)
+                TC_LOG_DEBUG("server.worldbots", "WorldBot {} cannot cast spell {}: global cooldown.", bot->GetName(), knownRank);
+
             return {};
+        }
 
         Spell* spell = new Spell(bot, spellInfo, TRIGGERED_NONE);
-        if (spell->CanAutoCast(target))
+        SpellCastTargets targets;
+        targets.SetUnitTarget(target);
+        spell->InitExplicitTargets(targets);
+
+        bot->SetInFront(target);
+
+        SpellCastResult result = spell->CheckCast(true);
+        if (result == SPELL_CAST_OK)
+        {
+            if (diagnostics)
+                ++diagnostics->UsableCount;
+
             return { spell, target, spell->GetSpellInfo()->Id };
+        }
+
+        if (diagnostics)
+        {
+            ++diagnostics->CheckCastFailureCount;
+            if (!diagnostics->FirstCheckCastSpell)
+            {
+                diagnostics->FirstCheckCastSpell = knownRank;
+                diagnostics->FirstCheckCastResult = result;
+                diagnostics->FirstCheckCastDistance = bot->GetDistance(target);
+                diagnostics->FirstCheckCastMoving = bot->isMoving();
+                diagnostics->FirstCheckCastStopped = bot->IsStopped();
+            }
+        }
+
+        if (debug)
+            TC_LOG_DEBUG("server.worldbots", "WorldBot {} cannot cast spell {} from base {}: CheckCast result {} ({}) distance={} moving={} stopped={}.",
+                bot->GetName(), knownRank, spellId, uint32(result), EnumUtils::ToConstant(result), bot->GetDistance(target), bot->isMoving(),
+                bot->IsStopped());
 
         delete spell;
         return {};
     }
 
     void PushWorldBotSpellCast(WorldBotPreparedSpellVector& spells, Player* bot, Unit* target, uint32 spellId, uint32 weight,
-        bool skipIfTargetHasCasterAura = false, uint32 auraSpellId = 0)
+        bool skipIfTargetHasCasterAura = false, uint32 auraSpellId = 0, bool debug = false)
     {
         if (!weight || !target)
             return;
 
+        WorldBotSpellDiagnostics* diagnostics = ActiveWorldBotSpellDiagnostics;
+        if (diagnostics)
+            ++diagnostics->CandidateCount;
+
         uint32 auraToCheck = auraSpellId ? auraSpellId : spellId;
         if (skipIfTargetHasCasterAura && target->GetAuraApplicationOfRankedSpell(auraToCheck, bot->GetGUID()))
-            return;
+        {
+            if (diagnostics)
+                ++diagnostics->AuraSkippedCount;
 
-        if (WorldBotPreparedSpell spell = VerifyWorldBotSpellCast(bot, spellId, target))
+            return;
+        }
+
+        if (WorldBotPreparedSpell spell = VerifyWorldBotSpellCast(bot, spellId, target, debug))
             spells.push_back({ spell, weight });
     }
 
@@ -219,106 +347,106 @@ namespace
         return selected;
     }
 
-    WorldBotPreparedSpell SelectWorldBotClassSpell(Player* bot, Unit* victim)
+    WorldBotPreparedSpell SelectWorldBotClassSpell(Player* bot, Unit* victim, bool debug)
     {
         WorldBotPreparedSpellVector spells;
 
         switch (bot->GetClass())
         {
             case CLASS_WARRIOR:
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_REND, 3, true);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_REND, 3, true, 0, debug);
                 if (victim->HealthBelowPct(20))
-                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_EXECUTE, 10);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_MORTAL_STRIKE, 5);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_BLOODTHIRST, 4);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SHIELD_SLAM, 3);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_THUNDER_CLAP, 2);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SUNDER_ARMOR, 2);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CLEAVE, 2);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_HEROIC_STRIKE, 6);
+                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_EXECUTE, 10, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_MORTAL_STRIKE, 5, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_BLOODTHIRST, 4, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SHIELD_SLAM, 3, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_THUNDER_CLAP, 2, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SUNDER_ARMOR, 2, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CLEAVE, 2, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_HEROIC_STRIKE, 6, false, 0, debug);
                 break;
             case CLASS_PALADIN:
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CRUSADER_STRIKE, 4);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_DIVINE_STORM, 5);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_JUDGEMENT, 4);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CRUSADER_STRIKE, 4, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_DIVINE_STORM, 5, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_JUDGEMENT, 4, false, 0, debug);
                 if (victim->HealthBelowPct(20))
-                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_HAMMER_OF_WRATH, 8);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CONSECRATION, 1);
+                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_HAMMER_OF_WRATH, 8, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CONSECRATION, 1, false, 0, debug);
                 break;
             case CLASS_HUNTER:
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SERPENT_STING, 4, true);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SERPENT_STING, 4, true, 0, debug);
                 if (victim->HealthBelowPct(20))
-                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_KILL_SHOT, 10);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_EXPLOSIVE_SHOT, 6);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_AIMED_SHOT, 4);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_ARCANE_SHOT, 4);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_MULTI_SHOT, 2);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_STEADY_SHOT, 2);
+                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_KILL_SHOT, 10, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_EXPLOSIVE_SHOT, 6, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_AIMED_SHOT, 4, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_ARCANE_SHOT, 4, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_MULTI_SHOT, 2, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_STEADY_SHOT, 2, false, 0, debug);
                 break;
             case CLASS_ROGUE:
                 if (victim->HasUnitState(UNIT_STATE_CASTING))
-                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_KICK, 12);
+                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_KICK, 12, false, 0, debug);
                 if (bot->GetPower(POWER_COMBO) >= 4)
-                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_EVISCERATE, 10);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SINISTER_STRIKE, 6);
+                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_EVISCERATE, 10, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SINISTER_STRIKE, 6, false, 0, debug);
                 break;
             case CLASS_PRIEST:
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SHADOW_WORD_PAIN, 4, true);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SHADOW_WORD_PAIN, 4, true, 0, debug);
                 if (victim->HealthBelowPct(25))
-                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SHADOW_WORD_DEATH, 5);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_MIND_BLAST, 4);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_MIND_FLAY, 3);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SMITE, 2);
+                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SHADOW_WORD_DEATH, 5, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_MIND_BLAST, 4, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_MIND_FLAY, 3, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SMITE, 2, false, 0, debug);
                 break;
             case CLASS_DEATH_KNIGHT:
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_ICY_TOUCH, 5, true, WB_AURA_FROST_FEVER);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_PLAGUE_STRIKE, 5, true, WB_AURA_BLOOD_PLAGUE);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_DEATH_STRIKE, 5);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_BLOOD_STRIKE, 3);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_DEATH_COIL_DK, 2);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_ICY_TOUCH, 5, true, WB_AURA_FROST_FEVER, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_PLAGUE_STRIKE, 5, true, WB_AURA_BLOOD_PLAGUE, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_DEATH_STRIKE, 5, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_BLOOD_STRIKE, 3, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_DEATH_COIL_DK, 2, false, 0, debug);
                 break;
             case CLASS_SHAMAN:
                 if (victim->GetAuraApplicationOfRankedSpell(WB_SPELL_FLAME_SHOCK, bot->GetGUID()))
-                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_LAVA_BURST, 6);
+                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_LAVA_BURST, 6, false, 0, debug);
                 else
-                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_FLAME_SHOCK, 5);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_STORMSTRIKE, 5);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_EARTH_SHOCK, 4);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CHAIN_LIGHTNING, 2);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_LIGHTNING_BOLT, 2);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_LAVA_LASH, 2);
+                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_FLAME_SHOCK, 5, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_STORMSTRIKE, 5, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_EARTH_SHOCK, 4, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CHAIN_LIGHTNING, 2, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_LIGHTNING_BOLT, 2, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_LAVA_LASH, 2, false, 0, debug);
                 break;
             case CLASS_MAGE:
                 if (victim->HasUnitState(UNIT_STATE_CASTING))
-                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_COUNTERSPELL, 12);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_LIVING_BOMB, 4, true);
+                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_COUNTERSPELL, 12, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_LIVING_BOMB, 4, true, 0, debug);
                 if (victim->HasAuraState(AURA_STATE_FROZEN, nullptr, bot))
-                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_ICE_LANCE, 8);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_FIRE_BLAST, 3);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_ARCANE_BLAST, 4);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_ARCANE_MISSILES, 3);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_FROSTBOLT, 4);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_FIREBALL, 3);
+                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_ICE_LANCE, 8, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_FIRE_BLAST, 3, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_ARCANE_BLAST, 4, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_ARCANE_MISSILES, 3, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_FROSTBOLT, 4, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_FIREBALL, 3, false, 0, debug);
                 break;
             case CLASS_WARLOCK:
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CORRUPTION, 6, true);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_IMMOLATE, 5, true);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CURSE_OF_AGONY, 3, true);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CORRUPTION, 6, true, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_IMMOLATE, 5, true, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CURSE_OF_AGONY, 3, true, 0, debug);
                 if (victim->HealthBelowPct(25))
-                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_DRAIN_SOUL, 8);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_INCINERATE, 3);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SHADOW_BOLT, 5);
+                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_DRAIN_SOUL, 8, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_INCINERATE, 3, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_SHADOW_BOLT, 5, false, 0, debug);
                 break;
             case CLASS_DRUID:
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_INSECT_SWARM, 4, true);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_MOONFIRE, 4, true);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_INSECT_SWARM, 4, true, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_MOONFIRE, 4, true, 0, debug);
                 if (bot->GetPower(POWER_COMBO) >= 4)
-                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_RIP, 8, true);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_MANGLE_CAT, 6);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_RAKE, 5, true);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CLAW, 3);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_STARFIRE, 3);
-                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_WRATH, 4);
+                    PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_RIP, 8, true, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_MANGLE_CAT, 6, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_RAKE, 5, true, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_CLAW, 3, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_STARFIRE, 3, false, 0, debug);
+                PushWorldBotSpellCast(spells, bot, victim, WB_SPELL_WRATH, 4, false, 0, debug);
                 break;
             default:
                 break;
@@ -346,6 +474,7 @@ void WorldBotMgr::LoadConfig(bool reload)
     _debugLootScanTimer = 0;
     _debugLootMoveTimer = 0;
     _debugLootTargetTimer = 0;
+    _debugRecovering = false;
     _debugLootTargetGuid.Clear();
     _debugLootBlacklist.clear();
     _debugRoamTimer = 0;
@@ -406,6 +535,9 @@ void WorldBotMgr::UpdateMap(Map* map, uint32 diff)
         return;
 
     if (UpdateDebugBotLoot(map, diff))
+        return;
+
+    if (UpdateDebugBotRecovery(map, diff))
         return;
 
     if (UpdateDebugBotCombat(map, diff))
@@ -585,6 +717,82 @@ bool WorldBotMgr::UpdateDebugBotLoot(Map* map, uint32 diff)
     return true;
 }
 
+bool WorldBotMgr::UpdateDebugBotRecovery(Map* map, uint32 /*diff*/)
+{
+    if (!_debugSession)
+        return false;
+
+    Player* bot = _debugSession->GetPlayer();
+    if (!bot || bot->GetMap() != map)
+        return false;
+
+    if (!_config.DebugRecovery)
+    {
+        if (_debugRecovering)
+        {
+            _debugRecovering = false;
+            if (!bot->IsStandState())
+                bot->SetStandState(UNIT_STAND_STATE_STAND);
+        }
+
+        return false;
+    }
+
+    if (!map || !map->GetEntry() || !map->GetEntry()->IsContinent())
+        return false;
+
+    if (!bot->IsInWorld() || !bot->IsAlive() || bot->IsBeingTeleported())
+    {
+        _debugRecovering = false;
+        return false;
+    }
+
+    if (bot->IsInCombat() || bot->GetVictim())
+        return false;
+
+    bool const hasActiveMana = bot->GetPowerType() == POWER_MANA && bot->GetMaxPower(POWER_MANA) > 0;
+    bool const needsHealth = bot->GetHealthPct() <= _config.DebugRecoveryStartHealthPct;
+    bool const needsMana = hasActiveMana && bot->GetPowerPct(POWER_MANA) <= _config.DebugRecoveryStartManaPct;
+
+    if (!_debugRecovering && !needsHealth && !needsMana)
+        return false;
+
+    bool const healthReady = bot->GetHealthPct() >= _config.DebugRecoveryStopHealthPct;
+    bool const manaReady = !hasActiveMana || bot->GetPowerPct(POWER_MANA) >= _config.DebugRecoveryStopManaPct;
+
+    if (_debugRecovering && healthReady && manaReady)
+    {
+        _debugRecovering = false;
+        if (!bot->IsStandState())
+            bot->SetStandState(UNIT_STAND_STATE_STAND);
+
+        if (_config.Debug)
+            TC_LOG_DEBUG("server.worldbots", "WorldBot {} recovery complete healthPct={} manaPct={}.", bot->GetName(),
+                bot->GetHealthPct(), hasActiveMana ? bot->GetPowerPct(POWER_MANA) : 100.0f);
+
+        return false;
+    }
+
+    if (!_debugRecovering)
+    {
+        _debugRecovering = true;
+        if (_config.Debug)
+            TC_LOG_DEBUG("server.worldbots", "WorldBot {} entering recovery healthPct={} manaPct={}.", bot->GetName(),
+                bot->GetHealthPct(), hasActiveMana ? bot->GetPowerPct(POWER_MANA) : 100.0f);
+    }
+
+    if (bot->IsMounted())
+        bot->Dismount();
+
+    if (!bot->IsStopped())
+        bot->StopMoving();
+
+    if (bot->GetStandState() != UNIT_STAND_STATE_SIT)
+        bot->SetStandState(UNIT_STAND_STATE_SIT);
+
+    return true;
+}
+
 bool WorldBotMgr::UpdateDebugBotCombat(Map* map, uint32 diff)
 {
     if (!_debugSession)
@@ -600,6 +808,8 @@ bool WorldBotMgr::UpdateDebugBotCombat(Map* map, uint32 diff)
     Unit* victim = bot->GetVictim();
     if (victim)
     {
+        _debugCombatNoVictimLogTimer = 0;
+
         if (!victim->IsAlive() || !bot->IsValidAttackTarget(victim) || !bot->IsWithinDistInMap(victim, _config.DebugCombatLeashRange))
         {
             bot->AttackStop();
@@ -621,7 +831,42 @@ bool WorldBotMgr::UpdateDebugBotCombat(Map* map, uint32 diff)
     }
 
     if (bot->IsInCombat())
+    {
+        Unit* attackerTarget = nullptr;
+        for (Unit* attacker : bot->getAttackers())
+        {
+            if (!attacker || !attacker->IsAlive() || !bot->IsValidAttackTarget(attacker) || !bot->IsWithinDistInMap(attacker, _config.DebugCombatLeashRange))
+                continue;
+
+            attackerTarget = attacker;
+            break;
+        }
+
+        if (attackerTarget && bot->Attack(attackerTarget, true))
+        {
+            if (UpdateDebugBotSpellRotation(bot, attackerTarget, diff))
+                return true;
+
+            if (!bot->IsWithinMeleeRange(attackerTarget) && bot->IsStopped())
+                bot->GetMotionMaster()->MoveChase(attackerTarget);
+
+            return true;
+        }
+
+        if (_config.Debug)
+        {
+            if (_debugCombatNoVictimLogTimer <= diff)
+            {
+                TC_LOG_INFO("server.worldbots", "WorldBot {} is in combat without a victim: attackers={} spellRotation={}.",
+                    bot->GetName(), bot->getAttackers().size(), _config.DebugSpellRotation);
+                _debugCombatNoVictimLogTimer = 5000;
+            }
+            else
+                _debugCombatNoVictimLogTimer -= diff;
+        }
+
         return true;
+    }
 
     if (!_config.DebugCombat)
         return false;
@@ -659,13 +904,33 @@ bool WorldBotMgr::UpdateDebugBotCombat(Map* map, uint32 diff)
 bool WorldBotMgr::UpdateDebugBotSpellRotation(Player* bot, Unit* victim, uint32 diff)
 {
     if (!_config.DebugSpellRotation)
+    {
+        if (_config.Debug)
+        {
+            if (_debugSpellDisabledLogTimer <= diff)
+            {
+                TC_LOG_WARN("server.worldbots", "WorldBot spell rotation is disabled while combat is active. Set WorldBots.Debug.SpellRotation = 1.");
+                _debugSpellDisabledLogTimer = 5000;
+            }
+            else
+                _debugSpellDisabledLogTimer -= diff;
+        }
+
         return false;
+    }
+
+    _debugSpellDisabledLogTimer = 0;
 
     if (!bot || !victim || !bot->IsAlive() || !victim->IsAlive())
         return false;
 
     if (bot->HasUnitState(UNIT_STATE_CASTING))
+    {
+        if (!bot->IsStopped())
+            bot->StopMoving();
+
         return true;
+    }
 
     if (_debugSpellCastTimer > diff)
     {
@@ -678,16 +943,38 @@ bool WorldBotMgr::UpdateDebugBotSpellRotation(Player* bot, Unit* victim, uint32 
     if (bot->IsMounted())
         bot->Dismount();
 
+    if (!bot->IsStandState())
+        bot->SetStandState(UNIT_STAND_STATE_STAND);
+
     bool const wasMoving = !bot->IsStopped();
-    if (wasMoving && bot->IsWithinDistInMap(victim, 30.0f))
+    if (wasMoving && bot->IsWithinDistInMap(victim, 35.0f))
         bot->StopMoving();
 
-    WorldBotPreparedSpell spell = SelectWorldBotClassSpell(bot, victim);
+    bot->SetInFront(victim);
+
+    WorldBotSpellDiagnostics diagnostics;
+    WorldBotPreparedSpell spell;
+    {
+        WorldBotSpellDiagnosticsScope diagnosticsScope(&diagnostics);
+        spell = SelectWorldBotClassSpell(bot, victim, _config.Debug);
+    }
+
     if (!spell)
     {
         if (_config.Debug)
-            TC_LOG_DEBUG("server.worldbots", "WorldBot {} found no valid spell for class {} at distance {}.", bot->GetName(), bot->GetClass(),
-                bot->GetDistance(victim));
+        {
+            TC_LOG_INFO("server.worldbots", "WorldBot {} found no valid spell: class={} target={} distance={} candidates={} auraSkipped={} known={} active={} gcd={} checkCastFailed={} usable={} firstNoKnownBase={} firstInactive={} powerType={} power={} moving={} stopped={}.",
+                bot->GetName(), bot->GetClass(), victim->GetGUID().ToString(), bot->GetDistance(victim), diagnostics.CandidateCount,
+                diagnostics.AuraSkippedCount, diagnostics.KnownRankCount, diagnostics.ActiveSpellCount, diagnostics.GlobalCooldownCount,
+                diagnostics.CheckCastFailureCount, diagnostics.UsableCount, diagnostics.FirstNoKnownBaseSpell, diagnostics.FirstInactiveSpell,
+                uint32(bot->GetPowerType()), bot->GetPower(bot->GetPowerType()), bot->isMoving(), bot->IsStopped());
+
+            if (diagnostics.FirstCheckCastSpell)
+                TC_LOG_INFO("server.worldbots", "WorldBot {} first CheckCast failure: spell={} result={} ({}) distance={} moving={} stopped={}.",
+                    bot->GetName(), diagnostics.FirstCheckCastSpell, uint32(diagnostics.FirstCheckCastResult),
+                    EnumUtils::ToConstant(diagnostics.FirstCheckCastResult), diagnostics.FirstCheckCastDistance, diagnostics.FirstCheckCastMoving,
+                    diagnostics.FirstCheckCastStopped);
+        }
 
         if (wasMoving && bot->IsStopped() && !bot->IsWithinMeleeRange(victim))
             bot->GetMotionMaster()->MoveChase(victim);
@@ -697,12 +984,22 @@ bool WorldBotMgr::UpdateDebugBotSpellRotation(Player* bot, Unit* victim, uint32 
 
     SpellCastTargets targets;
     targets.SetUnitTarget(spell.Target);
-    spell.SpellObject->prepare(targets);
+    bot->GetMotionMaster()->Clear();
+    bot->StopMoving();
+    bot->SetInFront(spell.Target);
+    SpellCastResult result = spell.SpellObject->prepare(targets);
 
     if (_config.Debug)
-        TC_LOG_DEBUG("server.worldbots", "WorldBot {} casting spell {} at {}.", bot->GetName(), spell.SpellId, spell.Target->GetGUID().ToString());
+    {
+        if (result == SPELL_CAST_OK)
+            TC_LOG_INFO("server.worldbots", "WorldBot {} casting spell {} at {} distance={} powerType={} power={}.", bot->GetName(), spell.SpellId,
+                spell.Target->GetGUID().ToString(), bot->GetDistance(spell.Target), uint32(bot->GetPowerType()), bot->GetPower(bot->GetPowerType()));
+        else
+            TC_LOG_WARN("server.worldbots", "WorldBot {} prepare rejected spell {}: result={} ({}) distance={} moving={} stopped={}.", bot->GetName(),
+                spell.SpellId, uint32(result), EnumUtils::ToConstant(result), bot->GetDistance(spell.Target), bot->isMoving(), bot->IsStopped());
+    }
 
-    return true;
+    return result == SPELL_CAST_OK;
 }
 
 Creature* WorldBotMgr::SelectDebugBotLootTarget(Player* bot) const

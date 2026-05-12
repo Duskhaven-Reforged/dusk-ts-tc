@@ -40,12 +40,17 @@ void WorldBotConfig::Load(bool reload)
     DebugCombatLeashRange = sConfigMgr->GetFloatDefault("WorldBots.Debug.CombatLeashRange", 60.0f);
     DebugCombatMinLevelDelta = sConfigMgr->GetIntDefault("WorldBots.Debug.CombatMinLevelDelta", -5);
     DebugCombatMaxLevelDelta = sConfigMgr->GetIntDefault("WorldBots.Debug.CombatMaxLevelDelta", 2);
-    DebugSpellRotation = sConfigMgr->GetBoolDefault("WorldBots.Debug.SpellRotation", false);
+    DebugSpellRotation = sConfigMgr->GetBoolDefault("WorldBots.Debug.SpellRotation", DebugCombat);
     DebugSpellCastIntervalMs = sConfigMgr->GetIntDefault("WorldBots.Debug.SpellCastIntervalMs", 1500);
     DebugLoot = sConfigMgr->GetBoolDefault("WorldBots.Debug.Loot", false);
     DebugLootScanIntervalMs = sConfigMgr->GetIntDefault("WorldBots.Debug.LootScanIntervalMs", 1000);
     DebugLootSearchRange = sConfigMgr->GetFloatDefault("WorldBots.Debug.LootSearchRange", 30.0f);
     DebugLootBlacklistMs = sConfigMgr->GetIntDefault("WorldBots.Debug.LootBlacklistMs", 30000);
+    DebugRecovery = sConfigMgr->GetBoolDefault("WorldBots.Debug.Recovery", false);
+    DebugRecoveryStartHealthPct = sConfigMgr->GetFloatDefault("WorldBots.Debug.RecoveryStartHealthPct", 45.0f);
+    DebugRecoveryStopHealthPct = sConfigMgr->GetFloatDefault("WorldBots.Debug.RecoveryStopHealthPct", 85.0f);
+    DebugRecoveryStartManaPct = sConfigMgr->GetFloatDefault("WorldBots.Debug.RecoveryStartManaPct", 20.0f);
+    DebugRecoveryStopManaPct = sConfigMgr->GetFloatDefault("WorldBots.Debug.RecoveryStopManaPct", 75.0f);
 
     if (UpdateIntervalMs < 100)
     {
@@ -123,6 +128,9 @@ void WorldBotConfig::Load(bool reload)
         DebugSpellCastIntervalMs = 500;
     }
 
+    if (Debug && DebugCombat && !DebugSpellRotation)
+        TC_LOG_WARN("server.worldbots", "WorldBots.Debug.Combat is enabled but WorldBots.Debug.SpellRotation is disabled. Bot will only melee.");
+
     if (DebugLootScanIntervalMs < 500)
     {
         TC_LOG_WARN("server.worldbots", "WorldBots.Debug.LootScanIntervalMs ({}) is too low. Using 500.", DebugLootScanIntervalMs);
@@ -146,9 +154,30 @@ void WorldBotConfig::Load(bool reload)
         DebugLootBlacklistMs = 1000;
     }
 
-    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}, debugSpellRotation={}, debugSpellCastIntervalMs={}, debugLoot={}, debugLootScanIntervalMs={}, debugLootSearchRange={}, debugLootBlacklistMs={}",
+    if (DebugRecoveryStartHealthPct < 1.0f)
+        DebugRecoveryStartHealthPct = 1.0f;
+    else if (DebugRecoveryStartHealthPct > 99.0f)
+        DebugRecoveryStartHealthPct = 99.0f;
+
+    if (DebugRecoveryStopHealthPct < DebugRecoveryStartHealthPct)
+        DebugRecoveryStopHealthPct = DebugRecoveryStartHealthPct;
+    else if (DebugRecoveryStopHealthPct > 100.0f)
+        DebugRecoveryStopHealthPct = 100.0f;
+
+    if (DebugRecoveryStartManaPct < 0.0f)
+        DebugRecoveryStartManaPct = 0.0f;
+    else if (DebugRecoveryStartManaPct > 99.0f)
+        DebugRecoveryStartManaPct = 99.0f;
+
+    if (DebugRecoveryStopManaPct < DebugRecoveryStartManaPct)
+        DebugRecoveryStopManaPct = DebugRecoveryStartManaPct;
+    else if (DebugRecoveryStopManaPct > 100.0f)
+        DebugRecoveryStopManaPct = 100.0f;
+
+    TC_LOG_INFO("server.worldbots", "WorldBots config {}: enabled={}, maxActiveBots={}, updateIntervalMs={}, mapTickBudgetMs={}, debug={}, debugCharacterGuid={}, debugAccountId={}, debugRoam={}, debugRoamIntervalMs={}, debugRoamRadius={}, debugRoamMinDistance={}, debugCombat={}, debugCombatScanIntervalMs={}, debugCombatSearchRange={}, debugCombatLeashRange={}, debugCombatMinLevelDelta={}, debugCombatMaxLevelDelta={}, debugSpellRotation={}, debugSpellCastIntervalMs={}, debugLoot={}, debugLootScanIntervalMs={}, debugLootSearchRange={}, debugLootBlacklistMs={}, debugRecovery={}, debugRecoveryStartHealthPct={}, debugRecoveryStopHealthPct={}, debugRecoveryStartManaPct={}, debugRecoveryStopManaPct={}",
         reload ? "reloaded" : "loaded", Enabled, MaxActiveBots, UpdateIntervalMs, MapTickBudgetMs, Debug, DebugCharacterGuid, DebugAccountId,
         DebugRoam, DebugRoamIntervalMs, DebugRoamRadius, DebugRoamMinDistance, DebugCombat, DebugCombatScanIntervalMs, DebugCombatSearchRange,
         DebugCombatLeashRange, DebugCombatMinLevelDelta, DebugCombatMaxLevelDelta, DebugSpellRotation, DebugSpellCastIntervalMs, DebugLoot,
-        DebugLootScanIntervalMs, DebugLootSearchRange, DebugLootBlacklistMs);
+        DebugLootScanIntervalMs, DebugLootSearchRange, DebugLootBlacklistMs, DebugRecovery, DebugRecoveryStartHealthPct, DebugRecoveryStopHealthPct,
+        DebugRecoveryStartManaPct, DebugRecoveryStopManaPct);
 }

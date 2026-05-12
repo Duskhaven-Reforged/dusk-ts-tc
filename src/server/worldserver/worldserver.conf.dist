@@ -4833,11 +4833,11 @@ WorldBots.Debug.CombatMaxLevelDelta = 2
 #    WorldBots.Debug.SpellRotation
 #        Description: Enables simple class offensive spell rotation for the single debug bot.
 #                     Requires WorldBots.Debug.Combat = 1.
-#        Default:     0 - (Disabled)
-#                     1 - (Enabled)
+#        Default:     1 - (Enabled when WorldBots.Debug.Combat is enabled)
+#                     0 - (Disabled)
 #
 
-WorldBots.Debug.SpellRotation = 0
+WorldBots.Debug.SpellRotation = 1
 
 #
 #    WorldBots.Debug.SpellCastIntervalMs
@@ -4880,6 +4880,48 @@ WorldBots.Debug.LootSearchRange = 30
 #
 
 WorldBots.Debug.LootBlacklistMs = 30000
+
+#
+#    WorldBots.Debug.Recovery
+#        Description: Enables simple out-of-combat recovery for the single debug bot. The bot
+#                     stops, sits, and waits for normal player health/mana regeneration.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+
+WorldBots.Debug.Recovery = 0
+
+#
+#    WorldBots.Debug.RecoveryStartHealthPct
+#        Description: Health percent at or below which recovery starts.
+#        Default:     45
+#
+
+WorldBots.Debug.RecoveryStartHealthPct = 45
+
+#
+#    WorldBots.Debug.RecoveryStopHealthPct
+#        Description: Health percent at or above which recovery health is considered safe.
+#        Default:     85
+#
+
+WorldBots.Debug.RecoveryStopHealthPct = 85
+
+#
+#    WorldBots.Debug.RecoveryStartManaPct
+#        Description: Mana percent at or below which recovery starts for active mana users.
+#        Default:     20
+#
+
+WorldBots.Debug.RecoveryStartManaPct = 20
+
+#
+#    WorldBots.Debug.RecoveryStopManaPct
+#        Description: Mana percent at or above which recovery mana is considered safe.
+#        Default:     75
+#
+
+WorldBots.Debug.RecoveryStopManaPct = 75
 
 #
 ###################################################################################################
