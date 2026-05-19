@@ -1557,8 +1557,8 @@ struct SpellCastTimesEntry
 {
     uint32 ID;                                              // 0
     int32 Base;                                             // 1
-    //int32 PerLevel;                                       // 2
-    //int32 Minimum;                                        // 3
+    int32 PerLevel;                                         // 2
+    int32 Minimum;                                          // 3
 };
 
 struct SpellCategoryEntry
